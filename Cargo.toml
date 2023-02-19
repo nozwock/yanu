@@ -7,9 +7,13 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.0", features = ["derive"] }
 dirs = "4.0.0"
 inquire = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive"] }
+confy = { version = "0.5.1", default-features = false, features = ["ron_conf"] }
+tracing-subscriber = "0.3"
+tracing = "0.1.37"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 native-dialog = { version = "0.6.3", features = [
