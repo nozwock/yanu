@@ -14,6 +14,7 @@ clap = { version = "4.0", features = ["derive"] }
 confy = { version = "0.5.1", default-features = false, features = ["ron_conf"] }
 tracing-subscriber = "0.3"
 tracing = "0.1.37"
+hex = "0.4.3"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 native-dialog = { version = "0.6.3", features = [
