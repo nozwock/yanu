@@ -8,7 +8,14 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
+dirs = "4.0.0"
 inquire = "0.5"
+
+[target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
+native-dialog = { version = "0.6.3", features = [
+    "windows_dpi_awareness",
+    "windows_visual_styles",
+] }
 
 [profile.release]
 strip = true
