@@ -9,7 +9,10 @@ use yanu::{
 };
 
 fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
+    let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt().with_writer(non_blocking).init();
 
     let cli = YanuCli::parse();
 
