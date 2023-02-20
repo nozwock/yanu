@@ -42,7 +42,7 @@ impl Nsp {
         debug!(
             "hactool extract stdout:\n{}",
             std::str::from_utf8(
-                Command::new(&hactool)
+                Command::new(hactool)
                     .args([
                         "-t",
                         "pfs0",

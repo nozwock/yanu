@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     let cli = YanuCli::parse();
 
     match cli.command {
-        Some(CliArgs::Commands::Cli(cli)) => {
+        Some(CliArgs::Commands::Cli(_cli)) => {
             // Cli mode
             unimplemented!();
         }
