@@ -7,3 +7,10 @@ pub fn browse_nsp_file() -> Option<PathBuf> {
         .show_open_single_file()
         .ok()?
 }
+
+pub fn str_truncate(s: &str, new_len: usize) -> &str {
+    match s.char_indices().nth(new_len) {
+        Some((idx, _)) => &s[..idx],
+        None => s,
+    }
+}
