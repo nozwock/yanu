@@ -6,6 +6,7 @@ use std::{
     path::Path,
 };
 
+use anyhow::Result;
 use tracing::{debug, info};
 
 enum TicketData {
@@ -30,22 +31,22 @@ impl fmt::Display for TitleKey {
     }
 }
 
-pub fn get_title_key<P: AsRef<Path>>(ticket_path: P) -> anyhow::Result<TitleKey> {
+pub fn get_title_key<P: AsRef<Path>>(path: P) -> Result<TitleKey> {
     let mut title_key = TitleKey::default();
-    let mut ticket = fs::File::open(&ticket_path)?;
+    let mut ticket = fs::File::open(&path)?;
 
-    info!(
-        "reading ticket \"{}\"",
-        ticket_path.as_ref().to_string_lossy()
-    );
+    info!("Reading ticket \"{}\"", path.as_ref().to_string_lossy());
 
     ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
     ticket.read_exact(&mut title_key.title_id)?;
-    debug!("title_id=\"{}\"", hex::encode(title_key.title_id));
 
     ticket.seek(io::SeekFrom::Start(TicketData::TitleKey as _))?;
     ticket.read_exact(&mut title_key.key)?;
-    debug!("key=\"{}\"", hex::encode(title_key.key));
+    debug!(
+        "TitleKey: \"{}={}\"",
+        hex::encode(title_key.title_id),
+        hex::encode(title_key.key)
+    );
 
     Ok(title_key)
 }

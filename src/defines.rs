@@ -17,6 +17,6 @@ pub const HACPACK: &[u8] = include_bytes!("../resources/aarch64-android/hacpack"
 #[cfg(target_os = "android")]
 pub const HACTOOL: &[u8] = include_bytes!("../resources/aarch64-android/hactool");
 
-pub fn app_cache_dir() -> Option<PathBuf> {
-    Some(dirs::cache_dir()?.join(APP_DIR))
+pub fn app_cache_dir() -> PathBuf {
+    dirs::cache_dir().unwrap_or_default().join(APP_DIR)
 }

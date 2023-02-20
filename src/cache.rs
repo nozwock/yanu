@@ -30,7 +30,7 @@ impl CacheEmbedded {
     /// Cache is used if it exists else the embedded data is written to a file
     /// and the path is returned.
     pub fn load(self) -> Result<PathBuf> {
-        let cache_dir = app_cache_dir().unwrap_or_default();
+        let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
 
         let file_name = self.to_string();
