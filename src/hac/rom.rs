@@ -38,6 +38,7 @@ impl fmt::Display for NcaType {
 #[derive(Debug, Clone)]
 pub struct Nca {
     path: PathBuf,
+    title_id: String,
     content_type: NcaType,
 }
 
@@ -62,7 +63,9 @@ impl Nsp {
         let hactool = CacheEmbedded::Hactool.load()?;
 
         debug!(
-            "hactool extract stdout:\n{}",
+            "stderr of \"hactool -t pfs0 --pfs0dir {} {}\":\n{}",
+            &path.as_ref().to_string_lossy(),
+            &self.path.to_string_lossy(),
             std::str::from_utf8(
                 Command::new(hactool)
                     .args([
@@ -73,9 +76,10 @@ impl Nsp {
                         &self.path.to_string_lossy(),
                     ])
                     .output()?
-                    .stdout
+                    .stderr
                     .as_slice(),
             )?
+            .trim()
         );
         self.extracted_data = Some(path.as_ref().to_owned());
 
@@ -136,7 +140,10 @@ impl Nca {
             );
         }
 
-        info!("Identifying content type for {:?}", path.as_ref());
+        info!(
+            "Identifying title ID and content type for {:?}",
+            path.as_ref()
+        );
 
         let hactool = CacheEmbedded::Hactool.load()?;
 
@@ -149,6 +156,22 @@ impl Nca {
         )?
         .to_owned();
 
+        let mut title_id: Option<String> = None;
+        for line in raw_info.lines() {
+            if line.find("Title ID:").is_some() {
+                title_id = Some(
+                    line.trim()
+                        .split(' ')
+                        .last()
+                        .expect("line must've had an item")
+                        .into(),
+                );
+                debug!("Title ID: {:?}", title_id);
+
+                break;
+            }
+        }
+
         let mut content_type: Option<NcaType> = None;
         for line in raw_info.lines() {
             if line.find("Content Type:").is_some() {
@@ -157,7 +180,7 @@ impl Nca {
                         line.trim()
                             .split(' ')
                             .last()
-                            .expect("line must have an item"),
+                            .expect("line must've had an item"),
                     )
                     .context("failed to identify nca content type")?,
                 );
@@ -169,7 +192,8 @@ impl Nca {
 
         Ok(Self {
             path: path.as_ref().to_owned(),
-            content_type: content_type.context("failed to identify nca content type")?,
+            title_id: title_id.expect("title id should've been found"),
+            content_type: content_type.expect("content type should've been found"),
         })
     }
 }
