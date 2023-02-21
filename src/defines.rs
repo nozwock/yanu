@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+pub const APP_NAME: &str = "yanu";
 pub const APP_DIR: &str = "com.github.nozwock.yanu";
 
 #[cfg(target_os = "linux")]
