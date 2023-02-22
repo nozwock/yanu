@@ -75,7 +75,7 @@ impl Cache {
         fs::create_dir_all(&cache_dir)?;
 
         let file_path = cache_dir.join(self.to_string());
-        if self.exists().is_ok() {
+        if self.is_cached() {
             if Command::new("chmod")
                 .arg("+x")
                 .arg(&file_path)
@@ -88,7 +88,13 @@ impl Cache {
 
         bail!("failed to give executable permission to {:?}", file_path);
     }
-    pub fn exists(&self) -> Result<()> {
+    pub fn is_cached(&self) -> bool {
+        if self._exists().is_ok() {
+            return true;
+        }
+        false
+    }
+    fn _exists(&self) -> Result<()> {
         let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
 
