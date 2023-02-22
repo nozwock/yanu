@@ -10,7 +10,7 @@ use strum_macros::EnumString;
 use tempdir::TempDir;
 use tracing::{debug, info};
 
-use crate::cache::Cache;
+use crate::{cache::Cache, hac::backend::Backend};
 
 use super::ticket::{self, TitleKey};
 
@@ -60,7 +60,7 @@ impl Nsp {
         })
     }
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        let hactool = Cache::Hactool.path()?;
+        let hactool = Backend::Hactool.path()?;
 
         debug!(
             "stderr of \"hactool -t pfs0 --pfs0dir {} {}\":\n{}",
@@ -145,7 +145,7 @@ impl Nca {
             path.as_ref()
         );
 
-        let hactool = Cache::Hactool.path()?;
+        let hactool = Backend::Hactool.path()?;
 
         let raw_info = std::str::from_utf8(
             Command::new(&hactool)
