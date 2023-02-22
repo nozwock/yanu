@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use std::{
     fmt, fs,
     io::Write,
@@ -65,6 +65,42 @@ impl Cache {
         file.write_all(self.as_bytes())?;
 
         Ok(path)
+    }
+    /// chmod +x
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    pub fn make_executable(self) -> Result<Self> {
+        use std::process::Command;
+
+        let cache_dir = app_cache_dir();
+        fs::create_dir_all(&cache_dir)?;
+
+        let file_path = cache_dir.join(self.to_string());
+        if self.exists().is_ok() {
+            if Command::new("chmod")
+                .arg("+x")
+                .arg(&file_path)
+                .status()?
+                .success()
+            {
+                return Ok(self);
+            }
+        }
+
+        bail!("failed to give executable permission to {:?}", file_path);
+    }
+    pub fn exists(&self) -> Result<()> {
+        let cache_dir = app_cache_dir();
+        fs::create_dir_all(&cache_dir)?;
+
+        let file_name = self.to_string();
+        for entry in fs::read_dir(&cache_dir)? {
+            let entry = entry?;
+            if entry.file_name().to_string_lossy() == file_name {
+                return Ok(());
+            }
+        }
+
+        bail!("{:?} isn't cached", file_name);
     }
     fn as_bytes(&self) -> &'static [u8] {
         match self {
