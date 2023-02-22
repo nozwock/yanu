@@ -13,6 +13,8 @@ The software is to act as an band-aid until Skyline supports Updates/DLCs native
 
 <!-- Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases). -->
 
+**Will be available Soon️:tm:**
+
 </div align="center">
 
 ## Features
@@ -23,4 +25,4 @@ The software is to act as an band-aid until Skyline supports Updates/DLCs native
 
 - WIP -->
 
-_**this readme isn't complete yet**_
+_**\*this readme isn't complete yet**_
