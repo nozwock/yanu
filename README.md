@@ -3,26 +3,37 @@
 # yanu
 Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline) [**WIP**]
 
-**Consider starring 🌟 the repository if it helped ig?**
+**Will be available Soon️™**
+
+**Consider starring 🌟 the project if it helped**
+
+</div align="center">
 
 ---
 
-Yanu, written in Rust is made to be compatible with Skyline. It **doesn't** support DLCs for now. The supported platforms currently consist of Linux, Android/Termux and Windows.
+## About
+
+**Yanu** is a **Nintendo Switch** rom patcher made to be compatible with Skyline. The supported platforms currently consist of **Linux**, **Android w/Termux** and **Windows**.
 
 The software is to act as an band-aid until Skyline supports Updates/DLCs natively.
 
+> **Note:** doesn't support DLCs yet.
+
 <!-- Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases). -->
-
-**Will be available Soon️:tm:**
-
-</div align="center">
 
 ## Features
 - [x] NSPs updates
 - [ ] XCIs updates
+- [ ] NSZs updates
+
+> **Note:** I might or might not add the features marked as unticked above.
 
 <!-- ## Installation
 
 - WIP -->
+
+## Credits
+
+[hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack)
 
 _**\*this readme isn't complete yet**_
