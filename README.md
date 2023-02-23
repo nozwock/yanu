@@ -3,7 +3,7 @@
 # yanu
 Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline) [**WIP**]
 
-**Will be available Soon️™**
+**Will be available Soon™**
 
 **Consider starring 🌟 the project if it helped**
 
@@ -15,7 +15,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline) [*
 
 **Yanu** is a **Nintendo Switch** rom patcher made to be compatible with Skyline. The supported platforms currently consist of **Linux**, **Android w/Termux** and **Windows**.
 
-The software is to act as an band-aid until Skyline supports Updates/DLCs natively.
+The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
 > **Note:** doesn't support DLCs yet.
 
