@@ -10,7 +10,7 @@ use strum_macros::EnumString;
 use tempdir::TempDir;
 use tracing::{debug, info};
 
-use crate::{cache::Cache, hac::backend::Backend};
+use crate::hac::backend::Backend;
 
 use super::ticket::{self, TitleKey};
 
@@ -22,7 +22,7 @@ pub struct Nsp {
 }
 
 #[derive(Debug, Clone, EnumString)]
-enum NcaType {
+pub enum NcaType {
     Control,
     Program,
     Meta,
@@ -37,9 +37,9 @@ impl fmt::Display for NcaType {
 
 #[derive(Debug, Clone)]
 pub struct Nca {
-    path: PathBuf,
-    title_id: String,
-    content_type: NcaType,
+    pub path: PathBuf,
+    pub title_id: String,
+    pub content_type: NcaType,
 }
 
 impl Nsp {
