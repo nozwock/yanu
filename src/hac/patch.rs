@@ -5,14 +5,13 @@ use crate::hac::{
 
 use super::rom::Nsp;
 use anyhow::{Context, Result};
-use std::{fs, process::Command};
+use std::{env, ffi::OsStr, fs, process::Command};
 use tempdir::TempDir;
 use tracing::info;
 use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
 
-/// `title_key_path` is the Path where TitleKeys will be stored (optional).
 pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
@@ -60,14 +59,19 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        let nca = Nca::from(entry.path())?;
-        match nca.content_type {
-            NcaType::Program => {
-                base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
-                break;
+        match entry.path().extension().and_then(OsStr::to_str) {
+            Some("nca") => {
+                let nca = Nca::from(entry.path())?;
+                match nca.content_type {
+                    NcaType::Program => {
+                        base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
+                        break;
+                    }
+                    _ => {}
+                };
             }
             _ => {}
-        };
+        }
     }
     let mut base_nca = base_nca.expect("base NCA must exist");
 
@@ -87,31 +91,28 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        let nca = Nca::from(entry.path())?;
-        match nca.content_type {
-            NcaType::Control => {
-                if control_nca.is_none() {
-                    control_nca = Some(nca);
-                }
-            }
-            NcaType::Program => {
-                if update_nca.is_none() {
-                    update_nca = Some(nca);
+        match entry.path().extension().and_then(OsStr::to_str) {
+            Some("nca") => {
+                let nca = Nca::from(entry.path())?;
+                match nca.content_type {
+                    NcaType::Control => {
+                        if control_nca.is_none() {
+                            control_nca = Some(nca);
+                        }
+                    }
+                    NcaType::Program => {
+                        if update_nca.is_none() {
+                            update_nca = Some(nca);
+                        }
+                    }
+                    _ => {}
                 }
             }
             _ => {}
         }
     }
-    let mut update_nca = update_nca.expect("update NCA must exist");
+    let update_nca = update_nca.expect("update NCA must exist");
     let mut control_nca = control_nca.expect("control NCA must exist");
-
-    // cleanup
-    info!("Cleaning up {:?}", base_data_path.to_string_lossy());
-    fs::remove_dir_all(base_data_path)?;
-    base.extracted_data = None;
-    info!("Cleaning up {:?}", update_data_path.to_string_lossy());
-    fs::remove_dir_all(update_data_path)?;
-    update.extracted_data = None;
 
     let patch_dir = TempDir::new("patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -130,6 +131,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
 
     // pack romfs & exefs into one NCA
     let nca_dir = patch_dir.path().join("nca");
+    // fs::create_dir_all(&nca_dir)?;
     base_nca.title_id.truncate(TITLEID_SZ as _);
     Command::new(&hacpack)
         .args([
@@ -140,7 +142,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--plaintext",
             "--exefsdir",
             &exefs_dir.to_string_lossy(),
-            "--romfsdoor",
+            "--romfsdir",
             &romfs_dir.to_string_lossy(),
             "--titleid",
             &base_nca.title_id,
@@ -151,12 +153,27 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
 
     let mut pactched_nca: Option<Nca> = None;
     for entry in WalkDir::new(&nca_dir).into_iter().filter_map(|e| e.ok()) {
-        pactched_nca = Some(Nca::from(entry.path())?);
-        break;
+        match entry.path().extension().and_then(OsStr::to_str) {
+            Some("nca") => {
+                pactched_nca = Some(Nca::from(dbg!(entry.path()))?);
+                break;
+            }
+            _ => {}
+        }
     }
+    dbg!(fs::rename(
+        dbg!(&control_nca.path),
+        dbg!(&nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")))
+    )?);
+    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
 
-    fs::rename(&control_nca.path, &nca_dir)?;
-    control_nca.path = nca_dir.clone();
+    // cleanup
+    info!("Cleaning up {:?}", base_data_path.to_string_lossy());
+    fs::remove_dir_all(base_data_path)?;
+    base.extracted_data = None;
+    info!("Cleaning up {:?}", update_data_path.to_string_lossy());
+    fs::remove_dir_all(update_data_path)?;
+    update.extracted_data = None;
 
     // generate meta NCA from patched NCA and control NCa
     Command::new(&hacpack)
@@ -181,8 +198,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         ])
         .output()?;
 
-    let patched_dir = TempDir::new("patched")?.into_path();
-
+    let outdir = env::current_exe()?;
+    let outdir = outdir.parent().expect("can't access parent dir of yanu");
     // pack all 3 NCAs into a single NSP
     Command::new(&hacpack)
         .args([
@@ -193,11 +210,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--titleid",
             &base_nca.title_id,
             "--outdir",
-            &patched_dir.to_string_lossy(),
+            &outdir.to_string_lossy(),
         ])
         .output()?;
 
-    Ok(Nsp::from(
-        patched_dir.join(format!("{}.nsp", base_nca.title_id)),
-    )?)
+    Ok(Nsp::from(dbg!(
+        outdir.join(format!("{}.nsp", base_nca.title_id)),
+    ))?)
 }

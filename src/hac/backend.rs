@@ -18,7 +18,7 @@ impl Backend {
                 if cfg!(target_os = "windows") {
                     Ok(hacpack.path()?)
                 } else {
-                    if hacpack.is_cached() {
+                    if dbg!(hacpack.is_cached()) {
                         Ok(hacpack.path()?)
                     } else {
                         Ok(hacpack.from(make_hacpack()?)?.make_executable()?.path()?)
@@ -30,7 +30,7 @@ impl Backend {
                 if cfg!(target_os = "windows") {
                     Ok(hactool.path()?)
                 } else {
-                    if hactool.is_cached() {
+                    if dbg!(hactool.is_cached()) {
                         Ok(hactool.path()?)
                     } else {
                         Ok(hactool.from(make_hactool()?)?.make_executable()?.path()?)

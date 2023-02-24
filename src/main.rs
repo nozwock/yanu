@@ -1,3 +1,5 @@
+use std::{env, fs};
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
@@ -5,21 +7,26 @@ use native_dialog::MessageDialog;
 use tracing::debug;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
+    hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::browse_nsp_file,
 };
 
 fn main() -> Result<()> {
-    // tracing_subscriber::fmt::init();
+    let current_exe_path = env::current_exe().expect("should be able to get current exe path");
+
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt().with_writer(non_blocking).init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .with_writer(non_blocking)
+        .init();
 
     let cli = YanuCli::parse();
 
     match cli.command {
         Some(CliArgs::Commands::Cli(_cli)) => {
             // Cli mode
-            unimplemented!();
+            todo!();
         }
         None => {
             // Interactive mode
@@ -30,28 +37,31 @@ fn main() -> Result<()> {
                     .set_title("yanu")
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
-                let base = browse_nsp_file().context("no file was selected")?;
-                if !base.is_file() {
+                let base_path = browse_nsp_file().context("no file was selected")?;
+                if !base_path.is_file() {
                     bail!("no file was selected");
                 }
-                debug!("Selected base package: \"{}\"", base.to_string_lossy());
+                debug!("Selected base package: \"{}\"", base_path.to_string_lossy());
 
                 MessageDialog::new()
                     .set_type(native_dialog::MessageType::Info)
                     .set_title("yanu")
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
-                let update = browse_nsp_file().context("no file was selected")?;
-                if !update.is_file() {
+                let update_path = browse_nsp_file().context("no file was selected")?;
+                if !update_path.is_file() {
                     bail!("no file was selected");
                 }
-                debug!("Selected update package: \"{}\"", base.to_string_lossy());
+                debug!(
+                    "Selected update package: \"{}\"",
+                    base_path.to_string_lossy()
+                );
 
-                let base_name = base
+                let base_name = base_path
                     .file_name()
                     .expect("A nsp file must've been selected by the file picker")
                     .to_string_lossy();
-                let update_name = update
+                let update_name = update_path
                     .file_name()
                     .expect("A nsp file must've been selected by the file picker")
                     .to_string_lossy();
@@ -66,7 +76,30 @@ fn main() -> Result<()> {
                     ))
                     .show_confirm()?
                 {
-                    true => unimplemented!(),
+                    true => {
+                        match patch_nsp_with_update(
+                            &mut Nsp::from(&base_path)?,
+                            &mut Nsp::from(&update_path)?,
+                        ) {
+                            Ok(patched) => {
+                                MessageDialog::new()
+                                    .set_type(native_dialog::MessageType::Info)
+                                    .set_title("Done patching!")
+                                    .set_text(&format!(
+                                        "Patched file saved as:\n{:?}",
+                                        patched.path.display()
+                                    ))
+                                    .show_alert()?;
+                            }
+                            Err(err) => {
+                                MessageDialog::new()
+                                    .set_type(native_dialog::MessageType::Error)
+                                    .set_title("Error occured!")
+                                    .set_text(&err.to_string())
+                                    .show_alert()?;
+                            }
+                        }
+                    }
                     false => println!("Program exited."),
                 }
             }

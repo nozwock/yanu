@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     fmt, fs,
     path::{Path, PathBuf},
     process::Command,
@@ -9,6 +10,7 @@ use anyhow::{bail, Context, Result};
 use strum_macros::EnumString;
 use tempdir::TempDir;
 use tracing::{debug, info};
+use walkdir::WalkDir;
 
 use crate::hac::backend::Backend;
 
@@ -96,12 +98,12 @@ impl Nsp {
     }
     pub fn extract_title_key(&mut self) -> Result<()> {
         let temp_dir: PathBuf;
-        info!("Extracting title key for {:?}", self.path.to_string_lossy());
 
         if self.extracted_data.is_none() {
+            info!("Extracting title key for {:?}", self.path.to_string_lossy());
             temp_dir = TempDir::new("nspdata")?.into_path();
             fs::create_dir_all(&temp_dir)?;
-            self.extract_data_to(&temp_dir)?;
+            dbg!(self.extract_data_to(&temp_dir)?);
         } else {
             temp_dir = self
                 .extracted_data
@@ -110,14 +112,16 @@ impl Nsp {
                 .to_path_buf();
         }
 
-        if self.title_key.is_none() {
-            for entry in fs::read_dir(temp_dir)? {
-                let entry = entry?.path();
-                if let Some(ext) = entry.extension() {
-                    if ext == "tik" {
-                        self.title_key = Some(ticket::get_title_key(&entry)?);
+        if dbg!(self.title_key.is_none()) {
+            for entry in WalkDir::new(&temp_dir) {
+                let entry = entry?;
+                dbg!(&entry);
+                match dbg!(entry.path().extension().and_then(OsStr::to_str)) {
+                    Some("tik") => {
+                        self.title_key = Some(ticket::get_title_key(&entry.path())?);
                         break;
                     }
+                    _ => continue,
                 }
             }
         } else {
