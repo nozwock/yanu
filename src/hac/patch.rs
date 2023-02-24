@@ -5,7 +5,7 @@ use crate::hac::{
 
 use super::rom::Nsp;
 use anyhow::{Context, Result};
-use std::{env, ffi::OsStr, fs, process::Command};
+use std::{env, ffi::OsStr, fs, path::PathBuf, process::Command};
 use tempdir::TempDir;
 use tracing::info;
 use walkdir::WalkDir;
@@ -198,8 +198,22 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         ])
         .output()?;
 
-    let outdir = env::current_exe()?;
-    let outdir = outdir.parent().expect("can't access parent dir of yanu");
+    // TODO: need to rewrite this aswell, prolly just take outdir as an arg in the fn
+    let outdir: PathBuf;
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        outdir = env::current_exe()?
+            .parent()
+            .expect("can't access parent dir of yanu")
+            .to_owned();
+    }
+    #[cfg(target_os = "android")]
+    {
+        outdir = dirs::home_dir()
+            .context("couldn't access home dir")?
+            .join("storage/shared");
+    }
+
     // pack all 3 NCAs into a single NSP
     Command::new(&hacpack)
         .args([

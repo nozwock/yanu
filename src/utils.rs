@@ -1,6 +1,8 @@
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::FileDialog;
 use std::path::PathBuf;
 
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn browse_nsp_file() -> Option<PathBuf> {
     FileDialog::new()
         .add_filter("NSP Files", &["nsp"])

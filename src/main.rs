@@ -1,18 +1,18 @@
-use std::{env, fs};
-
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::MessageDialog;
+use std::path::PathBuf;
 use tracing::debug;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use yanu::utils::browse_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::browse_nsp_file,
 };
 
 fn main() -> Result<()> {
-    let current_exe_path = env::current_exe().expect("should be able to get current exe path");
+    // let current_exe_path = env::current_exe().expect("should be able to get current exe path");
 
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -105,7 +105,27 @@ fn main() -> Result<()> {
             }
 
             #[cfg(target_os = "android")]
-            {}
+            {
+                let mut base = Nsp::from(PathBuf::from(
+                    inquire::Text::new("Enter base nsp path:").prompt()?,
+                ))?;
+                let mut update = Nsp::from(PathBuf::from(
+                    inquire::Text::new("Enter update nsp path:").prompt()?,
+                ))?;
+
+                match inquire::Confirm::new("Are you sure?")
+                    .with_default(false)
+                    .prompt()?
+                {
+                    true => match patch_nsp_with_update(&mut base, &mut update) {
+                        Ok(_) => {
+                            println!("Done patching");
+                        }
+                        Err(_) => println!("fk"),
+                    },
+                    false => todo!(),
+                }
+            }
         }
     }
 

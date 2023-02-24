@@ -6,7 +6,9 @@ use std::{
 };
 use tracing::debug;
 
-use crate::defines::{app_cache_dir, HACPACK, HACTOOL};
+use crate::defines::app_cache_dir;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use crate::defines::{HACPACK, HACTOOL};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Cache {
@@ -60,11 +62,17 @@ impl Cache {
         }
 
         // Extract the embedded files to cache folder
-        let path = cache_dir.join(file_name);
-        let mut file = fs::File::create(&path)?;
-        file.write_all(self.as_bytes())?;
+        // TODO: this needs to be rewritten a little.
 
-        Ok(path)
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        {
+            let path = cache_dir.join(file_name);
+            let mut file = fs::File::create(&path)?;
+            file.write_all(self.from_bytes())?;
+            return Ok(path);
+        }
+        #[cfg(target_os = "android")]
+        return Ok(PathBuf::new());
     }
     /// chmod +x
     #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -108,7 +116,8 @@ impl Cache {
 
         bail!("{:?} isn't cached", file_name);
     }
-    fn as_bytes(&self) -> &'static [u8] {
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    fn from_bytes(&self) -> &'static [u8] {
         match self {
             Cache::Hacpack => HACPACK,
             Cache::Hactool => HACTOOL,
