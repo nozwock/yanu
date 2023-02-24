@@ -15,25 +15,33 @@ impl Backend {
         match self {
             Backend::Hacpack => {
                 let hacpack = Cache::Hacpack;
-                if cfg!(target_os = "windows") {
-                    Ok(hacpack.path()?)
-                } else {
+                #[cfg(target_os = "windows")]
+                {
+                    return Ok(hacpack.path()?);
+                }
+                // if cfg!(target_os = "windows") {
+                // } else {
+                #[cfg(any(target_os = "linux", target_os = "android"))]
+                {
                     if dbg!(hacpack.is_cached()) {
-                        Ok(hacpack.path()?)
+                        return Ok(hacpack.path()?);
                     } else {
-                        Ok(hacpack.from(make_hacpack()?)?.make_executable()?.path()?)
+                        return Ok(hacpack.from(make_hacpack()?)?.make_executable()?.path()?);
                     }
                 }
             }
             Backend::Hactool => {
                 let hactool = Cache::Hactool;
-                if cfg!(target_os = "windows") {
-                    Ok(hactool.path()?)
-                } else {
+                #[cfg(target_os = "windows")]
+                {
+                    return Ok(hactool.path()?);
+                }
+                #[cfg(any(target_os = "linux", target_os = "android"))]
+                {
                     if dbg!(hactool.is_cached()) {
-                        Ok(hactool.path()?)
+                        return Ok(hactool.path()?);
                     } else {
-                        Ok(hactool.from(make_hactool()?)?.make_executable()?.path()?)
+                        return Ok(hactool.from(make_hactool()?)?.make_executable()?.path()?);
                     }
                 }
             }
