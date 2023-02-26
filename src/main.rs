@@ -23,9 +23,15 @@ fn main() -> Result<()> {
 
     let cli = YanuCli::parse();
     match cli.command {
-        Some(CliArgs::Commands::Cli(_cli)) => {
+        Some(CliArgs::Commands::Cli(cli)) => {
             // Cli mode
-            todo!();
+            println!(
+                "Patched file saved as:\n{:?}",
+                patch_nsp_with_update(&mut Nsp::from(cli.base)?, &mut Nsp::from(cli.update)?)?
+                    .path
+                    .display()
+            );
+            info!("Done");
         }
         None => {
             // Interactive mode
