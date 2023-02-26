@@ -32,7 +32,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 - Copy-pasta
   ```console
-  pkg install clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[1;32mInstalled yanu successfully!\nRun it by typing yanu"
+  pkg install clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[;92mInstalled yanu successfully\nRun it by typing in\n\e[0m\e[;96myanu\e[0m" || echo -e "\e[;91mInstallation failed\e[0m"
   ```
 
 > Run by typing `yanu`
