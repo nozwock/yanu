@@ -43,7 +43,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
    ```console
    git gcc make binutils
    ```
-2. Give executable permision to `yanu` from the console or file manager
+2. Download & give executable permission to `yanu` from the console or file manager
    ```console
    chmod +x yanu-x86_64-unknown-linux-musl
    ```
