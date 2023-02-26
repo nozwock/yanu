@@ -1,6 +1,9 @@
-use crate::hac::{
-    backend::Backend,
-    rom::{Nca, NcaType},
+use crate::{
+    defines::keys_path,
+    hac::{
+        backend::Backend,
+        rom::{Nca, NcaType},
+    },
 };
 
 use super::rom::Nsp;
@@ -160,10 +163,13 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     fs::remove_dir_all(update_data_path)?;
     update.extracted_data = None;
 
+    let keyset_path = keys_path()?;
     base_nca.title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs & exefs into a single NCA");
     if !Command::new(&hacpack)
         .args([
+            "--keyset",
+            &keyset_path.to_string_lossy(),
             "--type",
             "nca",
             "--ncatype",
@@ -198,6 +204,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     info!("Generating Meta NCA from patched NCA & control NCA");
     if !Command::new(&hacpack)
         .args([
+            "--keyset",
+            &keyset_path.to_string_lossy(),
             "--type",
             "nca",
             "--ncatype",
@@ -246,6 +254,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     );
     if !Command::new(&hacpack)
         .args([
+            "--keyset",
+            &keyset_path.to_string_lossy(),
             "--type",
             "nsp",
             "--ncadir",

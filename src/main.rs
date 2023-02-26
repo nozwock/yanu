@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::ERROR)
+        .with_max_level(tracing::Level::DEBUG)
         .with_writer(non_blocking)
         .init();
 
@@ -57,7 +57,9 @@ fn main() -> Result<()> {
                         bail_with_error_dialog("No key was selected", None)?;
                     }
                     //? maybe validate if it's indeed prod.keys
-                    if let Err(err) = fs::copy(path, keys_path()?) {
+                    let keyset_path = keys_path()?;
+                    fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
+                    if let Err(err) = fs::copy(path, keyset_path) {
                         bail_with_error_dialog(&err.to_string(), None)?;
                     }
                 }
