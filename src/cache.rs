@@ -44,6 +44,16 @@ impl Cache {
 
         Ok(self)
     }
+    /// Extracts the embedded files to the cache dir
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    pub fn from_embed(self) -> Result<Self> {
+        let cache_dir = app_cache_dir();
+        fs::create_dir_all(&cache_dir)?;
+        let mut file = fs::File::create(cache_dir.join(self.to_string()))?;
+        file.write_all(self.as_bytes())?;
+
+        Ok(self)
+    }
     /// Returns the path to the embedded resource.
     ///
     /// Cache is used if it exists else the embedded data is written to a file
@@ -61,18 +71,7 @@ impl Cache {
             }
         }
 
-        // Extract the embedded files to cache folder
-        // TODO: this needs to be rewritten a little.
-
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
-        {
-            let path = cache_dir.join(file_name);
-            let mut file = fs::File::create(&path)?;
-            file.write_all(self.from_bytes())?;
-            return Ok(path);
-        }
-        #[cfg(target_os = "android")]
-        return Ok(PathBuf::new());
+        bail!("failed to find {:?} in cache", self);
     }
     /// chmod +x
     #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -117,7 +116,7 @@ impl Cache {
         bail!("{:?} isn't cached", file_name);
     }
     #[cfg(any(target_os = "linux", target_os = "windows"))]
-    fn from_bytes(&self) -> &'static [u8] {
+    fn as_bytes(&self) -> &'static [u8] {
         match self {
             Cache::Hacpack => HACPACK,
             Cache::Hactool => HACTOOL,

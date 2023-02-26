@@ -211,7 +211,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     {
         outdir = dirs::home_dir()
             .context("couldn't access home dir")?
-            .join("storage/shared");
+            .join("storage")
+            .join("shared");
     }
 
     // pack all 3 NCAs into a single NSP
