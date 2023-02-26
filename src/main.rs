@@ -5,7 +5,7 @@ use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::MessageDialog;
 use native_dialog::MessageType;
-use tracing::{debug, info};
+use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
 use yanu::{
@@ -64,7 +64,6 @@ fn main() -> Result<()> {
                 if !base_path.is_file() {
                     bail!("no file was selected");
                 }
-                debug!("Selected base package: \"{}\"", base_path.to_string_lossy());
 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
@@ -75,10 +74,6 @@ fn main() -> Result<()> {
                 if !update_path.is_file() {
                     bail!("no file was selected");
                 }
-                debug!(
-                    "Selected update package: \"{}\"",
-                    base_path.to_string_lossy()
-                );
 
                 let base_name = base_path
                     .file_name()
@@ -115,6 +110,7 @@ fn main() -> Result<()> {
                                     .show_alert()?;
                             }
                             Err(err) => {
+                                error!("{}", err.to_string());
                                 MessageDialog::new()
                                     .set_type(MessageType::Error)
                                     .set_title("Error occured!")

@@ -17,7 +17,11 @@ impl Backend {
                 let hacpack = Cache::Hacpack;
                 #[cfg(target_os = "windows")]
                 {
-                    return Ok(hacpack.from_embed()?.path()?);
+                    if hacpack.is_cached() {
+                        return Ok(hacpack.path()?);
+                    } else {
+                        return Ok(hacpack.from_embed()?.path()?);
+                    }
                 }
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {
@@ -32,7 +36,11 @@ impl Backend {
                 let hactool = Cache::Hactool;
                 #[cfg(target_os = "windows")]
                 {
-                    return Ok(hactool.from_embed()?.path()?);
+                    if hactool.is_cached() {
+                        return Ok(hactool.path()?);
+                    } else {
+                        return Ok(hactool.from_embed()?.path()?);
+                    }
                 }
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {

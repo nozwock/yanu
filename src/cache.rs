@@ -69,7 +69,6 @@ impl Cache {
             let entry = entry?;
             if entry.file_name().to_string_lossy() == file_name {
                 // return cache if exists
-                debug!("Found {:?} in cache as {:?}", self, entry.path().display());
                 return Ok(entry.path());
             }
         }
