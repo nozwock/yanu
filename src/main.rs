@@ -3,23 +3,26 @@ use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::fs;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
-    defines::keys_path,
+    config::Config,
+    defines::{app_config_dir, keys_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::keys_exists,
+    utils::{bail_with_error_dialog, keys_exists},
 };
 
 fn main() -> Result<()> {
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::ERROR)
         .with_writer(non_blocking)
         .init();
+
+    let config: Config = confy::load_path(app_config_dir())?;
 
     let cli = YanuCli::parse();
     match cli.command {
@@ -41,20 +44,22 @@ fn main() -> Result<()> {
                     MessageDialog::new()
                         .set_type(MessageType::Warning)
                         .set_title("Failed to find keys!")
-                        .set_text("Please select `prod.keys` to continue")
+                        .set_text("Please select your `prod.keys` to continue further")
                         .show_alert()?;
                     let path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
-                        .context("no file was selected")?;
+                        .context("no key was selected")?;
 
                     info!("Selected keys {:?}", path.display());
                     if !path.is_file() {
                         // need to check if it's file bcz native_dialog somehow also permits dirs to be selected
-                        bail!("no file was selected");
+                        bail_with_error_dialog("No key was selected", None)?;
                     }
                     //? maybe validate if it's indeed prod.keys
-                    fs::copy(path, keys_path()?)?;
+                    if let Err(err) = fs::copy(path, keys_path()?) {
+                        bail_with_error_dialog(&err.to_string(), None)?;
+                    }
                 }
 
                 MessageDialog::new()
@@ -64,7 +69,7 @@ fn main() -> Result<()> {
                     .show_alert()?;
                 let base_path = browse_nsp_file().context("no file was selected")?;
                 if !base_path.is_file() {
-                    bail!("no file was selected");
+                    bail_with_error_dialog("No file was selected", None)?;
                 }
 
                 MessageDialog::new()
@@ -74,7 +79,7 @@ fn main() -> Result<()> {
                     .show_alert()?;
                 let update_path = browse_nsp_file().context("no file was selected")?;
                 if !update_path.is_file() {
-                    bail!("no file was selected");
+                    bail_with_error_dialog("No file was selected", None)?;
                 }
 
                 let base_name = base_path
@@ -90,7 +95,7 @@ fn main() -> Result<()> {
                     .set_type(MessageType::Info)
                     .set_title("Is this correct?")
                     .set_text(&format!(
-                        "Selected base pkg: \n\"{}\"\n\n\
+                        "Selected base pkg: \n\"{}\"\n\
                         Selected update pkg: \n\"{}\"",
                         base_name, update_name
                     ))
@@ -113,12 +118,7 @@ fn main() -> Result<()> {
                                     .show_alert()?;
                             }
                             Err(err) => {
-                                error!("{}", err.to_string());
-                                MessageDialog::new()
-                                    .set_type(MessageType::Error)
-                                    .set_title("Error occured!")
-                                    .set_text(&err.to_string())
-                                    .show_alert()?;
+                                bail_with_error_dialog(&err.to_string(), None)?;
                             }
                         }
                     }

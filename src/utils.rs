@@ -31,3 +31,14 @@ pub fn keys_exists() -> Option<()> {
     }
     Some(())
 }
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+pub fn bail_with_error_dialog(msg: &str, title: Option<&str>) -> anyhow::Result<()> {
+    tracing::error!("{}", msg);
+    native_dialog::MessageDialog::new()
+        .set_type(native_dialog::MessageType::Error)
+        .set_title(title.unwrap_or("Error occurred!"))
+        .set_text(msg)
+        .show_alert()?;
+    anyhow::bail!("{}", msg);
+}
