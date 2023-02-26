@@ -47,6 +47,8 @@ impl Cache {
     /// Extracts the embedded files to the cache dir
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     pub fn from_embed(self) -> Result<Self> {
+        debug!("Extracting and caching {:?} from embed", self);
+
         let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
         let mut file = fs::File::create(cache_dir.join(self.to_string()))?;
@@ -67,6 +69,7 @@ impl Cache {
             let entry = entry?;
             if entry.file_name().to_string_lossy() == file_name {
                 // return cache if exists
+                debug!("Found {:?} in cache as {:?}", self, entry.path().display());
                 return Ok(entry.path());
             }
         }
@@ -89,6 +92,7 @@ impl Cache {
                 .status()?
                 .success()
             {
+                debug!("Gave executable permission to {:?}", file_path.display());
                 return Ok(self);
             }
         }

@@ -16,16 +16,18 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
-    base.extract_title_key()?; //? might need a change in future!? (err handling)
-    update.extract_title_key()?;
+    base.derive_title_key()?; //? might need a change in future!? (err handling)
+    update.derive_title_key()?;
     //* sadly, need to cleanup the dir/files created via this manually...
     //* need to look this up
 
     let switch_dir = dirs::home_dir()
         .context("failed to find home dir")?
         .join(".switch");
-    let title_keys_path = switch_dir.join("title.keys");
     fs::create_dir_all(&switch_dir)?;
+    let title_keys_path = switch_dir.join("title.keys");
+
+    info!("Saving TitleKeys in {:?}", title_keys_path.display());
     fs::write(
         &title_keys_path,
         format!(
@@ -117,6 +119,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let patch_dir = TempDir::new("patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
+    info!(
+        "Extracting romfs & exefs of {:?} & {:?}",
+        base_nca.path.display(),
+        update_nca.path.display()
+    );
     Command::new(&hactool)
         .args([
             "--basenca",
@@ -127,12 +134,12 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--exefsdir",
             &exefs_dir.to_string_lossy(),
         ])
-        .output()?;
+        .status()?
+        .exit_ok()?;
 
-    // pack romfs & exefs into one NCA
     let nca_dir = patch_dir.path().join("nca");
-    // fs::create_dir_all(&nca_dir)?;
     base_nca.title_id.truncate(TITLEID_SZ as _);
+    info!("Packing romfs & exefs in a single NCA");
     Command::new(&hacpack)
         .args([
             "--type",
@@ -149,7 +156,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--outdir",
             &nca_dir.to_string_lossy(),
         ])
-        .output()?;
+        .status()?
+        .exit_ok()?;
 
     let mut pactched_nca: Option<Nca> = None;
     for entry in WalkDir::new(&nca_dir).into_iter().filter_map(|e| e.ok()) {
@@ -175,7 +183,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     fs::remove_dir_all(update_data_path)?;
     update.extracted_data = None;
 
-    // generate meta NCA from patched NCA and control NCa
+    info!("Generating Meta NCA from patched NCA & control NCA");
     Command::new(&hacpack)
         .args([
             "--type",
@@ -196,7 +204,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--outdir",
             &nca_dir.to_string_lossy(),
         ])
-        .output()?;
+        .status()?
+        .exit_ok()?;
 
     // TODO: need to rewrite this aswell, prolly just take outdir as an arg in the fn
     let outdir: PathBuf;
@@ -214,8 +223,12 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             .join("storage")
             .join("shared");
     }
+    let patched_nsp_path = outdir.join(format!("{}.nsp", base_nca.title_id));
 
-    // pack all 3 NCAs into a single NSP
+    info!(
+        "Packing all 3 NCAs into a NSP as {:?}",
+        patched_nsp_path.display()
+    );
     Command::new(&hacpack)
         .args([
             "--type",
@@ -227,9 +240,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--outdir",
             &outdir.to_string_lossy(),
         ])
-        .output()?;
+        .status()?
+        .exit_ok()?;
 
-    Ok(Nsp::from(dbg!(
-        outdir.join(format!("{}.nsp", base_nca.title_id)),
-    ))?)
+    Ok(Nsp::from(patched_nsp_path)?)
 }

@@ -2,7 +2,6 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::MessageDialog;
-use std::path::PathBuf;
 use tracing::debug;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;

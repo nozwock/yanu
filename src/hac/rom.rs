@@ -49,10 +49,7 @@ impl Nsp {
         if path.as_ref().extension().context("no file found")? != "nsp" {
             bail!(
                 "{:?} is not a nsp file",
-                path.as_ref()
-                    .file_name()
-                    .context("no file found")?
-                    .to_string_lossy()
+                path.as_ref().file_name().context("no file found")?
             );
         }
 
@@ -64,43 +61,30 @@ impl Nsp {
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let hactool = Backend::Hactool.path()?;
 
-        debug!(
-            "stderr of \"hactool -t pfs0 --pfs0dir {} {}\":\n{}",
-            &path.as_ref().to_string_lossy(),
-            &self.path.to_string_lossy(),
-            std::str::from_utf8(
-                Command::new(hactool)
-                    .args([
-                        "-t",
-                        "pfs0",
-                        "--pfs0dir",
-                        &path.as_ref().to_string_lossy(),
-                        &self.path.to_string_lossy(),
-                    ])
-                    .output()?
-                    .stderr
-                    .as_slice(),
-            )?
-            .trim()
-        );
+        Command::new(hactool)
+            .args([
+                "-t",
+                "pfs0",
+                "--pfs0dir",
+                &path.as_ref().to_string_lossy(),
+                &self.path.to_string_lossy(),
+            ])
+            .status()?
+            .exit_ok()?;
         self.extracted_data = Some(path.as_ref().to_owned());
 
         info!(
-            "{} has been extracted in \"{}\"",
-            self.path
-                .file_name()
-                .context("no file found")?
-                .to_string_lossy(),
-            path.as_ref().to_string_lossy()
+            "{:?} has been extracted in {:?}",
+            self.path.file_name().context("no file found")?,
+            path.as_ref()
         );
 
         Ok(())
     }
-    pub fn extract_title_key(&mut self) -> Result<()> {
+    pub fn derive_title_key(&mut self) -> Result<()> {
         let temp_dir: PathBuf;
 
         if self.extracted_data.is_none() {
-            info!("Extracting title key for {:?}", self.path.to_string_lossy());
             temp_dir = TempDir::new("nspdata")?.into_path();
             fs::create_dir_all(&temp_dir)?;
             dbg!(self.extract_data_to(&temp_dir)?);
@@ -113,9 +97,9 @@ impl Nsp {
         }
 
         if dbg!(self.title_key.is_none()) {
+            info!("Deriving title key for {:?}", self.path.display());
             for entry in WalkDir::new(&temp_dir) {
                 let entry = entry?;
-                dbg!(&entry);
                 match dbg!(entry.path().extension().and_then(OsStr::to_str)) {
                     Some("tik") => {
                         self.title_key = Some(ticket::get_title_key(&entry.path())?);
@@ -124,8 +108,11 @@ impl Nsp {
                     _ => continue,
                 }
             }
+            if self.title_key.is_none() {
+                bail!("failed to derive title key for {:?}", self.path);
+            }
         } else {
-            info!("TitleKey has already being extracted!");
+            info!("TitleKey has already being derived!");
         }
 
         Ok(())
@@ -137,10 +124,7 @@ impl Nca {
         if path.as_ref().extension().context("no file found")? != "nca" {
             bail!(
                 "{:?} is not a nca file",
-                path.as_ref()
-                    .file_name()
-                    .context("no file found")?
-                    .to_string_lossy()
+                path.as_ref().file_name().context("no file found")?
             );
         }
 
@@ -151,17 +135,12 @@ impl Nca {
 
         let hactool = Backend::Hactool.path()?;
 
-        let raw_info = std::str::from_utf8(
-            Command::new(&hactool)
-                .args([path.as_ref()])
-                .output()?
-                .stdout
-                .as_slice(),
-        )?
-        .to_owned();
+        let output = Command::new(&hactool).args([path.as_ref()]).output()?;
+        output.status.exit_ok()?;
 
+        let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
         let mut title_id: Option<String> = None;
-        for line in raw_info.lines() {
+        for line in stdout.lines() {
             if line.find("Title ID:").is_some() {
                 title_id = Some(
                     line.trim()
@@ -171,13 +150,12 @@ impl Nca {
                         .into(),
                 );
                 debug!("Title ID: {:?}", title_id);
-
                 break;
             }
         }
 
         let mut content_type: Option<NcaType> = None;
-        for line in raw_info.lines() {
+        for line in stdout.lines() {
             if line.find("Content Type:").is_some() {
                 content_type = Some(
                     NcaType::from_str(
@@ -189,7 +167,6 @@ impl Nca {
                     .context("failed to identify nca content type")?,
                 );
                 debug!("Content Type: {:?}", content_type);
-
                 break;
             }
         }
