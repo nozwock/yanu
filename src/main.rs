@@ -41,7 +41,7 @@ fn main() -> Result<()> {
                     MessageDialog::new()
                         .set_type(MessageType::Warning)
                         .set_title("Failed to find keys!")
-                        .set_text("Please select prod.keys to continue")
+                        .set_text("Please select `prod.keys` to continue")
                         .show_alert()?;
                     let path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
@@ -132,9 +132,9 @@ fn main() -> Result<()> {
 
                 if keys_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
-                        "Failed to find keys! Please enter the path to your prod.keys:",
+                        "Failed to find keys! Please enter the path to your `prod.keys`:",
                     )
-                    .with_help_message("Path to a file can be copied through some file managers such as MiXplorer, etc.")
+                    .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
                     .prompt()?);
 
                     let to = keys_path()?;

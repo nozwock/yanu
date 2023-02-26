@@ -138,13 +138,28 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .success()
     {
         bail!(
-            "failed extract romfs & exefs of {:?} & {:?}",
+            "failed to extract romfs & exefs of {:?} & {:?}",
             base_nca.path.display(),
             update_nca.path.display()
         );
     }
 
     let nca_dir = patch_dir.path().join("nca");
+    fs::create_dir_all(&nca_dir)?;
+    dbg!(fs::rename(
+        dbg!(&control_nca.path),
+        dbg!(&nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")))
+    )?);
+    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
+
+    // cleanup
+    info!("Cleaning up {:?}", base_data_path.to_string_lossy());
+    fs::remove_dir_all(base_data_path)?;
+    base.extracted_data = None;
+    info!("Cleaning up {:?}", update_data_path.to_string_lossy());
+    fs::remove_dir_all(update_data_path)?;
+    update.extracted_data = None;
+
     base_nca.title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs & exefs into a single NCA");
     if !Command::new(&hacpack)
@@ -179,19 +194,6 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             _ => {}
         }
     }
-    dbg!(fs::rename(
-        dbg!(&control_nca.path),
-        dbg!(&nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")))
-    )?);
-    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
-
-    // cleanup
-    info!("Cleaning up {:?}", base_data_path.to_string_lossy());
-    fs::remove_dir_all(base_data_path)?;
-    base.extracted_data = None;
-    info!("Cleaning up {:?}", update_data_path.to_string_lossy());
-    fs::remove_dir_all(update_data_path)?;
-    update.extracted_data = None;
 
     info!("Generating Meta NCA from patched NCA & control NCA");
     if !Command::new(&hacpack)
