@@ -32,18 +32,18 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 - Copy-pasta
   ```console
-  pkg install clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage
+  pkg install clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[1;32mInstalled yanu successfully!\nRun it by typing yanu"
   ```
 
 > Run by typing `yanu`
 
 ### Linux
 
-1. Make sure dependencies required to build hactool/hacPack are installed
+1. Make sure dependencies required to build hactool/hacPack are installed on your system
    ```console
    git gcc make binutils
    ```
-2. Give executable permision from console or your file manager.
+2. Give executable permision to `yanu` from the console or file manager
    ```console
    chmod +x yanu-x86_64-unknown-linux-musl
    ```
