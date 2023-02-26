@@ -1,10 +1,8 @@
-use std::fs;
-
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
-use native_dialog::MessageDialog;
-use native_dialog::MessageType;
+use native_dialog::{MessageDialog, MessageType};
+use std::fs;
 use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
@@ -16,8 +14,6 @@ use yanu::{
 };
 
 fn main() -> Result<()> {
-    // let current_exe_path = env::current_exe().expect("should be able to get current exe path");
-
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
@@ -26,7 +22,6 @@ fn main() -> Result<()> {
         .init();
 
     let cli = YanuCli::parse();
-
     match cli.command {
         Some(CliArgs::Commands::Cli(_cli)) => {
             // Cli mode
@@ -40,7 +35,7 @@ fn main() -> Result<()> {
                     MessageDialog::new()
                         .set_type(MessageType::Warning)
                         .set_title("Failed to find keys!")
-                        .set_text("Please select keys to continue")
+                        .set_text("Please select prod.keys to continue")
                         .show_alert()?;
                     let path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
@@ -49,6 +44,7 @@ fn main() -> Result<()> {
 
                     info!("Selected keys {:?}", path.display());
                     if !path.is_file() {
+                        // need to check if it's file bcz native_dialog somehow also permits dirs to be selected
                         bail!("no file was selected");
                     }
                     //? maybe validate if it's indeed prod.keys
@@ -100,6 +96,7 @@ fn main() -> Result<()> {
                             &mut Nsp::from(&update_path)?,
                         ) {
                             Ok(patched) => {
+                                info!("Done");
                                 MessageDialog::new()
                                     .set_type(MessageType::Info)
                                     .set_title("Done patching!")
@@ -119,17 +116,36 @@ fn main() -> Result<()> {
                             }
                         }
                     }
-                    false => println!("Program exited."),
+                    false => println!("yanu exited"),
                 }
             }
 
             #[cfg(target_os = "android")]
             {
+                use std::{ffi::OsStr, path::PathBuf};
+
+                if keys_exists().is_none() {
+                    let path = PathBuf::from(inquire::Text::new(
+                        "Failed to find keys! Please enter the path to your prod.keys:",
+                    )
+                    .with_help_message("Path to a file can be copied through some file managers such as MiXplorer, etc.")
+                    .prompt()?);
+
+                    let to = keys_path()?;
+                    fs::create_dir_all(to.parent().context("where ma parents?")?)?;
+                    info!("Selected keys {:?}", path.display());
+                    match path.extension().and_then(OsStr::to_str) {
+                        Some("keys") => {}
+                        _ => bail!("no keys were selected"),
+                    }
+                    fs::copy(path, to)?;
+                }
+
                 let mut base = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter base nsp path:").prompt()?,
+                    inquire::Text::new("Enter Base pkg path:").prompt()?,
                 ))?;
                 let mut update = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter update nsp path:").prompt()?,
+                    inquire::Text::new("Enter Update pkg path:").prompt()?,
                 ))?;
 
                 match inquire::Confirm::new("Are you sure?")
@@ -137,12 +153,16 @@ fn main() -> Result<()> {
                     .prompt()?
                 {
                     true => match patch_nsp_with_update(&mut base, &mut update) {
-                        Ok(_) => {
-                            println!("Done patching");
+                        Ok(patched) => {
+                            info!("Done");
+                            println!("Patched file saved as:\n{:?}", patched.path.display());
                         }
-                        Err(_) => println!("fk"),
+                        Err(err) => {
+                            error!("{}", err.to_string());
+                            println!("{}", err.to_string());
+                        }
                     },
-                    false => todo!(),
+                    false => println!("yanu exited"),
                 }
             }
         }

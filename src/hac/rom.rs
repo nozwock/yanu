@@ -61,7 +61,7 @@ impl Nsp {
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let hactool = Backend::Hactool.path()?;
 
-        Command::new(hactool)
+        if !Command::new(hactool)
             .args([
                 "-t",
                 "pfs0",
@@ -70,7 +70,10 @@ impl Nsp {
                 &self.path.to_string_lossy(),
             ])
             .status()?
-            .exit_ok()?;
+            .success()
+        {
+            bail!("hactool failed to extract {:?}", path.as_ref());
+        }
         self.extracted_data = Some(path.as_ref().to_owned());
 
         info!(
@@ -136,7 +139,9 @@ impl Nca {
         let hactool = Backend::Hactool.path()?;
 
         let output = Command::new(&hactool).args([path.as_ref()]).output()?;
-        output.status.exit_ok()?;
+        if !output.status.success() {
+            bail!("hactool failed to view info of {:?}", path.as_ref());
+        }
 
         let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
         let mut title_id: Option<String> = None;

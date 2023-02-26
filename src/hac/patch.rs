@@ -4,7 +4,7 @@ use crate::hac::{
 };
 
 use super::rom::Nsp;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use std::{env, ffi::OsStr, fs, path::PathBuf, process::Command};
 use tempdir::TempDir;
 use tracing::info;
@@ -124,7 +124,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         base_nca.path.display(),
         update_nca.path.display()
     );
-    Command::new(&hactool)
+    if !Command::new(&hactool)
         .args([
             "--basenca",
             &base_nca.path.to_string_lossy(),
@@ -135,12 +135,19 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             &exefs_dir.to_string_lossy(),
         ])
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!(
+            "failed extract romfs & exefs of {:?} & {:?}",
+            base_nca.path.display(),
+            update_nca.path.display()
+        );
+    }
 
     let nca_dir = patch_dir.path().join("nca");
     base_nca.title_id.truncate(TITLEID_SZ as _);
-    info!("Packing romfs & exefs in a single NCA");
-    Command::new(&hacpack)
+    info!("Packing romfs & exefs into a single NCA");
+    if !Command::new(&hacpack)
         .args([
             "--type",
             "nca",
@@ -157,7 +164,10 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             &nca_dir.to_string_lossy(),
         ])
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to pack romfs & exefs into a single NCA");
+    }
 
     let mut pactched_nca: Option<Nca> = None;
     for entry in WalkDir::new(&nca_dir).into_iter().filter_map(|e| e.ok()) {
@@ -184,7 +194,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     update.extracted_data = None;
 
     info!("Generating Meta NCA from patched NCA & control NCA");
-    Command::new(&hacpack)
+    if !Command::new(&hacpack)
         .args([
             "--type",
             "nca",
@@ -205,7 +215,10 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             &nca_dir.to_string_lossy(),
         ])
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to generate Meta NCA from patched NCA & control NCA");
+    }
 
     // TODO: need to rewrite this aswell, prolly just take outdir as an arg in the fn
     let outdir: PathBuf;
@@ -229,7 +242,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         "Packing all 3 NCAs into a NSP as {:?}",
         patched_nsp_path.display()
     );
-    Command::new(&hacpack)
+    if !Command::new(&hacpack)
         .args([
             "--type",
             "nsp",
@@ -241,7 +254,10 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             &outdir.to_string_lossy(),
         ])
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("Packing all 3 NCAs into a NSP");
+    }
 
     Ok(Nsp::from(patched_nsp_path)?)
 }

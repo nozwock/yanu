@@ -1,4 +1,3 @@
-use anyhow::{bail, Context, Result};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::FileDialog;
 use std::path::PathBuf;
@@ -7,14 +6,14 @@ use crate::defines::keys_path;
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn browse_nsp_file() -> Option<PathBuf> {
-    use tracing::debug;
+    use tracing::info;
 
     let path = FileDialog::new()
         .add_filter("NSP Files", &["nsp"])
         .show_open_single_file()
         .ok()?;
     if let Some(ref path) = path {
-        debug!("Selected file {:?}", path.display());
+        info!("Selected file {:?}", path.display());
     }
     path
 }

@@ -57,44 +57,55 @@ impl Backend {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hacpack() -> Result<PathBuf> {
+    use anyhow::bail;
     use std::fs;
     use tracing::info;
 
     info!("Building hacPack");
     let src_dir = TempDir::new("hacpack")?.into_path();
 
-    Command::new("git")
+    if !Command::new("git")
         .args(["clone", "https://github.com/The-4n/hacPack"])
         .arg(&src_dir)
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to clone hacPack repo");
+    }
 
     fs::rename(
         src_dir.join("config.mk.template"),
         src_dir.join("config.mk"),
     )?;
 
-    Command::new("make")
+    if !Command::new("make")
         .current_dir(&src_dir)
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to build hacPack");
+    }
 
     Ok(src_dir.join("hacpack"))
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hactool() -> Result<PathBuf> {
+    use anyhow::bail;
     use std::fs;
     use tracing::info;
 
     info!("Building hactool");
     let src_dir = TempDir::new("hactool")?.into_path();
 
-    Command::new("git")
+    if !Command::new("git")
         .args(["clone", "https://github.com/SciresM/hactool"])
         .arg(&src_dir)
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to clone hactool repo");
+    }
 
     fs::rename(
         src_dir.join("config.mk.template"),
@@ -123,10 +134,13 @@ pub fn make_hactool() -> Result<PathBuf> {
         fs::write(src_dir.join("main.c"), fixed_main.as_bytes())?;
     }
 
-    Command::new("make")
+    if !Command::new("make")
         .current_dir(&src_dir)
         .status()?
-        .exit_ok()?;
+        .success()
+    {
+        bail!("failed to build hactool");
+    }
 
     Ok(src_dir.join("hactool"))
 }
