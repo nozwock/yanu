@@ -102,6 +102,28 @@ pub fn make_hactool() -> Result<PathBuf> {
         src_dir.join("config.mk"),
     )?;
 
+    // removing line 372 as it causes build to fail on android
+    #[cfg(target_os = "android")]
+    {
+        use std::io::{BufRead, BufReader};
+
+        let reader = BufReader::new(fs::File::open(src_dir.join("main.c"))?);
+        //* can't use advance_by yet
+        let fixed_main = reader
+            .lines()
+            .enumerate()
+            .filter_map(|(i, ln)| {
+                if i != 371 {
+                    // i.e ln 372
+                    return Some(ln);
+                }
+                None
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .join("\n");
+        fs::write(src_dir.join("main.c"), fixed_main.as_bytes())?;
+    }
+
     if !Command::new("make")
         .current_dir(&src_dir)
         .status()?

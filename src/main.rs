@@ -114,7 +114,7 @@ fn main() -> Result<()> {
                 ))?;
 
                 match inquire::Confirm::new("Are you sure?")
-                    .with_default(false)
+                    .with_default(true)
                     .prompt()?
                 {
                     true => match patch_nsp_with_update(&mut base, &mut update) {
