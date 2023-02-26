@@ -1,5 +1,8 @@
 use anyhow::Result;
-use std::{path::PathBuf, process::Command};
+use std::path::PathBuf;
+#[cfg(any(target_os = "linux", target_os = "android"))]
+use std::process::Command;
+#[cfg(any(target_os = "linux", target_os = "android"))]
 use tempdir::TempDir;
 
 use crate::cache::Cache;
@@ -25,7 +28,7 @@ impl Backend {
                 }
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {
-                    if dbg!(hacpack.is_cached()) {
+                    if hacpack.is_cached() {
                         return Ok(hacpack.path()?);
                     } else {
                         return Ok(hacpack.from(make_hacpack()?)?.make_executable()?.path()?);
@@ -44,7 +47,7 @@ impl Backend {
                 }
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {
-                    if dbg!(hactool.is_cached()) {
+                    if hactool.is_cached() {
                         return Ok(hactool.path()?);
                     } else {
                         return Ok(hactool.from(make_hactool()?)?.make_executable()?.path()?);

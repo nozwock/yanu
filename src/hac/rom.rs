@@ -90,7 +90,7 @@ impl Nsp {
         if self.extracted_data.is_none() {
             temp_dir = TempDir::new("nspdata")?.into_path();
             fs::create_dir_all(&temp_dir)?;
-            dbg!(self.extract_data_to(&temp_dir)?);
+            self.extract_data_to(&temp_dir)?;
         } else {
             temp_dir = self
                 .extracted_data
@@ -99,11 +99,11 @@ impl Nsp {
                 .to_path_buf();
         }
 
-        if dbg!(self.title_key.is_none()) {
+        if self.title_key.is_none() {
             info!("Deriving title key for {:?}", self.path.display());
             for entry in WalkDir::new(&temp_dir) {
                 let entry = entry?;
-                match dbg!(entry.path().extension().and_then(OsStr::to_str)) {
+                match entry.path().extension().and_then(OsStr::to_str) {
                     Some("tik") => {
                         self.title_key = Some(ticket::get_title_key(&entry.path())?);
                         break;

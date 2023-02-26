@@ -149,10 +149,10 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
 
     let nca_dir = patch_dir.path().join("nca");
     fs::create_dir_all(&nca_dir)?;
-    dbg!(fs::rename(
-        dbg!(&control_nca.path),
-        dbg!(&nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")))
-    )?);
+    fs::rename(
+        &control_nca.path,
+        &nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")),
+    )?;
     control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
 
     // cleanup
@@ -194,7 +194,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     for entry in WalkDir::new(&nca_dir).into_iter().filter_map(|e| e.ok()) {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
-                pactched_nca = Some(Nca::from(dbg!(entry.path()))?);
+                pactched_nca = Some(Nca::from(entry.path())?);
                 break;
             }
             _ => {}

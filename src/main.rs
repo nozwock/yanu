@@ -1,9 +1,9 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::fs;
-use tracing::{debug, error, info};
+use tracing::info;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
 use yanu::{
@@ -130,7 +130,9 @@ fn main() -> Result<()> {
 
             #[cfg(target_os = "android")]
             {
+                use anyhow::bail;
                 use std::{ffi::OsStr, path::PathBuf};
+                use tracing::error;
 
                 if keys_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
