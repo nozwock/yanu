@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
+
 pub const APP_NAME: &str = "yanu";
 pub const APP_DIR: &str = "com.github.nozwock.yanu";
 
@@ -15,4 +17,11 @@ pub const HACTOOL: &[u8] = include_bytes!("../resources/x86_64-windows/hactool.e
 
 pub fn app_cache_dir() -> PathBuf {
     dirs::cache_dir().unwrap_or_default().join(APP_DIR)
+}
+
+pub fn keys_path() -> Result<PathBuf> {
+    Ok(dirs::home_dir()
+        .context("home dir not found")?
+        .join(".switch")
+        .join("prod.keys"))
 }

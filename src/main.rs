@@ -1,13 +1,18 @@
+use std::fs;
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::MessageDialog;
-use tracing::debug;
+use native_dialog::MessageType;
+use tracing::{debug, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
+    defines::keys_path,
     hac::{patch::patch_nsp_with_update, rom::Nsp},
+    utils::keys_exists,
 };
 
 fn main() -> Result<()> {
@@ -31,8 +36,27 @@ fn main() -> Result<()> {
             // Interactive mode
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
+                if keys_exists().is_none() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Warning)
+                        .set_title("Failed to find keys!")
+                        .set_text("Please select keys to continue")
+                        .show_alert()?;
+                    let path = native_dialog::FileDialog::new()
+                        .add_filter("Keys", &["keys"])
+                        .show_open_single_file()?
+                        .context("no file was selected")?;
+
+                    info!("Selected keys {:?}", path.display());
+                    if !path.is_file() {
+                        bail!("no file was selected");
+                    }
+                    //? maybe validate if it's indeed prod.keys
+                    fs::copy(path, keys_path()?)?;
+                }
+
                 MessageDialog::new()
-                    .set_type(native_dialog::MessageType::Info)
+                    .set_type(MessageType::Info)
                     .set_title("yanu")
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
@@ -43,7 +67,7 @@ fn main() -> Result<()> {
                 debug!("Selected base package: \"{}\"", base_path.to_string_lossy());
 
                 MessageDialog::new()
-                    .set_type(native_dialog::MessageType::Info)
+                    .set_type(MessageType::Info)
                     .set_title("yanu")
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
@@ -66,7 +90,7 @@ fn main() -> Result<()> {
                     .to_string_lossy();
 
                 match MessageDialog::new()
-                    .set_type(native_dialog::MessageType::Info)
+                    .set_type(MessageType::Info)
                     .set_title("Is this correct?")
                     .set_text(&format!(
                         "Selected base pkg: \n\"{}\"\n\n\
@@ -82,7 +106,7 @@ fn main() -> Result<()> {
                         ) {
                             Ok(patched) => {
                                 MessageDialog::new()
-                                    .set_type(native_dialog::MessageType::Info)
+                                    .set_type(MessageType::Info)
                                     .set_title("Done patching!")
                                     .set_text(&format!(
                                         "Patched file saved as:\n{:?}",
@@ -92,7 +116,7 @@ fn main() -> Result<()> {
                             }
                             Err(err) => {
                                 MessageDialog::new()
-                                    .set_type(native_dialog::MessageType::Error)
+                                    .set_type(MessageType::Error)
                                     .set_title("Error occured!")
                                     .set_text(&err.to_string())
                                     .show_alert()?;

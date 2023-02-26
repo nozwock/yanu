@@ -1,6 +1,9 @@
+use anyhow::{bail, Context, Result};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::FileDialog;
 use std::path::PathBuf;
+
+use crate::defines::keys_path;
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn browse_nsp_file() -> Option<PathBuf> {
@@ -21,4 +24,11 @@ pub fn str_truncate(s: &str, new_len: usize) -> &str {
         Some((idx, _)) => &s[..idx],
         None => s,
     }
+}
+
+pub fn keys_exists() -> Option<()> {
+    if !keys_path().ok()?.is_file() {
+        return None;
+    }
+    Some(())
 }
