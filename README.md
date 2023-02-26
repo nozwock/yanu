@@ -3,8 +3,6 @@
 # yanu
 Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline) [**WIP**]
 
-**Will be available Soon™**
-
 **Consider starring 🌟 the project if it helped**
 
 </div align="center">
@@ -19,7 +17,7 @@ The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs
 
 > **Note:** doesn't support DLCs yet.
 
-<!-- Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases). -->
+Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
 ## Features
 - [x] NSPs updates
@@ -35,5 +33,3 @@ The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs
 ## Credits
 
 [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack)
-
-_**\*this readme isn't complete yet**_
