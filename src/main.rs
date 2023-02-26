@@ -5,13 +5,13 @@ use native_dialog::{MessageDialog, MessageType};
 use std::fs;
 use tracing::info;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
-use yanu::utils::browse_nsp_file;
+use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
-    config::Config,
-    defines::{app_config_dir, keys_path},
+    // config::Config,
+    defines::keys_path,
     hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::{bail_with_error_dialog, keys_exists},
+    utils::keys_exists,
 };
 
 fn main() -> Result<()> {
@@ -22,7 +22,7 @@ fn main() -> Result<()> {
         .with_writer(non_blocking)
         .init();
 
-    let config: Config = confy::load_path(app_config_dir())?;
+    // let config: Config = confy::load_path(app_config_dir())?;
 
     let cli = YanuCli::parse();
     match cli.command {
