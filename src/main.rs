@@ -8,8 +8,8 @@ use tracing::info;
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
-    // config::Config,
-    defines::keys_path,
+    config::Config,
+    defines::{app_config_dir, keys_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keys_exists,
 };
@@ -22,7 +22,7 @@ fn main() -> Result<()> {
         .with_writer(non_blocking)
         .init();
 
-    // let config: Config = confy::load_path(app_config_dir())?;
+    let config: Config = confy::load_path(app_config_dir())?;
 
     let cli = YanuCli::parse();
     match cli.command {
@@ -50,18 +50,12 @@ fn main() -> Result<()> {
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
                         .context("no key was selected")?;
-
                     info!("Selected keys {:?}", path.display());
-                    if !path.is_file() {
-                        // need to check if it's file bcz native_dialog somehow also permits dirs to be selected
-                        bail_with_error_dialog("No key was selected", None)?;
-                    }
+
                     //? maybe validate if it's indeed prod.keys
                     let keyset_path = keys_path()?;
                     fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
-                    if let Err(err) = fs::copy(path, keyset_path) {
-                        bail_with_error_dialog(&err.to_string(), None)?;
-                    }
+                    fs::copy(path, keyset_path)?;
                 }
 
                 MessageDialog::new()
@@ -70,9 +64,6 @@ fn main() -> Result<()> {
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
                 let base_path = browse_nsp_file().context("no file was selected")?;
-                if !base_path.is_file() {
-                    bail_with_error_dialog("No file was selected", None)?;
-                }
 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
@@ -80,9 +71,6 @@ fn main() -> Result<()> {
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
                 let update_path = browse_nsp_file().context("no file was selected")?;
-                if !update_path.is_file() {
-                    bail_with_error_dialog("No file was selected", None)?;
-                }
 
                 let base_name = base_path
                     .file_name()
