@@ -15,6 +15,13 @@ use yanu::{
 };
 
 fn main() -> Result<()> {
+    let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_writer(non_blocking)
+        .init();
+
     match app() {
         Ok(_) => {
             info!("Done");
@@ -28,16 +35,9 @@ fn main() -> Result<()> {
 }
 
 fn app() -> Result<()> {
-    let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_writer(non_blocking)
-        .init();
-
     let mut config: Config = confy::load_path(app_config_dir())?;
-
     let cli = YanuCli::parse();
+
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
             // Cli mode
