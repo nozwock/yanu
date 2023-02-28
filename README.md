@@ -48,7 +48,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Winshit :toilet:
 
-- Just download & run.
+- Then just download & run.
 
 > Some AVs might false positively flag the program tho, deal with it.</br>
 > Use these if you're paranoid ig :weary: -
