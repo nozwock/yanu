@@ -7,10 +7,6 @@ use clap::{Args, Parser, Subcommand};
 pub struct YanuCli {
     #[command(subcommand)]
     pub command: Option<Commands>,
-    /// Change the directory in which to look for roms
-    #[cfg(target_os = "android")]
-    #[arg(long, value_name = "PATH")]
-    pub set_roms_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]

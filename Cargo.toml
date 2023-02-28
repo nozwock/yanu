@@ -11,7 +11,6 @@ dirs = "4.0.0"
 inquire = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "4.0", features = ["derive"] }
-confy = { version = "0.5.1", default-features = false, features = ["ron_conf"] }
 tracing-subscriber = "0.3"
 tracing = "0.1.37"
 hex = "0.4.3"

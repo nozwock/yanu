@@ -8,7 +8,6 @@ use tracing::{error, info};
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
-    config::Config,
     defines::{app_config_dir, get_keyset_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keys_exists,
@@ -35,7 +34,6 @@ fn main() -> Result<()> {
 }
 
 fn app() -> Result<()> {
-    let mut config: Config = confy::load_path(app_config_dir())?;
     let cli = YanuCli::parse();
 
     match cli.command {
@@ -137,29 +135,6 @@ fn app() -> Result<()> {
             #[cfg(target_os = "android")]
             {
                 use std::{ffi::OsStr, path::PathBuf};
-
-                if config.roms_dir.is_none() {
-                    let roms_dir = PathBuf::from(
-                        inquire::Text::new("Enter the path to a folder:")
-                            .with_help_message(
-                                "This folder will be used to search for roms to update.",
-                            )
-                            .prompt()?,
-                    );
-                    info!("Selected roms_dir {:?}", roms_dir);
-                    match roms_dir.is_dir() {
-                        true => {
-                            info!("Updating config");
-                            config.roms_dir = Some(roms_dir);
-                            confy::store_path(app_config_dir(), config)?;
-                        }
-                        false => {
-                            bail!("Invalid path {:?}", roms_dir);
-                        }
-                    }
-                }
-
-                // TODO: handle keys import
 
                 if keys_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
