@@ -64,8 +64,13 @@ fn app() -> Result<()> {
                         .context("no key was selected")?;
                     info!("Selected keys {:?}", path.display());
 
-                    // ! native dialog allows for dir to be picked (prob a bug)
-                    // ! handle this soon
+                    // native dialog allows for dir to be picked (prob a bug)
+                    if !path.is_file() {
+                        bail_with_error_dialog(
+                            &format!("{:?} is not a file", path.display()),
+                            None,
+                        )?;
+                    }
 
                     //? maybe validate if it's indeed prod.keys
                     let keyset_path = get_keyset_path()?;
@@ -80,6 +85,12 @@ fn app() -> Result<()> {
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
                 let base_path = browse_nsp_file().context("no file was selected")?;
+                if !base_path.is_file() {
+                    bail_with_error_dialog(
+                        &format!("{:?} is not a file", base_path.display()),
+                        None,
+                    )?;
+                }
 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
@@ -87,6 +98,12 @@ fn app() -> Result<()> {
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
                 let update_path = browse_nsp_file().context("no file was selected")?;
+                if !update_path.is_file() {
+                    bail_with_error_dialog(
+                        &format!("{:?} is not a file", update_path.display()),
+                        None,
+                    )?;
+                }
 
                 let base_name = base_path
                     .file_name()
