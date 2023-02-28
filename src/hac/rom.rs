@@ -113,7 +113,10 @@ impl Nsp {
                 }
             }
             if self.title_key.is_none() {
-                bail!("failed to derive title key for {:?}", self.path);
+                bail!(
+                    "Couldn't derive TitleKey, {:?} doesn't have a .tik file",
+                    self.path
+                );
             }
         } else {
             info!("TitleKey has already being derived!");
