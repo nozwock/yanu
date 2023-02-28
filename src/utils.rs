@@ -2,7 +2,7 @@
 use native_dialog::FileDialog;
 use std::path::PathBuf;
 
-use crate::defines::keys_path;
+use crate::defines::get_keyset_path;
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn browse_nsp_file() -> Option<PathBuf> {
@@ -26,7 +26,7 @@ pub fn str_truncate(s: &str, new_len: usize) -> &str {
 }
 
 pub fn keys_exists() -> Option<()> {
-    if !keys_path().ok()?.is_file() {
+    if !get_keyset_path().ok()?.is_file() {
         return None;
     }
     Some(())
@@ -34,7 +34,6 @@ pub fn keys_exists() -> Option<()> {
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn bail_with_error_dialog(msg: &str, title: Option<&str>) -> anyhow::Result<()> {
-    tracing::error!("{}", msg);
     native_dialog::MessageDialog::new()
         .set_type(native_dialog::MessageType::Error)
         .set_title(title.unwrap_or("Error occurred!"))

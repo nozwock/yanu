@@ -1,5 +1,5 @@
 use crate::{
-    defines::keys_path,
+    defines::get_keyset_path,
     hac::{
         backend::Backend,
         rom::{Nca, NcaType},
@@ -163,7 +163,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     fs::remove_dir_all(update_data_path)?;
     update.extracted_data = None;
 
-    let keyset_path = keys_path()?;
+    let keyset_path = get_keyset_path()?;
     base_nca.title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs & exefs into a single NCA");
     if !Command::new(&hacpack)

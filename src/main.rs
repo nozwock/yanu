@@ -1,20 +1,33 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::fs;
-use tracing::info;
+use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{app_config_dir, keys_path},
+    defines::{app_config_dir, get_keyset_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keys_exists,
 };
 
 fn main() -> Result<()> {
+    match app() {
+        Ok(_) => {
+            info!("Done");
+            Ok(())
+        }
+        Err(err) => {
+            error!("{}", err.to_string());
+            bail!(err.to_string());
+        }
+    }
+}
+
+fn app() -> Result<()> {
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
@@ -22,19 +35,20 @@ fn main() -> Result<()> {
         .with_writer(non_blocking)
         .init();
 
-    let config: Config = confy::load_path(app_config_dir())?;
+    let mut config: Config = confy::load_path(app_config_dir())?;
 
     let cli = YanuCli::parse();
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
             // Cli mode
+            // ! Yet to handle keys
+            info!("Started patching!");
             println!(
                 "Patched file saved as:\n{:?}",
                 patch_nsp_with_update(&mut Nsp::from(cli.base)?, &mut Nsp::from(cli.update)?)?
                     .path
                     .display()
             );
-            info!("Done");
         }
         None => {
             // Interactive mode
@@ -53,9 +67,10 @@ fn main() -> Result<()> {
                     info!("Selected keys {:?}", path.display());
 
                     //? maybe validate if it's indeed prod.keys
-                    let keyset_path = keys_path()?;
+                    let keyset_path = get_keyset_path()?;
                     fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
                     fs::copy(path, keyset_path)?;
+                    info!("Copied keys successfully to the C2 ^-^");
                 }
 
                 MessageDialog::new()
@@ -92,12 +107,12 @@ fn main() -> Result<()> {
                     .show_confirm()?
                 {
                     true => {
+                        info!("Started patching!");
                         match patch_nsp_with_update(
                             &mut Nsp::from(&base_path)?,
                             &mut Nsp::from(&update_path)?,
                         ) {
                             Ok(patched) => {
-                                info!("Done");
                                 MessageDialog::new()
                                     .set_type(MessageType::Info)
                                     .set_title("Done patching!")
@@ -118,48 +133,71 @@ fn main() -> Result<()> {
 
             #[cfg(target_os = "android")]
             {
-                use anyhow::bail;
                 use std::{ffi::OsStr, path::PathBuf};
-                use tracing::error;
+
+                if config.roms_dir.is_none() {
+                    let roms_dir = PathBuf::from(
+                        inquire::Text::new("Enter the path to a folder:")
+                            .with_help_message(
+                                "This folder will be used to search for roms to update.",
+                            )
+                            .prompt()?,
+                    );
+                    info!("Selected roms_dir {:?}", roms_dir);
+                    match roms_dir.is_dir() {
+                        true => {
+                            info!("Updating config");
+                            config.roms_dir = Some(roms_dir);
+                            confy::store_path(app_config_dir(), config)?;
+                        }
+                        false => {
+                            bail!("Invalid path {:?}", roms_dir);
+                        }
+                    }
+                }
+
+                // TODO: handle keys import
 
                 if keys_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
-                        "Failed to find keys! Please enter the path to your `prod.keys`:",
+                        "Failed to find keys!\nPlease enter the path to your `prod.keys`:",
                     )
                     .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
                     .prompt()?);
-
-                    let to = keys_path()?;
-                    fs::create_dir_all(to.parent().context("where ma parents?")?)?;
                     info!("Selected keys {:?}", path.display());
+
+                    let keyset_path = get_keyset_path()?;
+                    fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
                     match path.extension().and_then(OsStr::to_str) {
                         Some("keys") => {}
                         _ => bail!("no keys were selected"),
                     }
-                    fs::copy(path, to)?;
+                    fs::copy(path, keyset_path)?;
+                    info!("Copied keys successfully to the C2 ^-^");
                 }
 
                 let mut base = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter Base pkg path:").prompt()?,
+                    inquire::Text::new("Enter Base package path:").prompt()?,
                 ))?;
                 let mut update = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter Update pkg path:").prompt()?,
+                    inquire::Text::new("Enter Update package path:").prompt()?,
                 ))?;
 
                 match inquire::Confirm::new("Are you sure?")
                     .with_default(true)
                     .prompt()?
                 {
-                    true => match patch_nsp_with_update(&mut base, &mut update) {
-                        Ok(patched) => {
-                            info!("Done");
-                            println!("Patched file saved as:\n{:?}", patched.path.display());
+                    true => {
+                        info!("Started patching!");
+                        match patch_nsp_with_update(&mut base, &mut update) {
+                            Ok(patched) => {
+                                println!("Patched file saved as:\n{:?}", patched.path.display());
+                            }
+                            Err(err) => {
+                                bail!("{}", err.to_string());
+                            }
                         }
-                        Err(err) => {
-                            error!("{}", err.to_string());
-                            println!("{}", err.to_string());
-                        }
-                    },
+                    }
                     false => println!("yanu exited"),
                 }
             }

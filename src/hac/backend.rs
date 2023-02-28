@@ -76,11 +76,13 @@ pub fn make_hacpack() -> Result<PathBuf> {
         bail!("failed to clone hacPack repo");
     }
 
+    info!("Renaming config file");
     fs::rename(
         src_dir.join("config.mk.template"),
         src_dir.join("config.mk"),
     )?;
 
+    info!("Running make");
     if !Command::new("make")
         .current_dir(&src_dir)
         .status()?
@@ -110,6 +112,7 @@ pub fn make_hactool() -> Result<PathBuf> {
         bail!("failed to clone hactool repo");
     }
 
+    info!("Renaming config file");
     fs::rename(
         src_dir.join("config.mk.template"),
         src_dir.join("config.mk"),
@@ -120,6 +123,7 @@ pub fn make_hactool() -> Result<PathBuf> {
     {
         use std::io::{BufRead, BufReader};
 
+        info!("Removing line 372 from `main.c`");
         let reader = BufReader::new(fs::File::open(src_dir.join("main.c"))?);
         //* can't use advance_by yet
         let fixed_main = reader
@@ -137,6 +141,7 @@ pub fn make_hactool() -> Result<PathBuf> {
         fs::write(src_dir.join("main.c"), fixed_main.as_bytes())?;
     }
 
+    info!("Running make");
     if !Command::new("make")
         .current_dir(&src_dir)
         .status()?

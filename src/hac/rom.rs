@@ -61,6 +61,7 @@ impl Nsp {
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let hactool = Backend::Hactool.path()?;
 
+        info!("Extracting {:?}", &self.path);
         if !Command::new(hactool)
             .args([
                 "-t",

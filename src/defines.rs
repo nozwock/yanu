@@ -23,7 +23,7 @@ pub fn app_config_dir() -> PathBuf {
     dirs::config_dir().unwrap_or_default().join(APP_DIR)
 }
 
-pub fn keys_path() -> Result<PathBuf> {
+pub fn get_keyset_path() -> Result<PathBuf> {
     Ok(dirs::home_dir()
         .context("home dir not found")?
         .join(".switch")
