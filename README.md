@@ -48,7 +48,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Winshit :toilet:
 
-- Then just download & run.
+- Just download & run.
 
 > Some AVs might false positively flag the program tho, deal with it.</br>
 > Use these if you're paranoid ig :weary: -
@@ -57,4 +57,5 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ---
 
-Credits to [hactool](https://github.com/SciresM/hactool) and [hacPack](https://github.com/The-4n/hacPack).
+Credits to [hactool](https://github.com/SciresM/hactool) and [hacPack](https://github.com/The-4n/hacPack).</br>
+Used [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
