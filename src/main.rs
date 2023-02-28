@@ -66,6 +66,9 @@ fn app() -> Result<()> {
                         .context("no key was selected")?;
                     info!("Selected keys {:?}", path.display());
 
+                    // ! native dialog allows for dir to be picked (prob a bug)
+                    // ! handle this soon
+
                     //? maybe validate if it's indeed prod.keys
                     let keyset_path = get_keyset_path()?;
                     fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;

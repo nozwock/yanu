@@ -40,7 +40,7 @@ impl fmt::Display for NcaType {
 #[derive(Debug, Clone)]
 pub struct Nca {
     pub path: PathBuf,
-    pub title_id: String,
+    pub title_id: Option<String>,
     pub content_type: NcaType,
 }
 
@@ -73,7 +73,7 @@ impl Nsp {
             .status()?
             .success()
         {
-            bail!("hactool failed to extract {:?}", path.as_ref());
+            bail!("failed to extract {:?}", path.as_ref());
         }
         self.extracted_data = Some(path.as_ref().to_owned());
 
@@ -120,6 +120,12 @@ impl Nsp {
         }
 
         Ok(())
+    }
+    pub fn get_title_key(&self) -> String {
+        match self.title_key {
+            Some(ref key) => key.to_string(),
+            None => "=".to_string(),
+        }
     }
 }
 
@@ -179,7 +185,7 @@ impl Nca {
 
         Ok(Self {
             path: path.as_ref().to_owned(),
-            title_id: title_id.expect("title id should've been found"),
+            title_id,
             content_type: content_type.expect("content type should've been found"),
         })
     }

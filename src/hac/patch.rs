@@ -10,7 +10,7 @@ use super::rom::Nsp;
 use anyhow::{bail, Context, Result};
 use std::{env, ffi::OsStr, fs, path::PathBuf, process::Command};
 use tempdir::TempDir;
-use tracing::info;
+use tracing::{info, warn};
 use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
@@ -19,10 +19,29 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
-    base.derive_title_key()?; //? might need a change in future!? (err handling)
-    update.derive_title_key()?;
+    if let Err(err) = base.derive_title_key() {
+        warn!(
+            "This error is not being handeled right away!\n{}",
+            err.to_string()
+        );
+    } //? might need a change in future!? (err handling)
+    if let Err(err) = update.derive_title_key() {
+        warn!(
+            "This error is not being handeled right away!\n{}",
+            err.to_string()
+        );
+    }
     //* sadly, need to cleanup the dir/files created via this manually...
     //* need to look this up
+
+    let base_data_path = base
+        .extracted_data
+        .as_ref()
+        .context(format!("failed to extract {:?}", base.path))?;
+    let update_data_path = update
+        .extracted_data
+        .as_ref()
+        .context(format!("failed to extract {:?}", update.path))?;
 
     let switch_dir = dirs::home_dir()
         .context("failed to find home dir")?
@@ -33,21 +52,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     info!("Saving TitleKeys in {:?}", title_keys_path.display());
     fs::write(
         &title_keys_path,
-        format!(
-            "{}\n{}",
-            base.title_key.as_ref().unwrap().to_string(),
-            update.title_key.as_ref().unwrap().to_string()
-        ),
+        format!("{}\n{}", base.get_title_key(), update.get_title_key()),
     )?;
-
-    let base_data_path = base
-        .extracted_data
-        .as_ref()
-        .context("failed to extract the base nsp")?;
-    let update_data_path = update
-        .extracted_data
-        .as_ref()
-        .context("failed to extract the update nsp")?;
 
     let mut base_nca: Option<Nca> = None;
     for entry in WalkDir::new(base_data_path)
@@ -66,14 +72,20 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
-                let nca = Nca::from(entry.path())?;
-                match nca.content_type {
-                    NcaType::Program => {
-                        base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
-                        break;
+                match Nca::from(entry.path()) {
+                    Ok(nca) => {
+                        match nca.content_type {
+                            NcaType::Program => {
+                                base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
+                                break;
+                            }
+                            _ => {}
+                        };
                     }
-                    _ => {}
-                };
+                    Err(err) => {
+                        warn!("{}", err.to_string());
+                    }
+                }
             }
             _ => {}
         }
@@ -97,9 +109,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .filter_map(|e| e.ok())
     {
         match entry.path().extension().and_then(OsStr::to_str) {
-            Some("nca") => {
-                let nca = Nca::from(entry.path())?;
-                match nca.content_type {
+            Some("nca") => match Nca::from(entry.path()) {
+                Ok(nca) => match nca.content_type {
                     NcaType::Control => {
                         if control_nca.is_none() {
                             control_nca = Some(nca);
@@ -111,8 +122,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
                         }
                     }
                     _ => {}
+                },
+                Err(err) => {
+                    warn!("{}", err.to_string());
                 }
-            }
+            },
             _ => {}
         }
     }
@@ -123,11 +137,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     info!(
-        "Extracting romfs & exefs of {:?} & {:?}",
+        "Extracting romfs and exefs from: {:?} {:?}",
         base_nca.path.display(),
         update_nca.path.display()
     );
-    if !Command::new(&hactool)
+    let status = Command::new(&hactool)
         .args([
             "--basenca",
             &base_nca.path.to_string_lossy(),
@@ -137,13 +151,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--exefsdir",
             &exefs_dir.to_string_lossy(),
         ])
-        .status()?
-        .success()
-    {
-        bail!(
-            "failed to extract romfs & exefs of {:?} & {:?}",
-            base_nca.path.display(),
-            update_nca.path.display()
+        .status()?;
+    if !status.success() {
+        warn!(
+            "The proccess responsible for extracting romfs/exefs terminated improperly {:?} (This might result in a crash!)",
+            status.code()
         );
     }
 
@@ -164,7 +176,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     update.extracted_data = None;
 
     let keyset_path = get_keyset_path()?;
-    base_nca.title_id.truncate(TITLEID_SZ as _);
+    let mut title_id = base_nca.title_id.expect("base NCA must have title_id");
+    title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs & exefs into a single NCA");
     if !Command::new(&hacpack)
         .args([
@@ -180,7 +193,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--romfsdir",
             &romfs_dir.to_string_lossy(),
             "--titleid",
-            &base_nca.title_id,
+            &title_id,
             "--outdir",
             &nca_dir.to_string_lossy(),
         ])
@@ -220,7 +233,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--controlnca",
             &control_nca.path.to_string_lossy(),
             "--titleid",
-            &base_nca.title_id,
+            &title_id,
             "--outdir",
             &nca_dir.to_string_lossy(),
         ])
@@ -246,7 +259,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             .join("storage")
             .join("shared");
     }
-    let patched_nsp_path = outdir.join(format!("{}.nsp", base_nca.title_id));
+    let patched_nsp_path = outdir.join(format!("{}.nsp", title_id));
 
     info!(
         "Packing all 3 NCAs into a NSP as {:?}",
@@ -261,7 +274,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--ncadir",
             &nca_dir.to_string_lossy(),
             "--titleid",
-            &base_nca.title_id,
+            &title_id,
             "--outdir",
             &outdir.to_string_lossy(),
         ])
