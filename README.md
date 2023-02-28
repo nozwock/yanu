@@ -46,12 +46,11 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
    chmod +x yanu-x86_64-unknown-linux-musl
    ```
 
-### Windows
+### Winshit :toilet:
 
 - Just download & run.
 
-> Some AVs might false positively flag the program tho, deal with it.
->
+> Some AVs might false positively flag the program tho, deal with it.</br>
 > Use these if you're paranoid ig :weary: -
 > - https://www.virustotal.com
 > - https://www.hybrid-analysis.com 
