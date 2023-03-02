@@ -19,29 +19,26 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
-    if let Err(err) = base.derive_title_key() {
+    let base_data_path = TempDir::new("basedata")?;
+    let update_data_path = TempDir::new("updatedata")?;
+    fs::create_dir_all(base_data_path.path())?;
+    fs::create_dir_all(update_data_path.path())?;
+
+    base.extract_data_to(base_data_path.path())?;
+    update.extract_data_to(update_data_path.path())?;
+
+    if let Err(err) = base.derive_title_key(base_data_path.path()) {
         warn!(
-            "This error is not being handeled right away!\n{}",
-            err.to_string()
-        );
-    } //? might need a change in future!? (err handling)
-    if let Err(err) = update.derive_title_key() {
-        warn!(
-            "This error is not being handeled right away!\n{}",
+            "This error is not being handeled right away! {:?}",
             err.to_string()
         );
     }
-    //* sadly, need to cleanup the dir/files created via this manually...
-    //* need to look this up
-
-    let base_data_path = base
-        .extracted_data
-        .as_ref()
-        .context(format!("failed to extract {:?}", base.path))?;
-    let update_data_path = update
-        .extracted_data
-        .as_ref()
-        .context(format!("failed to extract {:?}", update.path))?;
+    if let Err(err) = update.derive_title_key(update_data_path.path()) {
+        warn!(
+            "This error is not being handeled right away! {:?}",
+            err.to_string()
+        );
+    }
 
     let switch_dir = dirs::home_dir()
         .context("failed to find home dir")?
@@ -56,7 +53,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     )?;
 
     let mut base_nca: Option<Nca> = None;
-    for entry in WalkDir::new(base_data_path)
+    for entry in WalkDir::new(base_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
                 .expect(&format!("failed to read metadata for {:?}", a.path()))
@@ -94,7 +91,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
-    for entry in WalkDir::new(update_data_path)
+    for entry in WalkDir::new(update_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
                 .expect(&format!("failed to read metadata for {:?}", a.path()))
@@ -167,13 +164,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     )?;
     control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
 
-    // cleanup
-    info!("Cleaning up {:?}", base_data_path.to_string_lossy());
-    fs::remove_dir_all(base_data_path)?;
-    base.extracted_data = None;
-    info!("Cleaning up {:?}", update_data_path.to_string_lossy());
-    fs::remove_dir_all(update_data_path)?;
-    update.extracted_data = None;
+    // Early cleanup
+    info!("Cleaning up {:?}", base_data_path.path().display());
+    drop(base_data_path);
+    info!("Cleaning up {:?}", update_data_path.path().display());
+    drop(update_data_path);
 
     let keyset_path = get_keyset_path()?;
     let mut title_id = base_nca.title_id.expect("base NCA must have title_id");

@@ -1,6 +1,6 @@
 use std::{
     ffi::OsStr,
-    fmt, fs,
+    fmt,
     path::{Path, PathBuf},
     process::Command,
     str::FromStr,
@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use strum_macros::EnumString;
-use tempdir::TempDir;
 use tracing::{debug, info};
 use walkdir::WalkDir;
 
@@ -20,7 +19,6 @@ use super::ticket::{self, TitleKey};
 pub struct Nsp {
     pub path: PathBuf,
     pub title_key: Option<TitleKey>,
-    pub extracted_data: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, EnumString)]
@@ -75,7 +73,6 @@ impl Nsp {
         {
             bail!("failed to extract {:?}", path.as_ref());
         }
-        self.extracted_data = Some(path.as_ref().to_owned());
 
         info!(
             "{:?} has been extracted in {:?}",
@@ -85,24 +82,10 @@ impl Nsp {
 
         Ok(())
     }
-    pub fn derive_title_key(&mut self) -> Result<()> {
-        let temp_dir: PathBuf;
-
-        if self.extracted_data.is_none() {
-            temp_dir = TempDir::new("nspdata")?.into_path();
-            fs::create_dir_all(&temp_dir)?;
-            self.extract_data_to(&temp_dir)?;
-        } else {
-            temp_dir = self
-                .extracted_data
-                .as_ref()
-                .expect("data must've been extracted")
-                .to_path_buf();
-        }
-
+    pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
             info!("Deriving title key for {:?}", self.path.display());
-            for entry in WalkDir::new(&temp_dir) {
+            for entry in WalkDir::new(data_path.as_ref()) {
                 let entry = entry?;
                 match entry.path().extension().and_then(OsStr::to_str) {
                     Some("tik") => {
