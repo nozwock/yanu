@@ -7,7 +7,7 @@ use std::{
 use tracing::debug;
 
 use crate::defines::app_cache_dir;
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(target_os = "windows")]
 use crate::defines::{HACPACK, HACTOOL};
 
 #[derive(Debug, Clone, Copy)]
@@ -45,7 +45,7 @@ impl Cache {
         Ok(self)
     }
     /// Extracts the embedded files to the cache dir
-    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    #[cfg(target_os = "windows")]
     pub fn from_embed(self) -> Result<Self> {
         debug!("Extracting and caching {:?} from embed", self);
 
@@ -118,7 +118,7 @@ impl Cache {
 
         bail!("{:?} isn't cached", file_name);
     }
-    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    #[cfg(target_os = "windows")]
     fn as_bytes(&self) -> &'static [u8] {
         match self {
             Cache::Hacpack => HACPACK,
