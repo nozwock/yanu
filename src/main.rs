@@ -10,7 +10,7 @@ use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     defines::{app_config_dir, get_keyset_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::keyset_exists,
+    utils::keyfile_exists,
 };
 
 fn main() -> Result<()> {
@@ -39,26 +39,27 @@ fn app() -> Result<()> {
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
             // Cli mode
-            match cli.keyset {
-                Some(keyset) => {
-                    let keyset_path = PathBuf::from(keyset);
-                    if keyset_path
+            match cli.keyfile {
+                Some(keyfile) => {
+                    let keyfile_path = PathBuf::from(keyfile);
+                    if keyfile_path
                         .extension()
                         .and_then(OsStr::to_str)
-                        .context("File must have an extension")?
+                        .context("File should've an extension")?
                         != "keys"
                     {
-                        bail!("Invalid keys");
+                        bail!("Invalid keyfile");
                     }
 
+                    info!("Selected keyfile {:?}", keyfile_path.display());
                     let to = get_keyset_path()?;
-                    fs::create_dir_all(to.parent().context("where ma parents?")?)?;
-                    fs::copy(keyset_path, to)?;
+                    fs::create_dir_all(to.parent().context("Failed to find parent")?)?;
+                    fs::copy(keyfile_path, to)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
                 None => {
-                    if keyset_exists().is_none() {
-                        bail!("Failed to find keys");
+                    if keyfile_exists().is_none() {
+                        bail!("Failed to find keyfile");
                     }
                 }
             }
@@ -75,17 +76,17 @@ fn app() -> Result<()> {
             // Interactive mode
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
-                if keyset_exists().is_none() {
+                if keyfile_exists().is_none() {
                     MessageDialog::new()
                         .set_type(MessageType::Warning)
-                        .set_title("Failed to find keys!")
-                        .set_text("Please select your `prod.keys` to continue further")
+                        .set_title("Failed to find keyfile!")
+                        .set_text("Please select `prod.keys` keyfile to continue")
                         .show_alert()?;
                     let path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
-                        .context("no key was selected")?;
-                    info!("Selected keys {:?}", path.display());
+                        .context("No keyfile was selected")?;
+                    info!("Selected keyfile {:?}", path.display());
 
                     // native dialog allows for dir to be picked (prob a bug)
                     if !path.is_file() {
@@ -97,17 +98,17 @@ fn app() -> Result<()> {
 
                     //? maybe validate if it's indeed prod.keys
                     let keyset_path = get_keyset_path()?;
-                    fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
+                    fs::create_dir_all(keyset_path.parent().context("Failed to find parent")?)?;
                     fs::copy(path, keyset_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
-                    .set_title("yanu")
+                    .set_title("yanu • BASE")
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
-                let base_path = browse_nsp_file().context("no file was selected")?;
+                let base_path = browse_nsp_file().context("No file was selected")?;
                 if !base_path.is_file() {
                     bail_with_error_dialog(
                         &format!("{:?} is not a file", base_path.display()),
@@ -117,10 +118,10 @@ fn app() -> Result<()> {
 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
-                    .set_title("yanu")
+                    .set_title("yanu • UPDATE")
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
-                let update_path = browse_nsp_file().context("no file was selected")?;
+                let update_path = browse_nsp_file().context("No file was selected")?;
                 if !update_path.is_file() {
                     bail_with_error_dialog(
                         &format!("{:?} is not a file", update_path.display()),
@@ -130,11 +131,11 @@ fn app() -> Result<()> {
 
                 let base_name = base_path
                     .file_name()
-                    .expect("A nsp file must've been selected by the file picker")
+                    .expect("Path should've a filename")
                     .to_string_lossy();
                 let update_name = update_path
                     .file_name()
-                    .expect("A nsp file must've been selected by the file picker")
+                    .expect("Path should've a filename")
                     .to_string_lossy();
 
                 match MessageDialog::new()
@@ -176,19 +177,19 @@ fn app() -> Result<()> {
             {
                 use std::{ffi::OsStr, path::PathBuf};
 
-                if keyset_exists().is_none() {
+                if keyfile_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
-                        "Failed to find keys!\nPlease enter the path to your `prod.keys`:",
+                        "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
                     )
                     .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
                     .prompt()?);
                     info!("Selected keys {:?}", path.display());
 
                     let keyset_path = get_keyset_path()?;
-                    fs::create_dir_all(keyset_path.parent().context("where ma parents?")?)?;
+                    fs::create_dir_all(keyset_path.parent().context("Failed to find parent")?)?;
                     match path.extension().and_then(OsStr::to_str) {
                         Some("keys") => {}
-                        _ => bail!("no keys were selected"),
+                        _ => bail!("No keyfile was selected"),
                     }
                     fs::copy(path, keyset_path)?;
                     info!("Copied keys successfully to the C2 ^-^");

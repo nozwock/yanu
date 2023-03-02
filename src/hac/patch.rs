@@ -41,7 +41,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     }
 
     let switch_dir = dirs::home_dir()
-        .context("failed to find home dir")?
+        .context("Failed to find home dir")?
         .join(".switch");
     fs::create_dir_all(&switch_dir)?;
     let title_keys_path = switch_dir.join("title.keys");
@@ -56,11 +56,11 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     for entry in WalkDir::new(base_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
-                .expect(&format!("failed to read metadata for {:?}", a.path()))
+                .expect(&format!("Failed to read metadata for {:?}", a.path()))
                 .len()
                 .cmp(
                     &b.metadata()
-                        .expect(&format!("failed to read metadata for {:?}", b.path()))
+                        .expect(&format!("Failed to read metadata for {:?}", b.path()))
                         .len(),
                 )
         })
@@ -87,18 +87,18 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             _ => {}
         }
     }
-    let mut base_nca = base_nca.expect("base NCA must exist");
+    let mut base_nca = base_nca.expect("Base NCA should exist");
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
     for entry in WalkDir::new(update_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
-                .expect(&format!("failed to read metadata for {:?}", a.path()))
+                .expect(&format!("Failed to read metadata for {:?}", a.path()))
                 .len()
                 .cmp(
                     &b.metadata()
-                        .expect(&format!("failed to read metadata for {:?}", b.path()))
+                        .expect(&format!("Failed to read metadata for {:?}", b.path()))
                         .len(),
                 )
         })
@@ -127,8 +127,8 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             _ => {}
         }
     }
-    let update_nca = update_nca.expect("update NCA must exist");
-    let mut control_nca = control_nca.expect("control NCA must exist");
+    let update_nca = update_nca.expect("Update NCA should exist");
+    let mut control_nca = control_nca.expect("Control NCA should exist");
 
     let patch_dir = TempDir::new("patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -151,7 +151,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .status()?;
     if !status.success() {
         warn!(
-            "The proccess responsible for extracting romfs/exefs terminated improperly {:?} (This might result in a crash!)",
+            "The proccess responsible for extracting romfs/exefs terminated improperly \"{:?}\" (This might result in a crash!)",
             status.code()
         );
     }
@@ -160,9 +160,9 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     fs::create_dir_all(&nca_dir)?;
     fs::rename(
         &control_nca.path,
-        &nca_dir.join(control_nca.path.file_name().expect("NCA file must exist")),
+        &nca_dir.join(control_nca.path.file_name().expect("File should've a name")),
     )?;
-    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("NCA file must exist"));
+    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("File should've a name"));
 
     // Early cleanup
     info!("Cleaning up {:?}", base_data_path.path().display());
@@ -171,7 +171,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     drop(update_data_path);
 
     let keyset_path = get_keyset_path()?;
-    let mut title_id = base_nca.title_id.expect("base NCA must have title_id");
+    let mut title_id = base_nca.title_id.expect("Base NCA should've TitleID");
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
     if !Command::new(&hacpack)
@@ -195,7 +195,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .status()?
         .success()
     {
-        bail!("failed to pack romfs/exefs into a single NCA");
+        bail!("Failed to pack romfs/exefs into a single NCA");
     }
 
     let mut pactched_nca: Option<Nca> = None;
@@ -235,7 +235,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .status()?
         .success()
     {
-        bail!("failed to generate Meta NCA from patched NCA & control NCA");
+        bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
     // TODO: need to rewrite this aswell, prolly just take outdir as an arg in the fn
@@ -244,13 +244,13 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     {
         outdir = env::current_exe()?
             .parent()
-            .expect("can't access parent dir of yanu")
+            .expect("Failed to find parent")
             .to_owned();
     }
     #[cfg(target_os = "android")]
     {
         outdir = dirs::home_dir()
-            .context("couldn't access home dir")?
+            .context("Failed to find home dir")?
             .join("storage")
             .join("shared");
     }
@@ -276,7 +276,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .status()?
         .success()
     {
-        bail!("Packing all 3 NCAs into a NSP");
+        bail!("Failed to Pack all 3 NCAs into a NSP");
     }
 
     Ok(Nsp::from(patched_nsp_path)?)

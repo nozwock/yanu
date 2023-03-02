@@ -44,10 +44,17 @@ pub struct Nca {
 
 impl Nsp {
     pub fn from<P: AsRef<Path>>(path: P) -> Result<Self> {
-        if path.as_ref().extension().context("no file found")? != "nsp" {
+        if path
+            .as_ref()
+            .extension()
+            .context("Failed to get file extension")?
+            != "nsp"
+        {
             bail!(
                 "{:?} is not a nsp file",
-                path.as_ref().file_name().context("no file found")?
+                path.as_ref()
+                    .file_name()
+                    .context("Failed to get filename")?
             );
         }
 
@@ -71,7 +78,7 @@ impl Nsp {
             .status()?
             .success()
         {
-            bail!("failed to extract {:?}", path.as_ref());
+            bail!("Failed to extract {:?}", path.as_ref());
         }
 
         info!(
@@ -117,10 +124,17 @@ impl Nsp {
 
 impl Nca {
     pub fn from<P: AsRef<Path>>(path: P) -> Result<Self> {
-        if path.as_ref().extension().context("no file found")? != "nca" {
+        if path
+            .as_ref()
+            .extension()
+            .context("Failed to get file extension")?
+            != "nca"
+        {
             bail!(
                 "{:?} is not a nca file",
-                path.as_ref().file_name().context("no file found")?
+                path.as_ref()
+                    .file_name()
+                    .context("Failed to get filename")?
             );
         }
 
@@ -133,7 +147,7 @@ impl Nca {
 
         let output = Command::new(&hactool).args([path.as_ref()]).output()?;
         if !output.status.success() {
-            bail!("hactool failed to view info of {:?}", path.as_ref());
+            bail!("Hactool failed to view info of {:?}", path.as_ref());
         }
 
         let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
@@ -144,7 +158,7 @@ impl Nca {
                     line.trim()
                         .split(' ')
                         .last()
-                        .expect("line must've had an item")
+                        .expect("TitleID line should've an item")
                         .into(),
                 );
                 debug!("Title ID: {:?}", title_id);
@@ -160,9 +174,9 @@ impl Nca {
                         line.trim()
                             .split(' ')
                             .last()
-                            .expect("line must've had an item"),
+                            .expect("ContentType line should've an item"),
                     )
-                    .context("failed to identify nca content type")?,
+                    .context("Failed to identify NCA content type")?,
                 );
                 debug!("Content Type: {:?}", content_type);
                 break;
@@ -172,7 +186,7 @@ impl Nca {
         Ok(Self {
             path: path.as_ref().to_owned(),
             title_id,
-            content_type: content_type.expect("content type should've been found"),
+            content_type: content_type.expect("NCA should've a ContentType"),
         })
     }
 }

@@ -73,7 +73,7 @@ impl Cache {
             }
         }
 
-        bail!("failed to find {:?} in cache", self);
+        bail!("Failed to find {:?} in cache", self);
     }
     /// chmod +x
     #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -96,7 +96,7 @@ impl Cache {
             }
         }
 
-        bail!("failed to give executable permission to {:?}", file_path);
+        bail!("Failed to give executable permission to {:?}", file_path);
     }
     pub fn is_cached(&self) -> bool {
         if self._exists().is_ok() {

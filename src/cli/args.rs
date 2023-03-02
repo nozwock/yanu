@@ -25,5 +25,5 @@ pub struct Cli {
     pub update: PathBuf,
     /// Select product keys
     #[arg(short, long, value_name = "FILE")]
-    pub keyset: Option<String>,
+    pub keyfile: Option<String>,
 }

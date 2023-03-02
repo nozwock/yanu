@@ -73,7 +73,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("failed to clone hacPack repo");
+        bail!("Failed to clone hacPack repo");
     }
 
     info!("Renaming config file");
@@ -88,7 +88,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("failed to build hacPack");
+        bail!("Failed to build hacPack");
     }
 
     Ok(src_dir.join("hacpack"))
@@ -109,7 +109,7 @@ pub fn make_hactool() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("failed to clone hactool repo");
+        bail!("Failed to clone hactool repo");
     }
 
     info!("Renaming config file");
@@ -147,7 +147,7 @@ pub fn make_hactool() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("failed to build hactool");
+        bail!("Failed to build hactool");
     }
 
     Ok(src_dir.join("hactool"))

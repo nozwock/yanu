@@ -18,12 +18,12 @@ pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
         .status()?
         .success()
     {
-        bail!("failed to get file from storage");
+        bail!("Failed to get file from storage");
     }
 
     // making sure the file is copied ;-;
     if !output.as_ref().is_file() {
-        bail!("failed to get file from storage");
+        bail!("Failed to get file from storage");
     } else {
         info!("Copied file as {:?}", output.as_ref());
     }
