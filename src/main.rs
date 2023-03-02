@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
-use std::{ffi::OsStr, fs, path::PathBuf};
+use std::{env, ffi::OsStr, fs, path::PathBuf};
 use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
@@ -67,9 +67,13 @@ fn app() -> Result<()> {
             info!("Started patching!");
             println!(
                 "\nPatched file saved as:\n{:?}",
-                patch_nsp_with_update(&mut Nsp::from(cli.base)?, &mut Nsp::from(cli.update)?)?
-                    .path
-                    .display()
+                patch_nsp_with_update(
+                    &mut Nsp::from(cli.base)?,
+                    &mut Nsp::from(cli.update)?,
+                    get_default_outdir()?
+                )?
+                .path
+                .display()
             );
         }
         None => {
@@ -153,6 +157,7 @@ fn app() -> Result<()> {
                         match patch_nsp_with_update(
                             &mut Nsp::from(&base_path)?,
                             &mut Nsp::from(&update_path)?,
+                            get_default_outdir()?,
                         ) {
                             Ok(patched) => {
                                 MessageDialog::new()
@@ -208,7 +213,7 @@ fn app() -> Result<()> {
                 {
                     true => {
                         info!("Started patching!");
-                        match patch_nsp_with_update(&mut base, &mut update) {
+                        match patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?) {
                             Ok(patched) => {
                                 println!("Patched file saved as:\n{:?}", patched.path.display());
                             }
@@ -224,4 +229,28 @@ fn app() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn get_default_outdir() -> Result<PathBuf> {
+    let outdir: PathBuf;
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        outdir = env::current_exe()?
+            .parent()
+            .expect("Failed to find parent")
+            .to_owned();
+    }
+    #[cfg(target_os = "android")]
+    {
+        outdir = dirs::home_dir()
+            .context("Failed to find home dir")?
+            .join("storage")
+            .join("shared");
+    }
+
+    if !outdir.is_dir() {
+        bail!("Failed to set {:?} as outdir", outdir.display());
+    }
+
+    Ok(outdir)
 }

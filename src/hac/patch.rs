@@ -8,14 +8,18 @@ use crate::{
 
 use super::rom::Nsp;
 use anyhow::{bail, Context, Result};
-use std::{env, ffi::OsStr, fs, path::PathBuf, process::Command};
+use std::{ffi::OsStr, fs, path::Path, process::Command};
 use tempdir::TempDir;
 use tracing::{info, warn};
 use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
 
-pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
+pub fn patch_nsp_with_update<O: AsRef<Path>>(
+    base: &mut Nsp,
+    update: &mut Nsp,
+    outdir: O,
+) -> Result<Nsp> {
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
@@ -238,23 +242,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
-    // TODO: need to rewrite this aswell, prolly just take outdir as an arg in the fn
-    let outdir: PathBuf;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    {
-        outdir = env::current_exe()?
-            .parent()
-            .expect("Failed to find parent")
-            .to_owned();
-    }
-    #[cfg(target_os = "android")]
-    {
-        outdir = dirs::home_dir()
-            .context("Failed to find home dir")?
-            .join("storage")
-            .join("shared");
-    }
-    let patched_nsp_path = outdir.join(format!("{}[yanu-patched].nsp", title_id));
+    let patched_nsp_path = outdir.as_ref().join(format!("{}.nsp", title_id));
 
     info!(
         "Packing all 3 NCAs into a NSP as {:?}",
@@ -271,7 +259,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             "--titleid",
             &title_id,
             "--outdir",
-            &outdir.to_string_lossy(),
+            &outdir.as_ref().to_string_lossy(),
         ])
         .status()?
         .success()
