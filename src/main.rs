@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
-use std::fs;
+use std::{ffi::OsStr, fs, path::PathBuf};
 use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
@@ -10,7 +10,7 @@ use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     defines::{app_config_dir, get_keyset_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::keys_exists,
+    utils::keyset_exists,
 };
 
 fn main() -> Result<()> {
@@ -39,10 +39,33 @@ fn app() -> Result<()> {
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
             // Cli mode
-            // ! Yet to handle keys
+            match cli.keyset {
+                Some(keyset) => {
+                    let keyset_path = PathBuf::from(keyset);
+                    if keyset_path
+                        .extension()
+                        .and_then(OsStr::to_str)
+                        .context("File must have an extension")?
+                        != "keys"
+                    {
+                        bail!("Invalid keys");
+                    }
+
+                    let to = get_keyset_path()?;
+                    fs::create_dir_all(to.parent().context("where ma parents?")?)?;
+                    fs::copy(keyset_path, to)?;
+                    info!("Copied keys successfully to the C2 ^-^");
+                }
+                None => {
+                    if keyset_exists().is_none() {
+                        bail!("Failed to find keys");
+                    }
+                }
+            }
+
             info!("Started patching!");
             println!(
-                "Patched file saved as:\n{:?}",
+                "\nPatched file saved as:\n{:?}",
                 patch_nsp_with_update(&mut Nsp::from(cli.base)?, &mut Nsp::from(cli.update)?)?
                     .path
                     .display()
@@ -52,7 +75,7 @@ fn app() -> Result<()> {
             // Interactive mode
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
-                if keys_exists().is_none() {
+                if keyset_exists().is_none() {
                     MessageDialog::new()
                         .set_type(MessageType::Warning)
                         .set_title("Failed to find keys!")
@@ -118,8 +141,8 @@ fn app() -> Result<()> {
                     .set_type(MessageType::Info)
                     .set_title("Is this correct?")
                     .set_text(&format!(
-                        "Selected base pkg: \n\"{}\"\n\
-                        Selected update pkg: \n\"{}\"",
+                        "Selected BASE package: \n\"{}\"\n\
+                        Selected UPDATE package: \n\"{}\"",
                         base_name, update_name
                     ))
                     .show_confirm()?
@@ -153,7 +176,7 @@ fn app() -> Result<()> {
             {
                 use std::{ffi::OsStr, path::PathBuf};
 
-                if keys_exists().is_none() {
+                if keyset_exists().is_none() {
                     let path = PathBuf::from(inquire::Text::new(
                         "Failed to find keys!\nPlease enter the path to your `prod.keys`:",
                     )
@@ -172,10 +195,10 @@ fn app() -> Result<()> {
                 }
 
                 let mut base = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter Base package path:").prompt()?,
+                    inquire::Text::new("Enter BASE package path:").prompt()?,
                 ))?;
                 let mut update = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter Update package path:").prompt()?,
+                    inquire::Text::new("Enter UPDATE package path:").prompt()?,
                 ))?;
 
                 match inquire::Confirm::new("Are you sure?")

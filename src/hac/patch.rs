@@ -137,7 +137,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     info!(
-        "Extracting romfs and exefs from: {:?} {:?}",
+        "Extracting romfs/exefs from: {:?} {:?}",
         base_nca.path.display(),
         update_nca.path.display()
     );
@@ -178,7 +178,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
     let keyset_path = get_keyset_path()?;
     let mut title_id = base_nca.title_id.expect("base NCA must have title_id");
     title_id.truncate(TITLEID_SZ as _);
-    info!("Packing romfs & exefs into a single NCA");
+    info!("Packing romfs/exefs into a single NCA");
     if !Command::new(&hacpack)
         .args([
             "--keyset",
@@ -200,7 +200,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
         .status()?
         .success()
     {
-        bail!("failed to pack romfs & exefs into a single NCA");
+        bail!("failed to pack romfs/exefs into a single NCA");
     }
 
     let mut pactched_nca: Option<Nca> = None;
@@ -259,7 +259,7 @@ pub fn patch_nsp_with_update(base: &mut Nsp, update: &mut Nsp) -> Result<Nsp> {
             .join("storage")
             .join("shared");
     }
-    let patched_nsp_path = outdir.join(format!("{}.nsp", title_id));
+    let patched_nsp_path = outdir.join(format!("{}[yanu-patched].nsp", title_id));
 
     info!(
         "Packing all 3 NCAs into a NSP as {:?}",

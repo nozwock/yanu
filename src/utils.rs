@@ -25,7 +25,7 @@ pub fn str_truncate(s: &str, new_len: usize) -> &str {
     }
 }
 
-pub fn keys_exists() -> Option<()> {
+pub fn keyset_exists() -> Option<()> {
     if !get_keyset_path().ok()?.is_file() {
         return None;
     }
