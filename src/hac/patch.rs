@@ -23,8 +23,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
-    let base_data_path = TempDir::new("basedata")?;
-    let update_data_path = TempDir::new("updatedata")?;
+    let temp_dir = TempDir::new("yanu")?;
+    let base_data_path = TempDir::new_in(&temp_dir, "basedata")?;
+    let update_data_path = TempDir::new_in(&temp_dir, "updatedata")?;
     fs::create_dir_all(base_data_path.path())?;
     fs::create_dir_all(update_data_path.path())?;
 
@@ -134,7 +135,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let update_nca = update_nca.expect("Update NCA should exist");
     let mut control_nca = control_nca.expect("Control NCA should exist");
 
-    let patch_dir = TempDir::new("patch")?;
+    let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     info!(
