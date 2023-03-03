@@ -200,7 +200,7 @@ fn app() -> Result<()> {
                     let roms_dir = PathBuf::from(
                         inquire::Text::new("Enter the path to a directory:")
                             .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
-                            .with_help_message("This directory will be used to look for roms! They will be showed in the Menu GUI.\n\
+                            .with_help_message("This directory will be used to look for ROMs(base/update)! They will be showed in a Menu GUI.\n\
                             Path to an item can be copied through some file managers such as MiXplorer, etc.")
                             .prompt()?,
                     );
@@ -232,7 +232,7 @@ fn app() -> Result<()> {
 
                     if keyfile_path.is_none() {
                         keyfile_path = Some(PathBuf::from(inquire::Text::new(
-                            "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
+                            "Failed to find keyfile!\nEnter the path to `prod.keys` keyfile:",
                         )
                         .with_help_message("This only needs to be done once!\nPath to an item can be copied through some file managers such as MiXplorer, etc.")
                         .prompt()?));
