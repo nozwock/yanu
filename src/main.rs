@@ -201,7 +201,7 @@ fn app() -> Result<()> {
                         inquire::Text::new("Enter the path to a directory:")
                             .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
                             .with_help_message("This directory will be used to look for roms! They will be showed in the Menu GUI.\n\
-                            Path to a file can be copied through some file managers such as MiXplorer, etc.")
+                            Path to an item can be copied through some file managers such as MiXplorer, etc.")
                             .prompt()?,
                     );
                     info!("Set {:?} as roms_dir", roms_dir);
@@ -234,7 +234,7 @@ fn app() -> Result<()> {
                         keyfile_path = Some(PathBuf::from(inquire::Text::new(
                             "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
                         )
-                        .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
+                        .with_help_message("This only needs to be done once!\nPath to an item can be copied through some file managers such as MiXplorer, etc.")
                         .prompt()?));
                     }
 
