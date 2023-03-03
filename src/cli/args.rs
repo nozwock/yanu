@@ -10,7 +10,6 @@ pub struct YanuCli {
 }
 
 #[derive(Debug, Subcommand)]
-#[command(arg_required_else_help = true)]
 pub enum Commands {
     #[command(short_flag = 'c')]
     Cli(Cli),
@@ -20,6 +19,7 @@ pub enum Commands {
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
+#[command(arg_required_else_help = true)]
 pub struct Cli {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]

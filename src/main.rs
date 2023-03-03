@@ -194,8 +194,27 @@ fn app() -> Result<()> {
             #[cfg(target_os = "android")]
             {
                 use std::{ffi::OsStr, path::PathBuf};
+                use walkdir::WalkDir;
+
+                if config.roms_dir.is_none() {
+                    let roms_dir = PathBuf::from(
+                        inquire::Text::new("Enter the path to a directory:")
+                            .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
+                            .with_help_message("This directory will be used to look for roms! They will be showed in the Menu GUI.")
+                            .prompt()?,
+                    );
+                    info!("Set {:?} as roms_dir", roms_dir);
+
+                    if !roms_dir.is_dir() {
+                        bail!("{:?} is not a valid directory", roms_dir);
+                    }
+                    config.roms_dir = Some(roms_dir);
+                    info!("Updating config at {:?}", app_config_path());
+                    confy::store_path(app_config_path(), config.clone())?;
+                }
 
                 if keyfile_exists().is_none() {
+                    // TODO: search for prod.keys in roms_dir
                     let path = PathBuf::from(inquire::Text::new(
                         "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
                     )
@@ -213,12 +232,58 @@ fn app() -> Result<()> {
                     info!("Copied keys successfully to the C2 ^-^");
                 }
 
-                let mut base = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter BASE package path:").prompt()?,
-                ))?;
-                let mut update = Nsp::from(PathBuf::from(
-                    inquire::Text::new("Enter UPDATE package path:").prompt()?,
-                ))?;
+                let roms_dir = config.roms_dir.expect("roms_dir should've been set");
+                let roms_path = WalkDir::new(&roms_dir)
+                    .min_depth(1)
+                    .max_depth(1)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                    .filter(|entry| {
+                        if entry.file_type().is_file()
+                            && entry
+                                .path()
+                                .extension()
+                                .and_then(|s| Some(s.to_ascii_lowercase()))
+                                == Some("nsp".into())
+                        {
+                            return true;
+                        }
+                        false
+                    })
+                    .collect::<Vec<_>>();
+
+                // ! ummm...I don't feel so gud here
+                let mut base: Option<Nsp> = None;
+                let mut options = roms_path
+                    .iter()
+                    .map(|entry| entry.file_name().to_string_lossy())
+                    .collect::<Vec<_>>();
+                let choice =
+                    inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
+                for entry in &roms_path {
+                    if entry.file_name().to_string_lossy() == choice {
+                        base = Some(Nsp::from(entry.path())?);
+                    }
+                }
+                let mut base = base.expect("Selected option should be in roms_path");
+
+                let mut update: Option<Nsp> = None;
+                options = options
+                    .into_iter()
+                    .filter(|s| {
+                        if s == &choice {
+                            return false;
+                        }
+                        true
+                    })
+                    .collect();
+                let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
+                for entry in &roms_path {
+                    if entry.file_name().to_string_lossy() == choice {
+                        update = Some(Nsp::from(entry.path())?);
+                    }
+                }
+                let mut update = update.expect("Selected option should be in roms_path");
 
                 match inquire::Confirm::new("Are you sure?")
                     .with_default(true)
