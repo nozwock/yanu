@@ -18,6 +18,10 @@ pub fn app_config_dir() -> PathBuf {
     dirs::config_dir().unwrap_or_default().join(APP_DIR)
 }
 
+pub fn app_config_path() -> PathBuf {
+    app_config_dir().join("yanu.ron")
+}
+
 pub fn get_keyset_path() -> Result<PathBuf> {
     Ok(dirs::home_dir()
         .context("Failed to find home dir")?

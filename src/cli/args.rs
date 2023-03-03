@@ -10,9 +10,13 @@ pub struct YanuCli {
 }
 
 #[derive(Debug, Subcommand)]
+#[command(arg_required_else_help = true)]
 pub enum Commands {
     #[command(short_flag = 'c')]
     Cli(Cli),
+    /// Manage yanu's config
+    #[command()]
+    Config(Config),
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
@@ -23,7 +27,15 @@ pub struct Cli {
     /// Select update package
     #[arg(short, long, value_name = "FILE")]
     pub update: PathBuf,
-    /// Select product keys
+    /// Select `prod.keys` keyfile
     #[arg(short, long, value_name = "FILE")]
     pub keyfile: Option<String>,
+}
+
+#[derive(Debug, Args, Default, PartialEq, Eq)]
+#[command(arg_required_else_help = true)]
+pub struct Config {
+    /// Set roms directory path
+    #[arg(long, value_name = "PATH")]
+    pub roms_dir: Option<PathBuf>,
 }

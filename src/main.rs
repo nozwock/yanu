@@ -8,7 +8,8 @@ use tracing::{error, info};
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
-    defines::{app_config_dir, get_keyset_path},
+    config::Config,
+    defines::{app_config_path, get_keyset_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keyfile_exists,
 };
@@ -34,6 +35,7 @@ fn main() -> Result<()> {
 }
 
 fn app() -> Result<()> {
+    let mut config: Config = confy::load_path(app_config_path())?;
     let cli = YanuCli::parse();
 
     match cli.command {
@@ -75,6 +77,17 @@ fn app() -> Result<()> {
                 .path
                 .display()
             );
+        }
+        Some(CliArgs::Commands::Config(new_config)) => {
+            if let Some(roms_dir) = new_config.roms_dir {
+                if !roms_dir.is_dir() {
+                    bail!("{:?} is not a valid directory", roms_dir);
+                }
+                config.roms_dir = Some(roms_dir);
+            }
+
+            info!("Updating config at {:?}", app_config_path());
+            confy::store_path(app_config_path(), config)?;
         }
         None => {
             // Interactive mode
