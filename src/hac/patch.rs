@@ -1,5 +1,5 @@
 use crate::{
-    defines::get_keyset_path,
+    defines::get_default_keyfile_path,
     hac::{
         backend::Backend,
         rom::{Nca, NcaType},
@@ -174,7 +174,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     info!("Cleaning up {:?}", update_data_path.path().display());
     drop(update_data_path);
 
-    let keyset_path = get_keyset_path()?;
+    let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca.title_id.expect("Base NCA should've TitleID");
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");

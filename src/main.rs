@@ -9,7 +9,7 @@ use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{app_config_path, get_keyset_path},
+    defines::{app_config_path, get_default_keyfile_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keyfile_exists,
 };
@@ -54,9 +54,9 @@ fn app() -> Result<()> {
                     }
 
                     info!("Selected keyfile {:?}", keyfile_path.display());
-                    let to = get_keyset_path()?;
-                    fs::create_dir_all(to.parent().context("Failed to find parent")?)?;
-                    fs::copy(keyfile_path, to)?;
+                    let default_path = get_default_keyfile_path()?;
+                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    fs::copy(keyfile_path, default_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
                 None => {
@@ -99,24 +99,24 @@ fn app() -> Result<()> {
                         .set_title("Failed to find keyfile!")
                         .set_text("Please select `prod.keys` keyfile to continue")
                         .show_alert()?;
-                    let path = native_dialog::FileDialog::new()
+                    let keyfile_path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
                         .context("No keyfile was selected")?;
-                    info!("Selected keyfile {:?}", path.display());
+                    info!("Selected keyfile {:?}", keyfile_path.display());
 
                     // native dialog allows for dir to be picked (prob a bug)
-                    if !path.is_file() {
+                    if !keyfile_path.is_file() {
                         bail_with_error_dialog(
-                            &format!("{:?} is not a file", path.display()),
+                            &format!("{:?} is not a file", keyfile_path.display()),
                             None,
                         )?;
                     }
 
                     //? maybe validate if it's indeed prod.keys
-                    let keyset_path = get_keyset_path()?;
-                    fs::create_dir_all(keyset_path.parent().context("Failed to find parent")?)?;
-                    fs::copy(path, keyset_path)?;
+                    let default_path = get_default_keyfile_path()?;
+                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    fs::copy(keyfile_path, default_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
 
@@ -200,7 +200,8 @@ fn app() -> Result<()> {
                     let roms_dir = PathBuf::from(
                         inquire::Text::new("Enter the path to a directory:")
                             .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
-                            .with_help_message("This directory will be used to look for roms! They will be showed in the Menu GUI.")
+                            .with_help_message("This directory will be used to look for roms! They will be showed in the Menu GUI.\n\
+                            Path to a file can be copied through some file managers such as MiXplorer, etc.")
                             .prompt()?,
                     );
                     info!("Set {:?} as roms_dir", roms_dir);
@@ -213,26 +214,43 @@ fn app() -> Result<()> {
                     confy::store_path(app_config_path(), config.clone())?;
                 }
 
-                if keyfile_exists().is_none() {
-                    // TODO: search for prod.keys in roms_dir
-                    let path = PathBuf::from(inquire::Text::new(
-                        "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
-                    )
-                    .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
-                    .prompt()?);
-                    info!("Selected keys {:?}", path.display());
+                let roms_dir = config.roms_dir.expect("roms_dir should've been set");
 
-                    let keyset_path = get_keyset_path()?;
-                    fs::create_dir_all(keyset_path.parent().context("Failed to find parent")?)?;
-                    match path.extension().and_then(OsStr::to_str) {
+                if keyfile_exists().is_none() {
+                    // Looking for `prod.keys` in roms_dir
+                    let mut keyfile_path: Option<PathBuf> = None;
+                    for entry in WalkDir::new(&roms_dir)
+                        .min_depth(1)
+                        .into_iter()
+                        .filter_map(|e| e.ok())
+                    {
+                        if entry.file_name() == "prod.keys" {
+                            keyfile_path = Some(entry.path().into());
+                            break;
+                        }
+                    }
+
+                    if keyfile_path.is_none() {
+                        keyfile_path = Some(PathBuf::from(inquire::Text::new(
+                            "Failed to find keyfile!\nPlease enter the path to `prod.keys` keyfile:",
+                        )
+                        .with_help_message("This only needs to be done once!\nPath to a file can be copied through some file managers such as MiXplorer, etc.")
+                        .prompt()?));
+                    }
+
+                    let keyfile_path = keyfile_path.expect("Keyfile path should've been set");
+                    info!("Selected keys {:?}", keyfile_path.display());
+
+                    let default_path = get_default_keyfile_path()?;
+                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    match keyfile_path.extension().and_then(OsStr::to_str) {
                         Some("keys") => {}
                         _ => bail!("No keyfile was selected"),
                     }
-                    fs::copy(path, keyset_path)?;
+                    fs::copy(keyfile_path, default_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
 
-                let roms_dir = config.roms_dir.expect("roms_dir should've been set");
                 let roms_path = WalkDir::new(&roms_dir)
                     .min_depth(1)
                     .max_depth(1)

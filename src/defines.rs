@@ -22,7 +22,7 @@ pub fn app_config_path() -> PathBuf {
     app_config_dir().join("yanu.ron")
 }
 
-pub fn get_keyset_path() -> Result<PathBuf> {
+pub fn get_default_keyfile_path() -> Result<PathBuf> {
     Ok(dirs::home_dir()
         .context("Failed to find home dir")?
         .join(".switch")

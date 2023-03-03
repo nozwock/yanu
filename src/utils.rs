@@ -2,7 +2,7 @@
 use native_dialog::FileDialog;
 use std::path::PathBuf;
 
-use crate::defines::get_keyset_path;
+use crate::defines::get_default_keyfile_path;
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 pub fn browse_nsp_file() -> Option<PathBuf> {
@@ -26,7 +26,7 @@ pub fn str_truncate(s: &str, new_len: usize) -> &str {
 }
 
 pub fn keyfile_exists() -> Option<()> {
-    if !get_keyset_path().ok()?.is_file() {
+    if !get_default_keyfile_path().ok()?.is_file() {
         return None;
     }
     Some(())
