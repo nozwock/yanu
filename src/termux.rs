@@ -10,7 +10,8 @@ pub fn clipboard_get() -> Result<String> {
 
 pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
     warn!(
-        "Using unstable API \"termux-storage-get {:?}\"",
+        "Using unstable API",
+        "termux-storage-get {:?}",
         output.as_ref()
     );
     if !Command::new("termux-storage-get")
@@ -25,7 +26,7 @@ pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
     if !output.as_ref().is_file() {
         bail!("Failed to get file from storage");
     } else {
-        info!("Copied file as {:?}", output.as_ref());
+        info!("Copied file to {:?}", output.as_ref());
     }
     Ok(())
 }

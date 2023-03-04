@@ -3,7 +3,7 @@ use clap::Parser;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::{env, ffi::OsStr, fs, path::PathBuf};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
 use yanu::{
@@ -28,7 +28,7 @@ fn main() -> Result<()> {
             Ok(())
         }
         Err(err) => {
-            error!("{}", err.to_string());
+            error!(?err);
             bail!(err.to_string());
         }
     }
@@ -53,7 +53,7 @@ fn app() -> Result<()> {
                         bail!("Invalid keyfile");
                     }
 
-                    info!("Selected keyfile {:?}", keyfile_path.display());
+                    info!(?keyfile_path, "Selected keyfile");
                     let default_path = get_default_keyfile_path()?;
                     fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
                     fs::copy(keyfile_path, default_path)?;
@@ -103,7 +103,7 @@ fn app() -> Result<()> {
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
                         .context("No keyfile was selected")?;
-                    info!("Selected keyfile {:?}", keyfile_path.display());
+                    info!(?keyfile_path, "Selected keyfile");
 
                     // native dialog allows for dir to be picked (prob a bug)
                     if !keyfile_path.is_file() {
@@ -204,7 +204,7 @@ fn app() -> Result<()> {
                             Path to an item can be copied through some file managers such as MiXplorer, etc.")
                             .prompt()?,
                     );
-                    info!("Set {:?} as roms_dir", roms_dir);
+                    info!(?roms_dir);
 
                     if !roms_dir.is_dir() {
                         bail!("{:?} is not a valid directory", roms_dir);
@@ -239,7 +239,7 @@ fn app() -> Result<()> {
                     }
 
                     let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
-                    info!("Selected keys {:?}", keyfile_path.display());
+                    info!(?keyfile_path, "Selected keyfile");
 
                     let default_path = get_default_keyfile_path()?;
                     fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;

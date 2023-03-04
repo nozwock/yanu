@@ -35,7 +35,7 @@ pub fn get_title_key<P: AsRef<Path>>(path: P) -> Result<TitleKey> {
     let mut title_key = TitleKey::default();
     let mut ticket = fs::File::open(&path)?;
 
-    info!("Reading ticket \"{}\"", path.as_ref().to_string_lossy());
+    info!(ticket = ?path.as_ref(), "Reading ticket");
 
     ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
     ticket.read_exact(&mut title_key.title_id)?;
@@ -43,9 +43,11 @@ pub fn get_title_key<P: AsRef<Path>>(path: P) -> Result<TitleKey> {
     ticket.seek(io::SeekFrom::Start(TicketData::TitleKey as _))?;
     ticket.read_exact(&mut title_key.key)?;
     debug!(
-        "TitleKey: \"{}={}\"",
-        hex::encode(title_key.title_id),
-        hex::encode(title_key.key)
+        title_key = ?format!(
+            "{}={}",
+            hex::encode(title_key.title_id),
+            hex::encode(title_key.key)
+        )
     );
 
     Ok(title_key)

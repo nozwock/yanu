@@ -33,16 +33,10 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     update.extract_data_to(update_data_path.path())?;
 
     if let Err(err) = base.derive_title_key(base_data_path.path()) {
-        warn!(
-            "This error is not being handeled right away! {:?}",
-            err.to_string()
-        );
+        warn!(?err, "This error is not being handeled right away!",);
     }
     if let Err(err) = update.derive_title_key(update_data_path.path()) {
-        warn!(
-            "This error is not being handeled right away! {:?}",
-            err.to_string()
-        );
+        warn!(?err, "This error is not being handeled right away!");
     }
 
     let switch_dir = dirs::home_dir()
@@ -51,7 +45,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::create_dir_all(&switch_dir)?;
     let title_keys_path = switch_dir.join("title.keys");
 
-    info!("Saving TitleKeys in {:?}", title_keys_path.display());
+    info!(?title_keys_path, "Storing TitleKeys");
     fs::write(
         &title_keys_path,
         format!("{}\n{}", base.get_title_key(), update.get_title_key()),
@@ -85,7 +79,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
                         };
                     }
                     Err(err) => {
-                        warn!("{}", err.to_string());
+                        warn!("{}", err);
                     }
                 }
             }
@@ -127,7 +121,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
                     _ => {}
                 },
                 Err(err) => {
-                    warn!("{}", err.to_string());
+                    warn!("{}", err);
                 }
             },
             _ => {}
@@ -149,11 +143,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
-    info!(
-        "Extracting romfs/exefs from: {:?} {:?}",
-        base_nca.path.display(),
-        update_nca.path.display()
-    );
+    info!(?base_nca.path, ?update_nca.path, "Extracting romfs/exefs");
     let status = Command::new(&hactool)
         .args([
             "--basenca",
@@ -167,8 +157,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .status()?;
     if !status.success() {
         warn!(
-            "The proccess responsible for extracting romfs/exefs terminated improperly \"{:?}\" (This might result in a crash!)",
-            status.code()
+            exit_code = ?status.code(),
+            "The proccess responsible for extracting romfs/exefs terminated improperly (This might result in a crash!)",
         );
     }
 
@@ -182,9 +172,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     control_nca.path = nca_dir.join(control_nca_filename);
 
     // Early cleanup
-    info!("Cleaning up {:?}", base_data_path.path().display());
+    info!(dir = ?base_data_path.path(), "Cleaning up");
     drop(base_data_path);
-    info!("Cleaning up {:?}", update_data_path.path().display());
+    info!(dir = ?update_data_path.path(), "Cleaning up");
     drop(update_data_path);
 
     let keyset_path = get_default_keyfile_path()?;
@@ -260,8 +250,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let patched_nsp_path = outdir.as_ref().join(format!("{}.nsp", title_id));
 
     info!(
-        "Packing all 3 NCAs into a NSP as {:?}",
-        patched_nsp_path.display()
+        patched_nsp = ?patched_nsp_path.display(),
+        "Packing all 3 NCAs into a NSP"
     );
     if !Command::new(&hacpack)
         .args([

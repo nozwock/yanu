@@ -13,7 +13,7 @@ pub fn browse_nsp_file() -> Option<PathBuf> {
         .show_open_single_file()
         .ok()?;
     if let Some(ref path) = path {
-        info!("Selected file {:?}", path.display());
+        info!(?path, "Selected file");
     }
     path
 }

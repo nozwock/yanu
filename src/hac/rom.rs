@@ -66,7 +66,7 @@ impl Nsp {
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let hactool = Backend::Hactool.path()?;
 
-        info!("Extracting {:?}", &self.path);
+        info!(nsp = ?self.path, "Extracting");
         if !Command::new(hactool)
             .args([
                 "-t",
@@ -81,17 +81,12 @@ impl Nsp {
             bail!("Failed to extract {:?}", path.as_ref());
         }
 
-        info!(
-            "{:?} has been extracted in {:?}",
-            self.path.file_name().context("no file found")?,
-            path.as_ref()
-        );
-
+        info!(nsp = ?self.path, data_dir = ?path.as_ref(), "Extraction done");
         Ok(())
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
-            info!("Deriving title key for {:?}", self.path.display());
+            info!(nsp = ?self.path, "Deriving TitleKey");
             for entry in WalkDir::new(data_path.as_ref()) {
                 let entry = entry?;
                 match entry.path().extension().and_then(OsStr::to_str) {
@@ -108,8 +103,9 @@ impl Nsp {
                     self.path
                 );
             }
+            info!("Derived TitleKey successfully");
         } else {
-            info!("TitleKey has already being derived!");
+            info!("TitleKey already exists");
         }
 
         Ok(())
@@ -140,8 +136,8 @@ impl Nca {
         }
 
         info!(
-            "Identifying title ID and content type for {:?}",
-            path.as_ref()
+            nca = ?path.as_ref(),
+            "Identifying TitleID and ContentType",
         );
 
         let hactool = Backend::Hactool.path()?;
@@ -162,7 +158,7 @@ impl Nca {
                         .context("TitleID line should've an item")?
                         .into(),
                 );
-                debug!("Title ID: {:?}", title_id);
+                debug!(?title_id);
                 break;
             }
         }
@@ -179,7 +175,7 @@ impl Nca {
                     )
                     .context("Failed to identify NCA content type")?,
                 );
-                debug!("Content Type: {:?}", content_type);
+                debug!(?content_type);
                 break;
             }
         }

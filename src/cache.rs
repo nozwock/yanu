@@ -4,7 +4,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::defines::app_cache_dir;
 #[cfg(target_os = "windows")]
@@ -34,9 +34,9 @@ impl fmt::Display for Cache {
 impl Cache {
     /// Saves the given file as a cache for `self`.
     ///
-    /// Overwrited the previous cache in the process if any.
+    /// Overwrites the previous cache in the process if any.
     pub fn from<P: AsRef<Path>>(self, path: P) -> Result<Self> {
-        debug!("Copying {:?} as cache for {:?}", path.as_ref(), self);
+        info!(?self, "Caching {:?}", path.as_ref());
 
         let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
@@ -47,7 +47,7 @@ impl Cache {
     /// Extracts the embedded files to the cache dir
     #[cfg(target_os = "windows")]
     pub fn from_embed(self) -> Result<Self> {
-        debug!("Extracting and caching {:?} from embed", self);
+        info!(?self, "Caching from embed");
 
         let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
@@ -91,7 +91,7 @@ impl Cache {
                 .status()?
                 .success()
             {
-                debug!("Gave executable permission to {:?}", file_path.display());
+                info!(?file_path, "Given executable permission");
                 return Ok(self);
             }
         }
