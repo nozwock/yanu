@@ -87,8 +87,11 @@ impl Nsp {
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
             info!(nsp = ?self.path, "Deriving TitleKey");
-            for entry in WalkDir::new(data_path.as_ref()) {
-                let entry = entry?;
+            for entry in WalkDir::new(data_path.as_ref())
+                .min_depth(1)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
                 match entry.path().extension().and_then(OsStr::to_str) {
                     Some("tik") => {
                         self.title_key = Some(ticket::get_title_key(&entry.path())?);

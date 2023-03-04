@@ -8,7 +8,7 @@ use crate::{
 
 use super::rom::Nsp;
 use anyhow::{bail, Context, Result};
-use std::{ffi::OsStr, fs, path::Path, process::Command};
+use std::{cmp, ffi::OsStr, fs, path::Path, process::Command};
 use tempdir::TempDir;
 use tracing::{info, warn};
 use walkdir::WalkDir;
@@ -53,15 +53,13 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
 
     let mut base_nca: Option<Nca> = None;
     for entry in WalkDir::new(base_data_path.path())
-        .sort_by(|a, b| {
-            a.metadata()
-                .expect(&format!("Failed to read metadata of {:?}", a.path()))
-                .len()
-                .cmp(
-                    &b.metadata()
-                        .expect(&format!("Failed to read metadata of {:?}", b.path()))
-                        .len(),
-                )
+        .min_depth(1)
+        .sort_by_key(|a| {
+            cmp::Reverse(
+                a.metadata()
+                    .expect(&format!("Failed to read metadata of {:?}", a.path()))
+                    .len(),
+            )
         })
         .into_iter()
         .filter_map(|e| e.ok())
@@ -92,15 +90,13 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
     for entry in WalkDir::new(update_data_path.path())
-        .sort_by(|a, b| {
-            a.metadata()
-                .expect(&format!("Failed to read metadata of {:?}", a.path()))
-                .len()
-                .cmp(
-                    &b.metadata()
-                        .expect(&format!("Failed to read metadata of {:?}", b.path()))
-                        .len(),
-                )
+        .min_depth(1)
+        .sort_by_key(|a| {
+            cmp::Reverse(
+                a.metadata()
+                    .expect(&format!("Failed to read metadata of {:?}", a.path()))
+                    .len(),
+            )
         })
         .into_iter()
         .filter_map(|e| e.ok())
@@ -208,7 +204,11 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     }
 
     let mut pactched_nca: Option<Nca> = None;
-    for entry in WalkDir::new(&nca_dir).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(&nca_dir)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
                 pactched_nca = Some(Nca::from(entry.path())?);
