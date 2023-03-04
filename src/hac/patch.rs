@@ -252,7 +252,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let patched_nsp_path = cache_dir.join(format!("{}.nsp", title_id));
 
     info!(
-        patched_nsp = ?patched_nsp_path.display(),
+        patched_nsp = ?patched_nsp_path,
         "Packing all 3 NCAs into a NSP"
     );
     if !Command::new(&hacpack)

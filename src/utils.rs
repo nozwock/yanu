@@ -36,16 +36,6 @@ pub fn keyfile_exists() -> Option<()> {
     Some(())
 }
 
-#[cfg(any(target_os = "linux", target_os = "windows"))]
-pub fn bail_with_error_dialog(msg: &str, title: Option<&str>) -> Result<()> {
-    native_dialog::MessageDialog::new()
-        .set_type(native_dialog::MessageType::Error)
-        .set_title(title.unwrap_or("Error occurred!"))
-        .set_text(msg)
-        .show_alert()?;
-    anyhow::bail!("{}", msg);
-}
-
 pub fn move_file<P, Q>(from: P, to: Q) -> Result<()>
 where
     P: AsRef<Path>,

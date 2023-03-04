@@ -5,11 +5,11 @@ use native_dialog::{MessageDialog, MessageType};
 use std::{env, ffi::OsStr, fs, path::PathBuf};
 use tracing::{debug, error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
-use yanu::utils::{bail_with_error_dialog, browse_nsp_file};
+use yanu::utils::browse_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{app_config_path, get_default_keyfile_path},
+    defines::{app_config_dir, app_config_path, get_default_keyfile_path},
     hac::{patch::patch_nsp_with_update, rom::Nsp},
     utils::keyfile_exists,
 };
@@ -22,21 +22,37 @@ fn main() -> Result<()> {
         .with_writer(non_blocking)
         .init();
 
-    match app() {
+    info!("Launching {}!", env!("CARGO_PKG_NAME"));
+    info!(version = env!("CARGO_PKG_VERSION"));
+
+    let cli = YanuCli::parse();
+    let mut cli_mode = false;
+    if let Some(CliArgs::Commands::Cli(_)) = cli.command {
+        cli_mode = true;
+    }
+
+    match run(cli) {
         Ok(_) => {
             info!("Done");
             Ok(())
         }
         Err(err) => {
             error!(?err);
-            bail!(err.to_string());
+            #[cfg(any(target_os = "linux", target_os = "windows"))]
+            if !cli_mode {
+                native_dialog::MessageDialog::new()
+                    .set_type(native_dialog::MessageType::Error)
+                    .set_title("Error occurred!")
+                    .set_text(&err.to_string())
+                    .show_alert()?;
+            }
+            bail!(err);
         }
     }
 }
 
-fn app() -> Result<()> {
+fn run(cli: YanuCli) -> Result<()> {
     let mut config: Config = confy::load_path(app_config_path())?;
-    let cli = YanuCli::parse();
 
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
@@ -75,7 +91,6 @@ fn app() -> Result<()> {
                     get_default_outdir()?
                 )?
                 .path
-                .display()
             );
         }
         #[cfg(target_os = "android")]
@@ -108,10 +123,7 @@ fn app() -> Result<()> {
 
                     // native dialog allows for dir to be picked (prob a bug)
                     if !keyfile_path.is_file() {
-                        bail_with_error_dialog(
-                            &format!("{:?} is not a file", keyfile_path.display()),
-                            None,
-                        )?;
+                        bail!("{:?} is not a file", keyfile_path);
                     }
 
                     //? maybe validate if it's indeed prod.keys
@@ -128,10 +140,7 @@ fn app() -> Result<()> {
                     .show_alert()?;
                 let base_path = browse_nsp_file().context("No file was selected")?;
                 if !base_path.is_file() {
-                    bail_with_error_dialog(
-                        &format!("{:?} is not a file", base_path.display()),
-                        None,
-                    )?;
+                    bail!("{:?} is not a file", base_path);
                 }
 
                 MessageDialog::new()
@@ -141,10 +150,7 @@ fn app() -> Result<()> {
                     .show_alert()?;
                 let update_path = browse_nsp_file().context("No file was selected")?;
                 if !update_path.is_file() {
-                    bail_with_error_dialog(
-                        &format!("{:?} is not a file", update_path.display()),
-                        None,
-                    )?;
+                    bail!("{:?} is not a file", update_path);
                 }
 
                 let base_name = base_path
@@ -179,12 +185,12 @@ fn app() -> Result<()> {
                                     .set_title("Done patching!")
                                     .set_text(&format!(
                                         "Patched file saved as:\n{:?}",
-                                        patched.path.display()
+                                        patched.path
                                     ))
                                     .show_alert()?;
                             }
                             Err(err) => {
-                                bail_with_error_dialog(&err.to_string(), None)?;
+                                bail!(err);
                             }
                         }
                     }
@@ -318,10 +324,10 @@ fn app() -> Result<()> {
                         info!("Started patching!");
                         match patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?) {
                             Ok(patched) => {
-                                println!("Patched file saved as:\n{:?}", patched.path.display());
+                                println!("Patched file saved as:\n{:?}", patched.path);
                             }
                             Err(err) => {
-                                bail!("{}", err.to_string());
+                                bail!(err);
                             }
                         }
                     }
@@ -353,7 +359,7 @@ fn get_default_outdir() -> Result<PathBuf> {
     }
 
     if !outdir.is_dir() {
-        bail!("Failed to set {:?} as outdir", outdir.display());
+        bail!("Failed to set {:?} as outdir", outdir);
     }
 
     Ok(outdir)
