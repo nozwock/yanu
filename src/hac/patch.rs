@@ -45,7 +45,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::create_dir_all(&switch_dir)?;
     let title_keys_path = switch_dir.join("title.keys");
 
-    info!(?title_keys_path, "Storing TitleKeys");
+    info!(keyfile = ?title_keys_path, "Storing TitleKeys");
     fs::write(
         &title_keys_path,
         format!("{}\n{}", base.get_title_key(), update.get_title_key()),

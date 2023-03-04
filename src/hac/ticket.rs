@@ -35,7 +35,7 @@ pub fn get_title_key<P: AsRef<Path>>(path: P) -> Result<TitleKey> {
     let mut title_key = TitleKey::default();
     let mut ticket = fs::File::open(&path)?;
 
-    info!(ticket = ?path.as_ref(), "Reading ticket");
+    info!(path = ?path.as_ref(), "Reading ticket");
 
     ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
     ticket.read_exact(&mut title_key.title_id)?;

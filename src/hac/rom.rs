@@ -81,7 +81,7 @@ impl Nsp {
             bail!("Failed to extract {:?}", path.as_ref());
         }
 
-        info!(nsp = ?self.path, data_dir = ?path.as_ref(), "Extraction done");
+        info!(nsp = ?self.path, data_dir = ?path.as_ref(), "Extraction done!");
         Ok(())
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
@@ -103,7 +103,7 @@ impl Nsp {
                     self.path
                 );
             }
-            info!("Derived TitleKey successfully");
+            info!("Derived TitleKey successfully!");
         } else {
             info!("TitleKey already exists");
         }
