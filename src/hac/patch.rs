@@ -1,9 +1,10 @@
 use crate::{
-    defines::get_default_keyfile_path,
+    defines::{app_cache_dir, get_default_keyfile_path},
     hac::{
         backend::Backend,
         rom::{Nca, NcaType},
     },
+    utils::move_file,
 };
 
 use super::rom::Nsp;
@@ -24,18 +25,18 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let hacpack = Backend::Hacpack.path()?;
 
     let temp_dir = TempDir::new("yanu")?;
-    let base_data_path = TempDir::new_in(&temp_dir, "basedata")?;
-    let update_data_path = TempDir::new_in(&temp_dir, "updatedata")?;
-    fs::create_dir_all(base_data_path.path())?;
-    fs::create_dir_all(update_data_path.path())?;
+    let base_data_dir = TempDir::new_in(&temp_dir, "basedata")?;
+    let update_data_dir = TempDir::new_in(&temp_dir, "updatedata")?;
+    fs::create_dir_all(base_data_dir.path())?;
+    fs::create_dir_all(update_data_dir.path())?;
 
-    base.extract_data_to(base_data_path.path())?;
-    update.extract_data_to(update_data_path.path())?;
+    base.extract_data_to(base_data_dir.path())?;
+    update.extract_data_to(update_data_dir.path())?;
 
-    if let Err(err) = base.derive_title_key(base_data_path.path()) {
+    if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err, "This error is not being handeled right away!",);
     }
-    if let Err(err) = update.derive_title_key(update_data_path.path()) {
+    if let Err(err) = update.derive_title_key(update_data_dir.path()) {
         warn!(?err, "This error is not being handeled right away!");
     }
 
@@ -52,7 +53,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     )?;
 
     let mut base_nca: Option<Nca> = None;
-    for entry in WalkDir::new(base_data_path.path())
+    for entry in WalkDir::new(base_data_dir.path())
         .min_depth(1)
         .sort_by_key(|a| {
             cmp::Reverse(
@@ -89,7 +90,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
-    for entry in WalkDir::new(update_data_path.path())
+    for entry in WalkDir::new(update_data_dir.path())
         .min_depth(1)
         .sort_by_key(|a| {
             cmp::Reverse(
@@ -142,13 +143,13 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     info!(?base_nca.path, ?update_nca.path, "Extracting romfs/exefs");
     let status = Command::new(&hactool)
         .args([
-            "--basenca",
-            &base_nca.path.to_string_lossy(),
-            &update_nca.path.to_string_lossy(),
-            "--romfsdir",
-            &romfs_dir.to_string_lossy(),
-            "--exefsdir",
-            &exefs_dir.to_string_lossy(),
+            "--basenca".as_ref(),
+            base_nca.path.as_path(),
+            update_nca.path.as_path(),
+            "--romfsdir".as_ref(),
+            romfs_dir.as_path(),
+            "--exefsdir".as_ref(),
+            exefs_dir.as_path(),
         ])
         .status()?;
     if !status.success() {
@@ -168,10 +169,10 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     control_nca.path = nca_dir.join(control_nca_filename);
 
     // Early cleanup
-    info!(dir = ?base_data_path.path(), "Cleaning up");
-    drop(base_data_path);
-    info!(dir = ?update_data_path.path(), "Cleaning up");
-    drop(update_data_path);
+    info!(dir = ?base_data_dir.path(), "Cleaning up");
+    drop(base_data_dir);
+    info!(dir = ?update_data_dir.path(), "Cleaning up");
+    drop(update_data_dir);
 
     let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca
@@ -181,21 +182,21 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     info!("Packing romfs/exefs into a single NCA");
     if !Command::new(&hacpack)
         .args([
-            "--keyset",
-            &keyset_path.to_string_lossy(),
-            "--type",
-            "nca",
-            "--ncatype",
-            "program",
-            "--plaintext",
-            "--exefsdir",
-            &exefs_dir.to_string_lossy(),
-            "--romfsdir",
-            &romfs_dir.to_string_lossy(),
-            "--titleid",
-            &title_id,
-            "--outdir",
-            &nca_dir.to_string_lossy(),
+            "--keyset".as_ref(),
+            keyset_path.as_path(),
+            "--type".as_ref(),
+            "nca".as_ref(),
+            "--ncatype".as_ref(),
+            "program".as_ref(),
+            "--plaintext".as_ref(),
+            "--exefsdir".as_ref(),
+            exefs_dir.as_path(),
+            "--romfsdir".as_ref(),
+            romfs_dir.as_path(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            nca_dir.as_path(),
         ])
         .status()?
         .success()
@@ -221,25 +222,25 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     info!("Generating Meta NCA from patched NCA & control NCA");
     if !Command::new(&hacpack)
         .args([
-            "--keyset",
-            &keyset_path.to_string_lossy(),
-            "--type",
-            "nca",
-            "--ncatype",
-            "meta",
-            "--titletype",
-            "application",
-            "--programnca",
-            &pactched_nca
+            "--keyset".as_ref(),
+            keyset_path.as_path(),
+            "--type".as_ref(),
+            "nca".as_ref(),
+            "--ncatype".as_ref(),
+            "meta".as_ref(),
+            "--titletype".as_ref(),
+            "application".as_ref(),
+            "--programnca".as_ref(),
+            pactched_nca
                 .context("Couldn't find the patched NCA")?
                 .path
-                .to_string_lossy(),
-            "--controlnca",
-            &control_nca.path.to_string_lossy(),
-            "--titleid",
-            &title_id,
-            "--outdir",
-            &nca_dir.to_string_lossy(),
+                .as_path(),
+            "--controlnca".as_ref(),
+            control_nca.path.as_path(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            nca_dir.as_path(),
         ])
         .status()?
         .success()
@@ -247,7 +248,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
-    let patched_nsp_path = outdir.as_ref().join(format!("{}.nsp", title_id));
+    let cache_dir = app_cache_dir();
+    let patched_nsp_path = cache_dir.join(format!("{}.nsp", title_id));
 
     info!(
         patched_nsp = ?patched_nsp_path.display(),
@@ -255,16 +257,16 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     );
     if !Command::new(&hacpack)
         .args([
-            "--keyset",
-            &keyset_path.to_string_lossy(),
-            "--type",
-            "nsp",
-            "--ncadir",
-            &nca_dir.to_string_lossy(),
-            "--titleid",
-            &title_id,
-            "--outdir",
-            &outdir.as_ref().to_string_lossy(),
+            "--keyset".as_ref(),
+            keyset_path.as_path(),
+            "--type".as_ref(),
+            "nsp".as_ref(),
+            "--ncadir".as_ref(),
+            nca_dir.as_path(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            cache_dir.as_ref(),
         ])
         .status()?
         .success()
@@ -272,5 +274,11 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         bail!("Failed to Pack all 3 NCAs into a NSP");
     }
 
-    Ok(Nsp::from(patched_nsp_path)?)
+    // Moving patched NSP to outdir
+    let dest = outdir
+        .as_ref()
+        .join(format!("{}[yanu-patched].nsp", title_id));
+    move_file(patched_nsp_path, &dest)?;
+
+    Ok(Nsp::from(dest)?)
 }

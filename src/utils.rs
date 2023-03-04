@@ -1,6 +1,10 @@
+use anyhow::Result;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::FileDialog;
-use std::path::PathBuf;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::defines::get_default_keyfile_path;
 
@@ -33,11 +37,26 @@ pub fn keyfile_exists() -> Option<()> {
 }
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
-pub fn bail_with_error_dialog(msg: &str, title: Option<&str>) -> anyhow::Result<()> {
+pub fn bail_with_error_dialog(msg: &str, title: Option<&str>) -> Result<()> {
     native_dialog::MessageDialog::new()
         .set_type(native_dialog::MessageType::Error)
         .set_title(title.unwrap_or("Error occurred!"))
         .set_text(msg)
         .show_alert()?;
     anyhow::bail!("{}", msg);
+}
+
+pub fn move_file<P, Q>(from: P, to: Q) -> Result<()>
+where
+    P: AsRef<Path>,
+    Q: AsRef<Path>,
+{
+    match fs::rename(&from, &to) {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            fs::copy(&from, &to)?;
+            fs::remove_file(&from)?;
+            Ok(())
+        }
+    }
 }

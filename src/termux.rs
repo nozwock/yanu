@@ -10,8 +10,7 @@ pub fn clipboard_get() -> Result<String> {
 
 pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
     warn!(
-        "Using unstable API",
-        "termux-storage-get {:?}",
+        "Using unstable API \"termux-storage-get {:?}\"",
         output.as_ref()
     );
     if !Command::new("termux-storage-get")
