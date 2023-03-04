@@ -11,7 +11,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 ## About
 
-**Yanu** is a **Nintendo Switch** rom patcher made to be compatible with Skyline. The supported platforms currently consist of **Linux**, **Android w/Termux** and **Windows**.
+**Yanu** is a **Nintendo Switch** ROM patcher made to be compatible with Skyline. The supported platforms currently consist of **Linux**, **Android w/Termux** and **Windows**.
 
 The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
@@ -30,7 +30,8 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Android w/Termux
 
-- Copy-pasta
+1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
+2. Copy-pasta this and press enter:
   ```console
   pkg upgrade -y && pkg in clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[;92mInstalled yanu successfully\nRun it by typing in\n\e[0m\e[;96myanu\e[0m" || echo -e "\e[;91mInstallation failed\e[0m"
   ```
@@ -49,14 +50,31 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
    chmod +x yanu-x86_64-unknown-linux-musl
    ```
 
-### Winshit :toilet:
+### Windows
 
-- Just download & run.
+- Just [download](https://github.com/nozwock/yanu/releases) & run.
 
 > Some AVs might false positively flag the program tho, deal with it.</br>
 > Use these if you're paranoid ig :weary: -
 > - https://www.virustotal.com
 > - https://www.hybrid-analysis.com 
+
+## Usage (CLI only)
+
+- View CLI help with:
+```sh
+yanu --help
+```
+
+- For updating a ROM using CLI:
+```sh
+yanu cli --keyfile /path/to/keyfile --base /path/to/base --update /path/to/base
+```
+
+- Set new `roms_dir` with (Android only):
+```sh
+yanu config --roms-dir /new/path/here
+```
 
 ---
 
