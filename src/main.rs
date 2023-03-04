@@ -148,11 +148,11 @@ fn app() -> Result<()> {
 
                 let base_name = base_path
                     .file_name()
-                    .expect("Path should've a filename")
+                    .expect("File should've a filename")
                     .to_string_lossy();
                 let update_name = update_path
                     .file_name()
-                    .expect("Path should've a filename")
+                    .expect("File should've a filename")
                     .to_string_lossy();
 
                 match MessageDialog::new()
@@ -214,7 +214,7 @@ fn app() -> Result<()> {
                     confy::store_path(app_config_path(), config.clone())?;
                 }
 
-                let roms_dir = config.roms_dir.expect("roms_dir should've been set");
+                let roms_dir = config.roms_dir.expect("roms_dir should've been Some()");
 
                 if keyfile_exists().is_none() {
                     // Looking for `prod.keys` in roms_dir
@@ -238,7 +238,7 @@ fn app() -> Result<()> {
                         .prompt()?));
                     }
 
-                    let keyfile_path = keyfile_path.expect("Keyfile path should've been set");
+                    let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
                     info!("Selected keys {:?}", keyfile_path.display());
 
                     let default_path = get_default_keyfile_path()?;
@@ -283,7 +283,10 @@ fn app() -> Result<()> {
                         base = Some(Nsp::from(entry.path())?);
                     }
                 }
-                let mut base = base.expect("Selected option should be in roms_path");
+                let mut base = base.expect(&format!(
+                    "Selected package {:?} should be in {:?}",
+                    choice, roms_path
+                ));
 
                 let mut update: Option<Nsp> = None;
                 options = options
@@ -301,7 +304,10 @@ fn app() -> Result<()> {
                         update = Some(Nsp::from(entry.path())?);
                     }
                 }
-                let mut update = update.expect("Selected option should be in roms_path");
+                let mut update = update.expect(&format!(
+                    "Selected package {:?} should be in {:?}",
+                    choice, roms_path
+                ));
 
                 match inquire::Confirm::new("Are you sure?")
                     .with_default(true)
@@ -331,9 +337,10 @@ fn get_default_outdir() -> Result<PathBuf> {
     let outdir: PathBuf;
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
-        outdir = env::current_exe()?
+        let exe_path = env::current_exe()?;
+        outdir = exe_path
             .parent()
-            .expect("Failed to find parent")
+            .with_context(|| format!("Failed to get parent of {:?}", exe_path))?
             .to_owned();
     }
     #[cfg(target_os = "android")]

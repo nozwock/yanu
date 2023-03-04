@@ -61,11 +61,11 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     for entry in WalkDir::new(base_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
-                .expect(&format!("Failed to read metadata for {:?}", a.path()))
+                .expect(&format!("Failed to read metadata of {:?}", a.path()))
                 .len()
                 .cmp(
                     &b.metadata()
-                        .expect(&format!("Failed to read metadata for {:?}", b.path()))
+                        .expect(&format!("Failed to read metadata of {:?}", b.path()))
                         .len(),
                 )
         })
@@ -92,18 +92,19 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             _ => {}
         }
     }
-    let mut base_nca = base_nca.expect("Base NCA should exist");
+    let base_nca = base_nca
+        .with_context(|| format!("Couldn't find a Base NCA (Program Type) in {:?}", base.path))?;
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
     for entry in WalkDir::new(update_data_path.path())
         .sort_by(|a, b| {
             a.metadata()
-                .expect(&format!("Failed to read metadata for {:?}", a.path()))
+                .expect(&format!("Failed to read metadata of {:?}", a.path()))
                 .len()
                 .cmp(
                     &b.metadata()
-                        .expect(&format!("Failed to read metadata for {:?}", b.path()))
+                        .expect(&format!("Failed to read metadata of {:?}", b.path()))
                         .len(),
                 )
         })
@@ -132,8 +133,18 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             _ => {}
         }
     }
-    let update_nca = update_nca.expect("Update NCA should exist");
-    let mut control_nca = control_nca.expect("Control NCA should exist");
+    let update_nca = update_nca.with_context(|| {
+        format!(
+            "Couldn't find a Update NCA (Program Type) in {:?}",
+            update.path
+        )
+    })?;
+    let mut control_nca = control_nca.with_context(|| {
+        format!(
+            "Couldn't find a Control NCA (Control Type) in {:?}",
+            update.path
+        )
+    })?;
 
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -163,11 +174,12 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
 
     let nca_dir = patch_dir.path().join("nca");
     fs::create_dir_all(&nca_dir)?;
-    fs::rename(
-        &control_nca.path,
-        &nca_dir.join(control_nca.path.file_name().expect("File should've a name")),
-    )?;
-    control_nca.path = nca_dir.join(control_nca.path.file_name().expect("File should've a name"));
+    let control_nca_filename = control_nca
+        .path
+        .file_name()
+        .expect("File should've a filename");
+    fs::rename(&control_nca.path, &nca_dir.join(control_nca_filename))?;
+    control_nca.path = nca_dir.join(control_nca_filename);
 
     // Early cleanup
     info!("Cleaning up {:?}", base_data_path.path().display());
@@ -176,7 +188,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     drop(update_data_path);
 
     let keyset_path = get_default_keyfile_path()?;
-    let mut title_id = base_nca.title_id.expect("Base NCA should've TitleID");
+    let mut title_id = base_nca
+        .title_id
+        .with_context(|| format!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
     if !Command::new(&hacpack)
@@ -227,7 +241,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "application",
             "--programnca",
             &pactched_nca
-                .expect("patched NCA must exist")
+                .context("Couldn't find the patched NCA")?
                 .path
                 .to_string_lossy(),
             "--controlnca",

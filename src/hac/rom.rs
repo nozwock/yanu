@@ -124,11 +124,12 @@ impl Nsp {
 
 impl Nca {
     pub fn from<P: AsRef<Path>>(path: P) -> Result<Self> {
-        if path
-            .as_ref()
-            .extension()
-            .context("Failed to get file extension")?
-            != "nca"
+        if path.as_ref().is_file()
+            && path
+                .as_ref()
+                .extension()
+                .context("Failed to get file extension")?
+                != "nca"
         {
             bail!(
                 "{:?} is not a nca file",
@@ -158,7 +159,7 @@ impl Nca {
                     line.trim()
                         .split(' ')
                         .last()
-                        .expect("TitleID line should've an item")
+                        .context("TitleID line should've an item")?
                         .into(),
                 );
                 debug!("Title ID: {:?}", title_id);
@@ -174,7 +175,7 @@ impl Nca {
                         line.trim()
                             .split(' ')
                             .last()
-                            .expect("ContentType line should've an item"),
+                            .context("ContentType line should've an item")?,
                     )
                     .context("Failed to identify NCA content type")?,
                 );
@@ -186,7 +187,9 @@ impl Nca {
         Ok(Self {
             path: path.as_ref().to_owned(),
             title_id,
-            content_type: content_type.expect("NCA should've a ContentType"),
+            content_type: content_type.with_context(|| {
+                format!("Failed to identify ContentType of {:?}", path.as_ref())
+            })?,
         })
     }
 }
