@@ -78,6 +78,7 @@ fn app() -> Result<()> {
                 .display()
             );
         }
+        #[cfg(target_os = "android")]
         Some(CliArgs::Commands::Config(new_config)) => {
             if let Some(roms_dir) = new_config.roms_dir {
                 if !roms_dir.is_dir() {

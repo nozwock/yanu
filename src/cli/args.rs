@@ -13,6 +13,7 @@ pub struct YanuCli {
 pub enum Commands {
     #[command(short_flag = 'c')]
     Cli(Cli),
+    #[cfg(target_os = "android")]
     /// Manage yanu's config
     #[command()]
     Config(Config),
