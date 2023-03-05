@@ -78,7 +78,7 @@ impl Nsp {
             .status()?
             .success()
         {
-            bail!("Failed to extract {:?}", path.as_ref());
+            bail!("Failed to extract {:?}", self.path);
         }
 
         info!(nsp = ?self.path, data_dir = ?path.as_ref(), "Extraction done!");

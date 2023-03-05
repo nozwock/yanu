@@ -206,9 +206,12 @@ fn run(cli: YanuCli) -> Result<()> {
                 if config.roms_dir.is_none() {
                     let roms_dir = PathBuf::from(
                         inquire::Text::new("Enter the path to a directory:")
+                            .with_default("/storage/emulated/0")
                             .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
-                            .with_help_message("This directory will be used to look for ROMs(base/update)! They will be showed in a Menu GUI.\n\
-                            Path to an item can be copied through some file managers such as MiXplorer, etc.")
+                            .with_help_message(
+                                "Help:\n1. This directory will be used to look for ROMs (base/update)\n\
+                                2. `prod.keys` from the given directory will be used, if any",
+                            )
                             .prompt()?,
                     );
                     info!(?roms_dir);
@@ -238,11 +241,11 @@ fn run(cli: YanuCli) -> Result<()> {
                     }
 
                     if keyfile_path.is_none() {
-                        keyfile_path = Some(PathBuf::from(inquire::Text::new(
-                            "Failed to find keyfile!\nEnter the path to `prod.keys` keyfile:",
-                        )
-                        .with_help_message("This only needs to be done once!\nPath to an item can be copied through some file managers such as MiXplorer, etc.")
-                        .prompt()?));
+                        eprintln!("Failed to find keyfile!");
+                        keyfile_path = Some(PathBuf::from(
+                            inquire::Text::new("Enter the path to `prod.keys` keyfile:")
+                                .prompt()?,
+                        ));
                     }
 
                     let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
@@ -317,7 +320,7 @@ fn run(cli: YanuCli) -> Result<()> {
                 ));
 
                 match inquire::Confirm::new("Are you sure?")
-                    .with_default(true)
+                    .with_default(false)
                     .prompt()?
                 {
                     true => {
