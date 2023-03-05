@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use eyre::{bail, Result};
 use std::{path::Path, process::Command};
 use tracing::{info, warn};
 

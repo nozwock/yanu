@@ -1,5 +1,5 @@
-use anyhow::{bail, Context, Result};
 use clap::Parser;
+use eyre::{bail, eyre, Result};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::{env, ffi::OsStr, fs, path::PathBuf};
@@ -63,7 +63,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     if keyfile_path
                         .extension()
                         .and_then(OsStr::to_str)
-                        .context("File should've an extension")?
+                        .ok_or_else(|| eyre!("File should've an extension"))?
                         != "keys"
                     {
                         bail!("Invalid keyfile");
@@ -71,7 +71,11 @@ fn run(cli: YanuCli) -> Result<()> {
 
                     info!(?keyfile_path, "Selected keyfile");
                     let default_path = get_default_keyfile_path()?;
-                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    fs::create_dir_all(
+                        default_path
+                            .parent()
+                            .ok_or_else(|| eyre!("Failed to find parent"))?,
+                    )?;
                     fs::copy(keyfile_path, default_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
@@ -118,7 +122,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     let keyfile_path = native_dialog::FileDialog::new()
                         .add_filter("Keys", &["keys"])
                         .show_open_single_file()?
-                        .context("No keyfile was selected")?;
+                        .ok_or_else(|| eyre!("No keyfile was selected"))?;
                     info!(?keyfile_path, "Selected keyfile");
 
                     // native dialog allows for dir to be picked (prob a bug)
@@ -128,7 +132,11 @@ fn run(cli: YanuCli) -> Result<()> {
 
                     //? maybe validate if it's indeed prod.keys
                     let default_path = get_default_keyfile_path()?;
-                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    fs::create_dir_all(
+                        default_path
+                            .parent()
+                            .ok_or_else(|| eyre!("Failed to find parent"))?,
+                    )?;
                     fs::copy(keyfile_path, default_path)?;
                     info!("Copied keys successfully to the C2 ^-^");
                 }
@@ -138,7 +146,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     .set_title("yanu • BASE")
                     .set_text("Please select the BASE package file to update!")
                     .show_alert()?;
-                let base_path = browse_nsp_file().context("No file was selected")?;
+                let base_path = browse_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                 if !base_path.is_file() {
                     bail!("{:?} is not a file", base_path);
                 }
@@ -148,7 +156,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     .set_title("yanu • UPDATE")
                     .set_text("Please select the UPDATE package file to apply!")
                     .show_alert()?;
-                let update_path = browse_nsp_file().context("No file was selected")?;
+                let update_path = browse_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                 if !update_path.is_file() {
                     bail!("{:?} is not a file", update_path);
                 }
@@ -252,7 +260,11 @@ fn run(cli: YanuCli) -> Result<()> {
                     info!(?keyfile_path, "Selected keyfile");
 
                     let default_path = get_default_keyfile_path()?;
-                    fs::create_dir_all(default_path.parent().context("Failed to find parent")?)?;
+                    fs::create_dir_all(
+                        default_path
+                            .parent()
+                            .ok_or_else(|| eyre!("Failed to find parent"))?,
+                    )?;
                     match keyfile_path.extension().and_then(OsStr::to_str) {
                         Some("keys") => {}
                         _ => bail!("No keyfile was selected"),
@@ -350,13 +362,13 @@ fn get_default_outdir() -> Result<PathBuf> {
         let exe_path = env::current_exe()?;
         outdir = exe_path
             .parent()
-            .with_context(|| format!("Failed to get parent of {:?}", exe_path))?
+            .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?
             .to_owned();
     }
     #[cfg(target_os = "android")]
     {
         outdir = dirs::home_dir()
-            .context("Failed to find home dir")?
+            .ok_or_else("Failed to find home dir")?
             .join("storage")
             .join("shared");
     }

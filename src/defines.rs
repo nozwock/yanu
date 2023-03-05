@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use eyre::{eyre, Result};
 
 pub const APP_NAME: &str = "yanu";
 pub const APP_DIR: &str = "com.github.nozwock.yanu";
@@ -24,7 +24,7 @@ pub fn app_config_path() -> PathBuf {
 
 pub fn get_default_keyfile_path() -> Result<PathBuf> {
     Ok(dirs::home_dir()
-        .context("Failed to find home dir")?
+        .ok_or_else(|| eyre!("Failed to find home dir"))?
         .join(".switch")
         .join("prod.keys"))
 }

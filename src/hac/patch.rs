@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::rom::Nsp;
-use anyhow::{bail, Context, Result};
+use eyre::{bail, eyre, Result};
 use std::{cmp, ffi::OsStr, fs, path::Path, process::Command};
 use tempdir::TempDir;
 use tracing::{info, warn};
@@ -41,7 +41,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     }
 
     let switch_dir = dirs::home_dir()
-        .context("Failed to find home dir")?
+        .ok_or_else(|| eyre!("Failed to find home dir"))?
         .join(".switch");
     fs::create_dir_all(&switch_dir)?;
     let title_keys_path = switch_dir.join("title.keys");
@@ -86,7 +86,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         }
     }
     let base_nca = base_nca
-        .with_context(|| format!("Couldn't find a Base NCA (Program Type) in {:?}", base.path))?;
+        .ok_or_else(|| eyre!("Couldn't find a Base NCA (Program Type) in {:?}", base.path))?;
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
@@ -124,14 +124,14 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             _ => {}
         }
     }
-    let update_nca = update_nca.with_context(|| {
-        format!(
+    let update_nca = update_nca.ok_or_else(|| {
+        eyre!(
             "Couldn't find a Update NCA (Program Type) in {:?}",
             update.path
         )
     })?;
-    let mut control_nca = control_nca.with_context(|| {
-        format!(
+    let mut control_nca = control_nca.ok_or_else(|| {
+        eyre!(
             "Couldn't find a Control NCA (Control Type) in {:?}",
             update.path
         )
@@ -177,7 +177,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca
         .title_id
-        .with_context(|| format!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
+        .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
     if !Command::new(&hacpack)
@@ -232,7 +232,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "application".as_ref(),
             "--programnca".as_ref(),
             pactched_nca
-                .context("Couldn't find the patched NCA")?
+                .ok_or_else(|| eyre!("Couldn't find the patched NCA"))?
                 .path
                 .as_path(),
             "--controlnca".as_ref(),

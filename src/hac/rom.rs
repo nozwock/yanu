@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::{bail, Context, Result};
+use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
 use tracing::{debug, info};
 use walkdir::WalkDir;
@@ -47,14 +47,14 @@ impl Nsp {
         if path
             .as_ref()
             .extension()
-            .context("Failed to get file extension")?
+            .ok_or_else(|| eyre!("Failed to get file extension"))?
             != "nsp"
         {
             bail!(
                 "{:?} is not a nsp file",
                 path.as_ref()
                     .file_name()
-                    .context("Failed to get filename")?
+                    .ok_or_else(|| eyre!("Failed to get filename"))?
             );
         }
 
@@ -127,14 +127,14 @@ impl Nca {
             && path
                 .as_ref()
                 .extension()
-                .context("Failed to get file extension")?
+                .ok_or_else(|| eyre!("Failed to get file extension"))?
                 != "nca"
         {
             bail!(
                 "{:?} is not a nca file",
                 path.as_ref()
                     .file_name()
-                    .context("Failed to get filename")?
+                    .ok_or_else(|| eyre!("Failed to get filename"))?
             );
         }
 
@@ -158,7 +158,7 @@ impl Nca {
                     line.trim()
                         .split(' ')
                         .last()
-                        .context("TitleID line should've an item")?
+                        .ok_or_else(|| eyre!("TitleID line should've an item"))?
                         .into(),
                 );
                 debug!(?title_id);
@@ -169,15 +169,12 @@ impl Nca {
         let mut content_type: Option<NcaType> = None;
         for line in stdout.lines() {
             if line.find("Content Type:").is_some() {
-                content_type = Some(
-                    NcaType::from_str(
-                        line.trim()
-                            .split(' ')
-                            .last()
-                            .context("ContentType line should've an item")?,
-                    )
-                    .context("Failed to identify NCA content type")?,
-                );
+                content_type = Some(NcaType::from_str(
+                    line.trim()
+                        .split(' ')
+                        .last()
+                        .ok_or_else(|| eyre!("ContentType line should've an item"))?,
+                )?);
                 debug!(?content_type);
                 break;
             }
@@ -186,9 +183,8 @@ impl Nca {
         Ok(Self {
             path: path.as_ref().to_owned(),
             title_id,
-            content_type: content_type.with_context(|| {
-                format!("Failed to identify ContentType of {:?}", path.as_ref())
-            })?,
+            content_type: content_type
+                .ok_or_else(|| eyre!("Failed to identify ContentType of {:?}", path.as_ref()))?,
         })
     }
 }

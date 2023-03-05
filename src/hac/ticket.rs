@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use anyhow::Result;
+use eyre::Result;
 use tracing::{debug, info};
 
 enum TicketData {

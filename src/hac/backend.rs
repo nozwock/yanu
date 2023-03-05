@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use std::path::PathBuf;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use std::process::Command;
@@ -60,7 +60,7 @@ impl Backend {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hacpack() -> Result<PathBuf> {
-    use anyhow::bail;
+    use eyre::bail;
     use std::fs;
     use tracing::info;
 
@@ -96,7 +96,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hactool() -> Result<PathBuf> {
-    use anyhow::bail;
+    use eyre::bail;
     use std::fs;
     use tracing::info;
 

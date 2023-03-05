@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::FileDialog;
 use std::{
