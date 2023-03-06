@@ -3,7 +3,7 @@ use eyre::{bail, eyre, Result};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use native_dialog::{MessageDialog, MessageType};
 use std::{env, ffi::OsStr, fs, path::PathBuf};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::browse_nsp_file;
 use yanu::{
@@ -15,6 +15,10 @@ use yanu::{
 };
 
 fn main() -> Result<()> {
+    ctrlc::set_handler(move || {
+        error!("Process terminated by the user!");
+    })?;
+
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
