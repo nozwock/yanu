@@ -6,9 +6,9 @@ use std::{
 };
 use tracing::{debug, info};
 
-use crate::defines::app_cache_dir;
 #[cfg(target_os = "windows")]
 use crate::defines::{HACPACK, HACTOOL};
+use crate::{defines::app_cache_dir, utils::move_file};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Cache {
@@ -40,7 +40,10 @@ impl Cache {
 
         let cache_dir = app_cache_dir();
         fs::create_dir_all(&cache_dir)?;
-        fs::copy(path.as_ref(), cache_dir.join(self.to_string()))?;
+        let dest = cache_dir.join(self.to_string());
+        if path.as_ref() != dest {
+            move_file(path.as_ref(), dest)?;
+        }
 
         Ok(self)
     }

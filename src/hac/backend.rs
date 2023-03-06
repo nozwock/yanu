@@ -60,26 +60,28 @@ impl Backend {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hacpack() -> Result<PathBuf> {
+    use crate::{defines::app_cache_dir, utils::move_file};
     use eyre::bail;
     use std::fs;
     use tracing::info;
 
-    info!("Building hacPack");
-    let src_dir = TempDir::new("hacpack")?.into_path();
+    let name = format!("{:?}", Backend::Hacpack).to_lowercase();
+    info!("Building {}", name);
+    let src_dir = TempDir::new(&name)?;
 
     if !Command::new("git")
         .args(["clone", "https://github.com/The-4n/hacPack"])
-        .arg(&src_dir)
+        .arg(src_dir.path())
         .status()?
         .success()
     {
-        bail!("Failed to clone hacPack repo");
+        bail!("Failed to clone {} repo", name);
     }
 
     info!("Renaming config file");
     fs::rename(
-        src_dir.join("config.mk.template"),
-        src_dir.join("config.mk"),
+        src_dir.path().join("config.mk.template"),
+        src_dir.path().join("config.mk"),
     )?;
 
     info!("Running make");
@@ -88,34 +90,40 @@ pub fn make_hacpack() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("Failed to build hacPack");
+        bail!("Failed to build {}", name);
     }
 
-    Ok(src_dir.join("hacpack"))
+    //* Moving bin from temp dir to cache dir
+    let dest = app_cache_dir().join(&name);
+    move_file(src_dir.path().join(&name), &dest)?;
+
+    Ok(dest)
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hactool() -> Result<PathBuf> {
+    use crate::{defines::app_cache_dir, utils::move_file};
     use eyre::bail;
     use std::fs;
     use tracing::info;
 
-    info!("Building hactool");
-    let src_dir = TempDir::new("hactool")?.into_path();
+    let name = format!("{:?}", Backend::Hactool).to_lowercase();
+    info!("Building {}", name);
+    let src_dir = TempDir::new(&name)?;
 
     if !Command::new("git")
         .args(["clone", "https://github.com/SciresM/hactool"])
-        .arg(&src_dir)
+        .arg(src_dir.path())
         .status()?
         .success()
     {
-        bail!("Failed to clone hactool repo");
+        bail!("Failed to clone {} repo", name);
     }
 
     info!("Renaming config file");
     fs::rename(
-        src_dir.join("config.mk.template"),
-        src_dir.join("config.mk"),
+        src_dir.path().join("config.mk.template"),
+        src_dir.path().join("config.mk"),
     )?;
 
     // removing line 372 as it causes build to fail on android
@@ -124,7 +132,7 @@ pub fn make_hactool() -> Result<PathBuf> {
         use std::io::{BufRead, BufReader};
 
         info!("Removing line 372 from `main.c`");
-        let reader = BufReader::new(fs::File::open(src_dir.join("main.c"))?);
+        let reader = BufReader::new(fs::File::open(src_dir.path().join("main.c"))?);
         //* can't use advance_by yet
         let fixed_main = reader
             .lines()
@@ -138,7 +146,7 @@ pub fn make_hactool() -> Result<PathBuf> {
             })
             .collect::<Result<Vec<_>, _>>()?
             .join("\n");
-        fs::write(src_dir.join("main.c"), fixed_main.as_bytes())?;
+        fs::write(src_dir.path().join("main.c"), fixed_main.as_bytes())?;
     }
 
     info!("Running make");
@@ -147,8 +155,12 @@ pub fn make_hactool() -> Result<PathBuf> {
         .status()?
         .success()
     {
-        bail!("Failed to build hactool");
+        bail!("Failed to build {}", name);
     }
 
-    Ok(src_dir.join("hactool"))
+    //* Moving bin from temp dir to cache dir
+    let dest = app_cache_dir().join(&name);
+    move_file(src_dir.path().join(&name), &dest)?;
+
+    Ok(dest)
 }
