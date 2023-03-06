@@ -9,9 +9,9 @@ use crate::{
 
 use super::rom::Nsp;
 use eyre::{bail, eyre, Result};
-use std::{cmp, ffi::OsStr, fs, path::Path, process::Command};
+use std::{cmp, ffi::OsStr, fs, io, path::Path, process::Command};
 use tempdir::TempDir;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
@@ -24,7 +24,20 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let hactool = Backend::Hactool.path()?;
     let hacpack = Backend::Hacpack.path()?;
 
-    let temp_dir = TempDir::new("yanu")?;
+    let switch_dir = dirs::home_dir()
+        .ok_or_else(|| eyre!("Failed to find home dir"))?
+        .join(".switch");
+    fs::create_dir_all(&switch_dir)?;
+    let title_keys_path = switch_dir.join("title.keys");
+    match fs::remove_file(&title_keys_path) {
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
+            bail!("{}", err);
+        }
+        _ => {}
+    }
+
+    let cache_dir = app_cache_dir();
+    let temp_dir = TempDir::new_in(&cache_dir, "yanu")?;
     let base_data_dir = TempDir::new_in(&temp_dir, "basedata")?;
     let update_data_dir = TempDir::new_in(&temp_dir, "updatedata")?;
     fs::create_dir_all(base_data_dir.path())?;
@@ -39,12 +52,6 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     if let Err(err) = update.derive_title_key(update_data_dir.path()) {
         warn!(?err, "This error is not being handeled right away!");
     }
-
-    let switch_dir = dirs::home_dir()
-        .ok_or_else(|| eyre!("Failed to find home dir"))?
-        .join(".switch");
-    fs::create_dir_all(&switch_dir)?;
-    let title_keys_path = switch_dir.join("title.keys");
 
     info!(keyfile = ?title_keys_path, "Storing TitleKeys");
     fs::write(
@@ -87,6 +94,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     }
     let base_nca = base_nca
         .ok_or_else(|| eyre!("Couldn't find a Base NCA (Program Type) in {:?}", base.path))?;
+    debug!(?base_nca);
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
@@ -130,12 +138,14 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             update.path
         )
     })?;
+    debug!(?update_nca);
     let mut control_nca = control_nca.ok_or_else(|| {
         eyre!(
             "Couldn't find a Control NCA (Control Type) in {:?}",
             update.path
         )
     })?;
+    debug!(?control_nca);
 
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -147,7 +157,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             base_nca.path.as_path(),
             update_nca.path.as_path(),
             "--romfsdir".as_ref(),
-            romfs_dir.as_path(),
+            romfs_dir.as_path(), // ! hacshit seems to fail if the outdirs are in different mount places -_-
             "--exefsdir".as_ref(),
             exefs_dir.as_path(),
         ])
@@ -248,7 +258,6 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
-    let cache_dir = app_cache_dir();
     let patched_nsp_path = cache_dir.join(format!("{}.nsp", title_id));
 
     info!(

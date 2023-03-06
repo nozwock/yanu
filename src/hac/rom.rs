@@ -69,11 +69,11 @@ impl Nsp {
         info!(nsp = ?self.path, "Extracting");
         if !Command::new(hactool)
             .args([
-                "-t",
-                "pfs0",
-                "--pfs0dir",
-                &path.as_ref().to_string_lossy(),
-                &self.path.to_string_lossy(),
+                "-t".as_ref(),
+                "pfs0".as_ref(),
+                "--pfs0dir".as_ref(),
+                path.as_ref(),
+                self.path.as_path(),
             ])
             .status()?
             .success()
