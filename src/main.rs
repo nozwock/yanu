@@ -372,7 +372,7 @@ fn get_default_outdir() -> Result<PathBuf> {
     #[cfg(target_os = "android")]
     {
         outdir = dirs::home_dir()
-            .ok_or_else("Failed to find home dir")?
+            .ok_or_else(|| eyre!("Failed to find home dir"))?
             .join("storage")
             .join("shared");
     }
