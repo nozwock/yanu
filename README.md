@@ -15,7 +15,9 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
-> **Note:** doesn't support DLCs yet.
+> **Note:** 
+> - Doesn't support DLCs yet.
+> - PC builds supports more games.
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
@@ -81,5 +83,5 @@ yanu config --roms-dir /new/path/here
 
 ---
 
-Credits to [hactool](https://github.com/SciresM/hactool) and [hacPack](https://github.com/The-4n/hacPack).</br>
+Credits to [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack) and [hactoolnet](https://github.com/Thealexbarney/LibHac).</br>
 Used [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
