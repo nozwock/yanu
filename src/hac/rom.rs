@@ -2,13 +2,13 @@ use std::{
     ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
-    process::Command,
+    process::{self, Command, Stdio},
     str::FromStr,
 };
 
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
 use crate::hac::backend::{Backend, BackendKind};
@@ -65,17 +65,19 @@ impl Nsp {
     }
     pub fn extract_data<P: AsRef<Path>>(&mut self, extractor: &Backend, to: P) -> Result<()> {
         info!(nsp = ?self.path, "Extracting");
-        if !Command::new(extractor.path())
-            .args([
-                "-t".as_ref(),
-                "pfs0".as_ref(),
-                "--outdir".as_ref(),
-                to.as_ref(),
-                self.path.as_path(),
-            ])
-            .status()?
-            .success()
-        {
+        let mut cmd = Command::new(extractor.path());
+        cmd.args([
+            "-t".as_ref(),
+            "pfs0".as_ref(),
+            "--outdir".as_ref(),
+            to.as_ref(),
+            self.path.as_path(),
+        ]);
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        cmd.stdout(Stdio::inherit());
+        let output = cmd.output()?;
+        if !output.status.success() {
+            error!(stderr = %String::from_utf8(output.stderr)?);
             bail!("Failed to extract {:?}", self.path);
         }
 
@@ -143,16 +145,16 @@ impl Nca {
 
         let output = Command::new(extractor.path())
             .args([path.as_ref()])
-            .output()?;
+            .output()?; // Capture stdout aswell :-)
         if !output.status.success() {
             warn!(
                 nca = ?path.as_ref(),
-                stderr = %std::str::from_utf8(output.stderr.as_slice())?,
+                stderr = %String::from_utf8(output.stderr)?,
                 "An error occured while trying to view info",
             );
         }
 
-        let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
+        let stdout = String::from_utf8(output.stdout)?.to_owned();
         let mut title_id: Option<String> = None;
         let title_id_pat = match extractor.kind() {
             BackendKind::Hactool => "Title ID:",
