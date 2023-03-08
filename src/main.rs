@@ -26,7 +26,11 @@ fn main() -> Result<()> {
         .with_writer(non_blocking)
         .init();
 
-    info!("Launching {}!", env!("CARGO_PKG_NAME"));
+    info!(
+        "Launching {} on {}!",
+        env!("CARGO_PKG_NAME"),
+        env::consts::OS
+    );
     info!(version = env!("CARGO_PKG_VERSION"));
 
     let cli = YanuCli::parse();
