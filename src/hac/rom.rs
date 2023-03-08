@@ -63,16 +63,14 @@ impl Nsp {
             ..Default::default()
         })
     }
-    pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        let extractor = Backend::new(BackendKind::Hactool)?;
-
+    pub fn extract_data<P: AsRef<Path>>(&mut self, extractor: &Backend, to: P) -> Result<()> {
         info!(nsp = ?self.path, "Extracting");
         if !Command::new(extractor.path())
             .args([
                 "-t".as_ref(),
                 "pfs0".as_ref(),
-                "--pfs0dir".as_ref(),
-                path.as_ref(),
+                "--outdir".as_ref(),
+                to.as_ref(),
                 self.path.as_path(),
             ])
             .status()?
@@ -81,7 +79,7 @@ impl Nsp {
             bail!("Failed to extract {:?}", self.path);
         }
 
-        info!(nsp = ?self.path, data_dir = ?path.as_ref(), "Extraction done!");
+        info!(nsp = ?self.path, data_dir = ?to.as_ref(), "Extraction done!");
         Ok(())
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
@@ -122,7 +120,7 @@ impl Nsp {
 }
 
 impl Nca {
-    pub fn from<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(extractor: &Backend, path: P) -> Result<Self> {
         if path.as_ref().is_file()
             && path
                 .as_ref()
@@ -143,8 +141,6 @@ impl Nca {
             "Identifying TitleID and ContentType",
         );
 
-        let extractor = Backend::new(BackendKind::Hactool)?;
-
         let output = Command::new(extractor.path())
             .args([path.as_ref()])
             .output()?;
@@ -158,8 +154,14 @@ impl Nca {
 
         let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
         let mut title_id: Option<String> = None;
+        let title_id_pat = match extractor.kind() {
+            BackendKind::Hactool => "Title ID:",
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            BackendKind::Hactoolnet => "TitleID:",
+            _ => unreachable!(),
+        };
         for line in stdout.lines() {
-            if line.find("Title ID:").is_some() {
+            if line.find(title_id_pat).is_some() {
                 title_id = Some(
                     line.trim()
                         .split(' ')

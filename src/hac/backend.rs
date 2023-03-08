@@ -11,6 +11,8 @@ use crate::cache::Cache;
 pub enum BackendKind {
     Hacpack,
     Hactool,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    Hactoolnet,
 }
 
 pub struct Backend {
@@ -21,33 +23,28 @@ pub struct Backend {
 impl Backend {
     pub const HACPACK: BackendKind = BackendKind::Hacpack;
     pub const HACTOOL: BackendKind = BackendKind::Hactool;
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    pub const HACTOOLNET: BackendKind = BackendKind::Hactoolnet;
 
     pub fn new(kind: BackendKind) -> Result<Self> {
         let tool = Backend::map_to_cache(kind);
-        let path: PathBuf;
-        if tool.is_cached() {
-            path = tool.path()?;
+        let path = if tool.is_cached() {
+            tool.path()?
         } else {
             #[cfg(target_os = "windows")]
             {
-                path = tool.from_embed()?.path()?;
+                tool.from_embed()?.path()?
             }
             #[cfg(any(target_os = "linux", target_os = "android"))]
             {
                 match tool {
-                    Cache::Hacpack => {
-                        path = tool.from(make_hacpack()?)?.make_executable()?.path()?;
-                    }
-                    Cache::Hactool => {
-                        path = tool.from(make_hactool()?)?.make_executable()?.path()?;
-                    }
+                    Cache::Hacpack => tool.from(make_hacpack()?)?.make_executable()?.path()?,
+                    Cache::Hactool => tool.from(make_hactool()?)?.make_executable()?.path()?,
                     #[cfg(target_os = "linux")]
-                    Cache::Hactoolnet => {
-                        path = tool.from_embed()?.path()?;
-                    }
+                    Cache::Hactoolnet => tool.from_embed()?.make_executable()?.path()?,
                 }
             }
-        }
+        };
 
         Ok(Self { kind, path })
     }
@@ -62,6 +59,8 @@ impl Backend {
         match tool {
             BackendKind::Hacpack => Cache::Hacpack,
             BackendKind::Hactool => Cache::Hactool,
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            BackendKind::Hactoolnet => Cache::Hactoolnet,
         }
     }
 }

@@ -21,6 +21,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     update: &mut Nsp,
     outdir: O,
 ) -> Result<Nsp> {
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    let extractor = Backend::new(Backend::HACTOOLNET)?;
+    #[cfg(target_os = "android")]
     let extractor = Backend::new(Backend::HACTOOL)?;
     let packer = Backend::new(Backend::HACPACK)?;
 
@@ -43,8 +46,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
-    base.extract_data_to(base_data_dir.path())?;
-    update.extract_data_to(update_data_dir.path())?;
+    base.extract_data(&extractor, base_data_dir.path())?;
+    update.extract_data(&extractor, update_data_dir.path())?;
 
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err, "This error is not being handeled right away!",);
@@ -74,7 +77,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
-                match Nca::from(entry.path()) {
+                match Nca::new(&extractor, entry.path()) {
                     Ok(nca) => {
                         match nca.content_type {
                             NcaType::Program => {
@@ -111,7 +114,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .filter_map(|e| e.ok())
     {
         match entry.path().extension().and_then(OsStr::to_str) {
-            Some("nca") => match Nca::from(entry.path()) {
+            Some("nca") => match Nca::new(&extractor, entry.path()) {
                 Ok(nca) => match nca.content_type {
                     NcaType::Control => {
                         if control_nca.is_none() {
@@ -184,7 +187,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca
         .title_id
-        .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
+        .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?
+        .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
     if !Command::new(packer.path())
@@ -219,7 +223,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
-                patched_nca = Some(Nca::from(entry.path())?);
+                patched_nca = Some(Nca::new(&extractor, entry.path())?);
                 break;
             }
             _ => {}
