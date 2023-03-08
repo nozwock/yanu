@@ -1,5 +1,5 @@
 use eyre::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use std::process::Command;
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -8,52 +8,56 @@ use tempdir::TempDir;
 use crate::cache::Cache;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Backend {
+pub enum BackendKind {
     Hacpack,
     Hactool,
 }
 
+pub struct Backend {
+    kind: BackendKind,
+    path: PathBuf,
+}
+
 impl Backend {
-    pub fn path(&self) -> Result<PathBuf> {
-        match self {
-            Backend::Hacpack => {
-                let hacpack = Cache::Hacpack;
-                #[cfg(target_os = "windows")]
-                {
-                    if hacpack.is_cached() {
-                        return Ok(hacpack.path()?);
-                    } else {
-                        return Ok(hacpack.from_embed()?.path()?);
+    pub const HACPACK: BackendKind = BackendKind::Hacpack;
+    pub const HACTOOL: BackendKind = BackendKind::Hactool;
+
+    pub fn new(kind: BackendKind) -> Result<Self> {
+        let tool = Backend::map_to_cache(kind);
+        let path: PathBuf;
+        if tool.is_cached() {
+            path = tool.path()?;
+        } else {
+            #[cfg(target_os = "windows")]
+            {
+                path = tool.from_embed()?.path()?;
+            }
+            #[cfg(any(target_os = "linux", target_os = "android"))]
+            {
+                match tool {
+                    Cache::Hacpack => {
+                        path = tool.from(make_hacpack()?)?.make_executable()?.path()?;
                     }
-                }
-                #[cfg(any(target_os = "linux", target_os = "android"))]
-                {
-                    if hacpack.is_cached() {
-                        return Ok(hacpack.path()?);
-                    } else {
-                        return Ok(hacpack.from(make_hacpack()?)?.make_executable()?.path()?);
+                    Cache::Hactool => {
+                        path = tool.from(make_hactool()?)?.make_executable()?.path()?;
                     }
                 }
             }
-            Backend::Hactool => {
-                let hactool = Cache::Hactool;
-                #[cfg(target_os = "windows")]
-                {
-                    if hactool.is_cached() {
-                        return Ok(hactool.path()?);
-                    } else {
-                        return Ok(hactool.from_embed()?.path()?);
-                    }
-                }
-                #[cfg(any(target_os = "linux", target_os = "android"))]
-                {
-                    if hactool.is_cached() {
-                        return Ok(hactool.path()?);
-                    } else {
-                        return Ok(hactool.from(make_hactool()?)?.make_executable()?.path()?);
-                    }
-                }
-            }
+        }
+
+        Ok(Self { kind, path })
+    }
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+    pub fn kind(&self) -> BackendKind {
+        self.kind
+    }
+    //* there's prob a better way to do this mapping
+    fn map_to_cache(tool: BackendKind) -> Cache {
+        match tool {
+            BackendKind::Hacpack => Cache::Hacpack,
+            BackendKind::Hactool => Cache::Hactool,
         }
     }
 }
@@ -65,7 +69,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
     use std::fs;
     use tracing::info;
 
-    let name = format!("{:?}", Backend::Hacpack).to_lowercase();
+    let name = format!("{:?}", Backend::HACPACK).to_lowercase();
     info!("Building {}", name);
     let src_dir = TempDir::new(&name)?;
 
@@ -107,7 +111,7 @@ pub fn make_hactool() -> Result<PathBuf> {
     use std::fs;
     use tracing::info;
 
-    let name = format!("{:?}", Backend::Hactool).to_lowercase();
+    let name = format!("{:?}", Backend::HACTOOL).to_lowercase();
     info!("Building {}", name);
     let src_dir = TempDir::new(&name)?;
 

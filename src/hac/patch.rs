@@ -16,13 +16,41 @@ use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
 
+fn extract_patch<R, E>(
+    extractor: &Backend,
+    base: &Nca,
+    patch: &Nca,
+    romfs_dir: R,
+    exefs_dir: E,
+) -> Result<()>
+where
+    R: AsRef<Path>,
+    E: AsRef<Path>,
+{
+    let status = Command::new(extractor.path())
+        .args([
+            "--basenca".as_ref(),
+            base.path.as_path(),
+            patch.path.as_path(),
+            "--romfsdir".as_ref(),
+            romfs_dir.as_ref(), // ! hacshit seems to fail if the outdirs are in different mount places -_-
+            "--exefsdir".as_ref(),
+            exefs_dir.as_ref(),
+        ])
+        .status()?;
+    if !status.success() {
+        bail!("The process responsible for extracting romfs/exefs terminated improperly with exit_status {:?}", status.code());
+    }
+    Ok(())
+}
+
 pub fn patch_nsp_with_update<O: AsRef<Path>>(
     base: &mut Nsp,
     update: &mut Nsp,
     outdir: O,
 ) -> Result<Nsp> {
-    let hactool = Backend::Hactool.path()?;
-    let hacpack = Backend::Hacpack.path()?;
+    let extractor = Backend::new(Backend::HACTOOL)?;
+    let packer = Backend::new(Backend::HACPACK)?;
 
     let switch_dir = dirs::home_dir()
         .ok_or_else(|| eyre!("Failed to find home dir"))?
@@ -151,22 +179,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     info!(?base_nca.path, ?update_nca.path, "Extracting romfs/exefs");
-    let status = Command::new(&hactool)
-        .args([
-            "--basenca".as_ref(),
-            base_nca.path.as_path(),
-            update_nca.path.as_path(),
-            "--romfsdir".as_ref(),
-            romfs_dir.as_path(), // ! hacshit seems to fail if the outdirs are in different mount places -_-
-            "--exefsdir".as_ref(),
-            exefs_dir.as_path(),
-        ])
-        .status()?;
-    if !status.success() {
-        warn!(
-            exit_code = ?status.code(),
-            "The process responsible for extracting romfs/exefs terminated improperly",
-        );
+    let status = extract_patch(&extractor, &base_nca, &update_nca, &romfs_dir, &exefs_dir);
+    if let Err(err) = status {
+        warn!("{}", err);
     }
 
     let nca_dir = patch_dir.path().join("nca");
@@ -190,7 +205,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
-    let status = Command::new(&hacpack)
+    let status = Command::new(packer.path())
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),
@@ -210,6 +225,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         ])
         .status()?;
     if !status.success() {
+        // ! nah just exit if packer exits improperly
         warn!(
             exit_code = ?status.code(),
             "The process responsible for packing romfs/exefs into a NCA terminated improperly"
@@ -233,7 +249,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs into a NCA"))?;
 
     info!("Generating Meta NCA from patched NCA & control NCA");
-    let status = Command::new(&hacpack)
+    let status = Command::new(packer.path())
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),
@@ -284,7 +300,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         patched_nsp = ?patched_nsp_path,
         "Packing all 3 NCAs into a NSP"
     );
-    let status = Command::new(&hacpack)
+    let status = Command::new(packer.path())
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),

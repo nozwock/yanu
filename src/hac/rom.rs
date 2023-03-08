@@ -11,7 +11,7 @@ use strum_macros::EnumString;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
-use crate::hac::backend::Backend;
+use crate::hac::backend::{Backend, BackendKind};
 
 use super::ticket::{self, TitleKey};
 
@@ -64,10 +64,10 @@ impl Nsp {
         })
     }
     pub fn extract_data_to<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        let hactool = Backend::Hactool.path()?;
+        let extractor = Backend::new(BackendKind::Hactool)?;
 
         info!(nsp = ?self.path, "Extracting");
-        if !Command::new(hactool)
+        if !Command::new(extractor.path())
             .args([
                 "-t".as_ref(),
                 "pfs0".as_ref(),
@@ -143,9 +143,11 @@ impl Nca {
             "Identifying TitleID and ContentType",
         );
 
-        let hactool = Backend::Hactool.path()?;
+        let extractor = Backend::new(BackendKind::Hactool)?;
 
-        let output = Command::new(&hactool).args([path.as_ref()]).output()?;
+        let output = Command::new(extractor.path())
+            .args([path.as_ref()])
+            .output()?;
         if !output.status.success() {
             warn!(
                 nca = ?path.as_ref(),
