@@ -9,6 +9,11 @@ pub const APP_DIR: &str = "com.github.nozwock.yanu";
 pub const HACPACK: &[u8] = include_bytes!("../resources/x86_64-windows/hacpack.exe");
 #[cfg(target_os = "windows")]
 pub const HACTOOL: &[u8] = include_bytes!("../resources/x86_64-windows/hactool.exe");
+#[cfg(target_os = "windows")]
+pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-windows/hactoolnet.exe");
+
+#[cfg(target_os = "linux")]
+pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-linux/hactoolnet");
 
 pub fn app_cache_dir() -> PathBuf {
     dirs::cache_dir().unwrap_or_default().join(APP_DIR)

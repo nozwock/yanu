@@ -14,6 +14,8 @@ use crate::{defines::app_cache_dir, utils::move_file};
 pub enum Cache {
     Hacpack,
     Hactool,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    Hactoolnet,
 }
 
 impl fmt::Display for Cache {
@@ -23,10 +25,14 @@ impl fmt::Display for Cache {
             Cache::Hacpack => write!(f, "hacpack.exe"),
             #[cfg(target_os = "windows")]
             Cache::Hactool => write!(f, "hactool.exe"),
+            #[cfg(target_os = "windows")]
+            Cache::Hactoolnet => write!(f, "hactoolnet.exe"),
             #[cfg(any(target_os = "linux", target_os = "android"))]
             Cache::Hacpack => write!(f, "hacpack"),
             #[cfg(any(target_os = "linux", target_os = "android"))]
             Cache::Hactool => write!(f, "hactool"),
+            #[cfg(target_os = "linux")]
+            Cache::Hactoolnet => write!(f, "hactoolnet"),
         }
     }
 }
@@ -48,7 +54,7 @@ impl Cache {
         Ok(self)
     }
     /// Extracts the embedded files to the cache dir
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     pub fn from_embed(self) -> Result<Self> {
         info!(?self, "Caching from embed");
 
@@ -121,11 +127,17 @@ impl Cache {
 
         bail!("{:?} isn't cached", file_name);
     }
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     fn as_bytes(&self) -> &'static [u8] {
+        use crate::defines::HACTOOLNET;
+
         match self {
+            #[cfg(target_os = "windows")]
             Cache::Hacpack => HACPACK,
+            #[cfg(target_os = "windows")]
             Cache::Hactool => HACTOOL,
+            Cache::Hactoolnet => HACTOOLNET,
+            _ => unreachable!(),
         }
     }
 }

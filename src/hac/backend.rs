@@ -41,6 +41,10 @@ impl Backend {
                     Cache::Hactool => {
                         path = tool.from(make_hactool()?)?.make_executable()?.path()?;
                     }
+                    #[cfg(target_os = "linux")]
+                    Cache::Hactoolnet => {
+                        path = tool.from_embed()?.path()?;
+                    }
                 }
             }
         }
