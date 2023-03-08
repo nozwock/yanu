@@ -165,7 +165,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     if !status.success() {
         warn!(
             exit_code = ?status.code(),
-            "The proccess responsible for extracting romfs/exefs terminated improperly (This might result in a crash!)",
+            "The process responsible for extracting romfs/exefs terminated improperly",
         );
     }
 
@@ -190,7 +190,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?;
     title_id.truncate(TITLEID_SZ as _);
     info!("Packing romfs/exefs into a single NCA");
-    if !Command::new(&hacpack)
+    let status = Command::new(&hacpack)
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),
@@ -208,13 +208,15 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "--outdir".as_ref(),
             nca_dir.as_path(),
         ])
-        .status()?
-        .success()
-    {
-        bail!("Failed to pack romfs/exefs into a single NCA");
+        .status()?;
+    if !status.success() {
+        warn!(
+            exit_code = ?status.code(),
+            "The process responsible for packing romfs/exefs into a NCA terminated improperly"
+        );
     }
 
-    let mut pactched_nca: Option<Nca> = None;
+    let mut patched_nca: Option<Nca> = None;
     for entry in WalkDir::new(&nca_dir)
         .min_depth(1)
         .into_iter()
@@ -222,15 +224,16 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     {
         match entry.path().extension().and_then(OsStr::to_str) {
             Some("nca") => {
-                pactched_nca = Some(Nca::from(entry.path())?);
+                patched_nca = Some(Nca::from(entry.path())?);
                 break;
             }
             _ => {}
         }
     }
+    let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs into a NCA"))?;
 
     info!("Generating Meta NCA from patched NCA & control NCA");
-    if !Command::new(&hacpack)
+    let status = Command::new(&hacpack)
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),
@@ -241,10 +244,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "--titletype".as_ref(),
             "application".as_ref(),
             "--programnca".as_ref(),
-            pactched_nca
-                .ok_or_else(|| eyre!("Couldn't find the patched NCA"))?
-                .path
-                .as_path(),
+            patched_nca.path.as_path(),
             "--controlnca".as_ref(),
             control_nca.path.as_path(),
             "--titleid".as_ref(),
@@ -252,9 +252,29 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "--outdir".as_ref(),
             nca_dir.as_path(),
         ])
-        .status()?
-        .success()
+        .status()?;
+    if !status.success() {
+        warn!(
+            exit_code = ?status.code(),
+            "The process responsible for generating Meta NCA from patched NCA & control NCA terminated improperly"
+        );
+    }
+    // Checking for meta NCA
+    let mut meta_exists = false;
+    for entry in WalkDir::new(&nca_dir)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(|e| e.ok())
     {
+        //? Should prob improve this check
+        let is_meta = entry.file_name().to_string_lossy().ends_with("cnmt.nca");
+        debug!(file = ?entry.file_name(), is_meta);
+        if is_meta {
+            meta_exists = true;
+            break;
+        }
+    }
+    if !meta_exists {
         bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
@@ -264,7 +284,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         patched_nsp = ?patched_nsp_path,
         "Packing all 3 NCAs into a NSP"
     );
-    if !Command::new(&hacpack)
+    let status = Command::new(&hacpack)
         .args([
             "--keyset".as_ref(),
             keyset_path.as_path(),
@@ -277,16 +297,21 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "--outdir".as_ref(),
             cache_dir.as_ref(),
         ])
-        .status()?
-        .success()
-    {
+        .status()?;
+    if !status.success() {
+        warn!(
+            exit_code = ?status.code(),
+            "The process responsible for packing all 3 NCAs into a NSP terminated improperly"
+        );
+    }
+    if !patched_nsp_path.is_file() {
         bail!("Failed to Pack all 3 NCAs into a NSP");
     }
 
-    // Moving patched NSP to outdir
     let dest = outdir
         .as_ref()
         .join(format!("{}[yanu-patched].nsp", title_id));
+    info!(from = ?patched_nsp_path,to = ?dest,"Moving");
     move_file(patched_nsp_path, &dest)?;
 
     Ok(Nsp::from(dest)?)

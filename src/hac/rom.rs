@@ -8,7 +8,7 @@ use std::{
 
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
 use crate::hac::backend::Backend;
@@ -147,7 +147,11 @@ impl Nca {
 
         let output = Command::new(&hactool).args([path.as_ref()]).output()?;
         if !output.status.success() {
-            bail!("Hactool failed to view info of {:?}", path.as_ref());
+            warn!(
+                nca = ?path.as_ref(),
+                stderr = %std::str::from_utf8(output.stderr.as_slice())?,
+                "An error occured while trying to view info",
+            );
         }
 
         let stdout = std::str::from_utf8(output.stdout.as_slice())?.to_owned();
