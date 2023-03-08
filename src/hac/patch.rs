@@ -39,8 +39,11 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         _ => {}
     }
 
-    let cache_dir = app_cache_dir();
-    let temp_dir = TempDir::new_in(&cache_dir, "yanu")?;
+    let exe_path = std::env::current_exe()?;
+    let root_dir = exe_path
+        .parent()
+        .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
+    let temp_dir = TempDir::new_in(&root_dir, "yanu")?;
     let base_data_dir = TempDir::new_in(&temp_dir, "basedata")?;
     let update_data_dir = TempDir::new_in(&temp_dir, "updatedata")?;
     fs::create_dir_all(base_data_dir.path())?;
@@ -257,7 +260,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         bail!("Failed to generate Meta NCA from patched NCA & control NCA");
     }
 
-    let patched_nsp_path = cache_dir.join(format!("{}.nsp", title_id));
+    let patched_nsp_path = root_dir.join(format!("{}.nsp", title_id));
 
     info!(
         patched_nsp = ?patched_nsp_path,
@@ -274,7 +277,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             "--titleid".as_ref(),
             title_id.as_ref(),
             "--outdir".as_ref(),
-            cache_dir.as_ref(),
+            root_dir.as_ref(),
         ])
         .status()?
         .success()
