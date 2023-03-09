@@ -13,25 +13,31 @@ serde = { version = "1.0", features = ["derive"] }
 confy = { version = "0.5", default-features = false, features = ["ron_conf"] }
 clap = { version = "4.1", features = ["derive"] }
 tracing-subscriber = "0.3"
-tracing = "0.1.37"
-hex = "0.4.3"
-tempdir = "0.3.7"
-tracing-appender = "0.2.2"
+tracing = "0.1"
+hex = "0.4"
+tempdir = "0.3"
+tracing-appender = "0.2"
 strum = "0.24"
 strum_macros = "0.24"
-walkdir = "2.3.2"
-ctrlc = "3.2.5"
-indicatif = "0.17.3"
-console = "0.15.5"
+walkdir = "2.3"
+ctrlc = "3.2"
+indicatif = "0.17"
+console = "0.15"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
-native-dialog = { version = "0.6.3", features = [
-    "windows_dpi_awareness",
-    "windows_visual_styles",
+rfd = { version = "0.11", features = [
+    # "common-controls-v6"
 ] }
+# native-dialog = { version = "0.6", features = [
+#     "windows_dpi_awareness",
+#     "windows_visual_styles",
+# ] }
 
 [profile.release]
 strip = true
 opt-level = "s"
 lto = true
 # panic = "abort"
+
+[build-dependencies]
+embed-resource = "1.8.0"

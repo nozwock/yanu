@@ -1,23 +1,17 @@
+use crate::defines::get_default_keyfile_path;
 use eyre::Result;
-#[cfg(any(target_os = "linux", target_os = "windows"))]
-use native_dialog::FileDialog;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 
-use crate::defines::get_default_keyfile_path;
-
-#[cfg(any(target_os = "linux", target_os = "windows"))]
-pub fn browse_nsp_file() -> Option<PathBuf> {
-    use tracing::info;
-
-    let path = FileDialog::new()
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+pub fn pick_nsp_file() -> Option<PathBuf> {
+    let path = rfd::FileDialog::new()
         .add_filter("NSP Files", &["nsp"])
-        .show_open_single_file()
-        .ok()?;
+        .pick_file();
     if let Some(ref path) = path {
-        info!(?path, "Selected file");
+        tracing::info!(?path, "Selected file");
     }
     path
 }
