@@ -21,6 +21,7 @@ strum = "0.24"
 strum_macros = "0.24"
 walkdir = "2.3.2"
 ctrlc = "3.2.5"
+indicatif = "0.17.3"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 native-dialog = { version = "0.6.3", features = [

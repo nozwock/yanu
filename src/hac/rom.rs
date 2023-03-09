@@ -73,7 +73,6 @@ impl Nsp {
             to.as_ref(),
             self.path.as_path(),
         ]);
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
         cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {

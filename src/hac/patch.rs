@@ -9,16 +9,29 @@ use crate::{
 
 use super::rom::Nsp;
 use eyre::{bail, eyre, Result};
+use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     cmp,
     ffi::OsStr,
     fs, io,
     path::Path,
     process::{Command, Stdio},
+    time::{self, Duration},
 };
 use tempdir::TempDir;
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
+
+fn default_spinner() -> ProgressBar {
+    let sp = ProgressBar::new_spinner();
+    sp.enable_steady_tick(Duration::from_millis(80));
+    sp.set_style(
+        ProgressStyle::with_template("{spinner:.blue} {msg}")
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+    );
+    sp
+}
 
 const TITLEID_SZ: u8 = 16;
 
@@ -27,6 +40,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     update: &mut Nsp,
     outdir: O,
 ) -> Result<Nsp> {
+    let started = time::Instant::now();
+
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     let extractor = Backend::new(Backend::HACTOOLNET)?;
     #[cfg(target_os = "android")]
@@ -54,6 +69,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let update_data_dir = TempDir::new_in(&temp_dir, "updatedata")?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
+
+    // ! color this shiz
+    println!("Extracting NSP data...");
 
     base.extract_data(&extractor, base_data_dir.path())?;
     update.extract_data(&extractor, update_data_dir.path())?;
@@ -159,6 +177,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     })?;
     debug!(?control_nca);
 
+    // ! COLOR
+    println!("Extracting romfs/exefs...");
+
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
@@ -173,7 +194,6 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         "--exefsdir".as_ref(),
         exefs_dir.as_ref(),
     ]);
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
     cmd.stdout(Stdio::inherit());
     let output = cmd.output()?;
     if !output.status.success() {
@@ -193,11 +213,17 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::rename(&control_nca.path, &nca_dir.join(control_nca_filename))?;
     control_nca.path = nca_dir.join(control_nca_filename);
 
+    println!("Extracted romfs/exefs ({:?})", started.elapsed());
+    let sp = default_spinner().with_message("Cleaning up...");
+
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
     drop(base_data_dir);
     info!(dir = ?update_data_dir.path(), "Cleaning up");
     drop(update_data_dir);
+
+    sp.println(format!("Cleaned up ({:?})", started.elapsed()));
+    sp.set_message("Packing romfs/exefs to NCA...");
 
     let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca
@@ -205,7 +231,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
-    info!("Packing romfs/exefs into a single NCA");
+    info!("Packing romfs/exefs into a NCA");
     let mut cmd = Command::new(packer.path());
     cmd.args([
         "--keyset".as_ref(),
@@ -246,6 +272,12 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     }
     let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs into a NCA"))?;
 
+    sp.println(format!(
+        "Packed romfs/exefs to NCA ({:?})",
+        started.elapsed()
+    ));
+    sp.set_message("Generating Meta NCA...");
+
     info!("Generating Meta NCA from patched NCA & control NCA");
     let mut cmd = Command::new(packer.path());
     cmd.args([
@@ -273,6 +305,9 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     }
 
     let patched_nsp_path = root_dir.join(format!("{}.nsp", title_id));
+
+    sp.println(format!("Created Meta NCA ({:?})", started.elapsed()));
+    sp.set_message("Packing all NCAs to NSP...");
 
     info!(
         patched_nsp = ?patched_nsp_path,
@@ -302,6 +337,11 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         .join(format!("{}[yanu-patched].nsp", title_id));
     info!(from = ?patched_nsp_path,to = ?dest,"Moving");
     move_file(patched_nsp_path, &dest)?;
+
+    sp.finish_and_clear();
+    // ! COLOR
+    println!("Packed all NCAs to NSP ({:?})", started.elapsed());
+    println!("Patched NSP created at {:?}", dest);
 
     Ok(Nsp::from(dest)?)
 }
