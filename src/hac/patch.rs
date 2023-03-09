@@ -8,6 +8,7 @@ use crate::{
 };
 
 use super::rom::Nsp;
+use console::style;
 use eyre::{bail, eyre, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{
@@ -26,7 +27,7 @@ fn default_spinner() -> ProgressBar {
     let sp = ProgressBar::new_spinner();
     sp.enable_steady_tick(Duration::from_millis(80));
     sp.set_style(
-        ProgressStyle::with_template("{spinner:.blue} {msg}")
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")
             .unwrap()
             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
@@ -40,6 +41,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     update: &mut Nsp,
     outdir: O,
 ) -> Result<Nsp> {
+    //* It's a mess, ik and I'm not sry ;-;
     let started = time::Instant::now();
 
     #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -70,8 +72,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
-    // ! color this shiz
-    println!("Extracting NSP data...");
+    println!("{}", style("Extracting NSP data...").yellow().bold());
 
     base.extract_data(&extractor, base_data_dir.path())?;
     update.extract_data(&extractor, update_data_dir.path())?;
@@ -177,8 +178,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     })?;
     debug!(?control_nca);
 
-    // ! COLOR
-    println!("Extracting romfs/exefs...");
+    println!("{}", style("Extracting romfs/exefs...").yellow().bold());
 
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -213,8 +213,15 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     fs::rename(&control_nca.path, &nca_dir.join(control_nca_filename))?;
     control_nca.path = nca_dir.join(control_nca_filename);
 
-    println!("Extracted romfs/exefs ({:?})", started.elapsed());
-    let sp = default_spinner().with_message("Cleaning up...");
+    println!(
+        "{} {}",
+        style("Extracted romfs/exefs").green().bold(),
+        style(format!("({:?})", started.elapsed())).bold().dim()
+    );
+    let sp = default_spinner().with_message(format!(
+        "{}",
+        style("Cleaning up extracted NSPs data...").yellow().bold()
+    ));
 
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
@@ -222,8 +229,15 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     info!(dir = ?update_data_dir.path(), "Cleaning up");
     drop(update_data_dir);
 
-    sp.println(format!("Cleaned up ({:?})", started.elapsed()));
-    sp.set_message("Packing romfs/exefs to NCA...");
+    sp.println(format!(
+        "{} {}",
+        style("Cleaned up extracted NSPs data").green().bold(),
+        style(format!("({:?})", started.elapsed())).bold().dim(),
+    ));
+    sp.set_message(format!(
+        "{}",
+        style("Packing romfs/exefs to NCA...").yellow().bold()
+    ));
 
     let keyset_path = get_default_keyfile_path()?;
     let mut title_id = base_nca
@@ -273,10 +287,14 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs into a NCA"))?;
 
     sp.println(format!(
-        "Packed romfs/exefs to NCA ({:?})",
-        started.elapsed()
+        "{} {}",
+        style("Packed romfs/exefs to NCA").green().bold(),
+        style(format!("({:?})", started.elapsed())).bold().dim(),
     ));
-    sp.set_message("Generating Meta NCA...");
+    sp.set_message(format!(
+        "{}",
+        style("Generating Meta NCA...").yellow().bold()
+    ));
 
     info!("Generating Meta NCA from patched NCA & control NCA");
     let mut cmd = Command::new(packer.path());
@@ -306,8 +324,15 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
 
     let patched_nsp_path = root_dir.join(format!("{}.nsp", title_id));
 
-    sp.println(format!("Created Meta NCA ({:?})", started.elapsed()));
-    sp.set_message("Packing all NCAs to NSP...");
+    sp.println(format!(
+        "{} {}",
+        style("Created Meta NCA").green().bold(),
+        style(format!("({:?})", started.elapsed())).bold().dim(),
+    ));
+    sp.set_message(format!(
+        "{}",
+        style("Packing all NCAs to NSP...").yellow().bold()
+    ));
 
     info!(
         patched_nsp = ?patched_nsp_path,
@@ -339,9 +364,16 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     move_file(patched_nsp_path, &dest)?;
 
     sp.finish_and_clear();
-    // ! COLOR
-    println!("Packed all NCAs to NSP ({:?})", started.elapsed());
-    println!("Patched NSP created at {:?}", dest);
+    println!(
+        "{} {}",
+        style("Packed all NCAs to NSP").green().bold(),
+        style(format!("({:?})", started.elapsed())).bold().dim(),
+    );
+    println!(
+        "{} {:?}",
+        style("Patched NSP created at").cyan().bold(),
+        dest
+    );
 
     Ok(Nsp::from(dest)?)
 }

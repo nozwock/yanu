@@ -210,7 +210,7 @@ fn run(cli: YanuCli) -> Result<()> {
                             }
                         }
                     }
-                    false => println!("yanu exited"),
+                    false => println!("bi bi"),
                 }
             }
 
@@ -345,16 +345,13 @@ fn run(cli: YanuCli) -> Result<()> {
                 {
                     true => {
                         info!("Started patching!");
-                        match patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?) {
-                            Ok(patched) => {
-                                println!("Patched file saved as:\n{:?}", patched.path);
-                            }
-                            Err(err) => {
-                                bail!(err);
-                            }
+                        if let Err(err) =
+                            patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?)
+                        {
+                            bail!(err);
                         }
                     }
-                    false => println!("yanu exited"),
+                    false => println!("bi bi"),
                 }
             }
         }
