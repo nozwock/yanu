@@ -25,9 +25,13 @@ indicatif = "0.17"
 console = "0.15"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
-rfd = { version = "0.11", features = [
+rfd = { git = "https://github.com/PolyMeilex/rfd.git", branch = "zenity", default_features = false, features = [
+    "xdg-portal",
     # "common-controls-v6"
 ] }
+# rfd = { version = "0.11", features = [
+#     # "common-controls-v6"
+# ] }
 # native-dialog = { version = "0.6", features = [
 #     "windows_dpi_awareness",
 #     "windows_visual_styles",
