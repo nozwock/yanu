@@ -49,7 +49,7 @@ fn main() -> Result<()> {
             if !cli_mode {
                 rfd::MessageDialog::new()
                     .set_level(rfd::MessageLevel::Error)
-                    .set_title("Error occurred!")
+                    .set_title("Error occurred")
                     .set_description(&err.to_string())
                     .show();
             }
@@ -94,15 +94,11 @@ fn run(cli: YanuCli) -> Result<()> {
             }
 
             info!("Started patching!");
-            println!(
-                "\nPatched file saved as:\n{:?}",
-                patch_nsp_with_update(
-                    &mut Nsp::from(cli.base)?,
-                    &mut Nsp::from(cli.update)?,
-                    get_default_outdir()?
-                )?
-                .path
-            );
+            patch_nsp_with_update(
+                &mut Nsp::from(cli.base)?,
+                &mut Nsp::from(cli.update)?,
+                get_default_outdir()?,
+            )?;
         }
         #[cfg(target_os = "android")]
         Some(CliArgs::Commands::Config(new_config)) => {
@@ -123,8 +119,8 @@ fn run(cli: YanuCli) -> Result<()> {
                 if keyfile_exists().is_none() {
                     rfd::MessageDialog::new()
                         .set_level(rfd::MessageLevel::Warning)
-                        .set_title("Failed to find keyfile!")
-                        .set_description("Please select `prod.keys` keyfile to continue")
+                        .set_title("Keyfile required")
+                        .set_description("Select `prod.keys` keyfile to continue")
                         .show();
                     let keyfile_path = rfd::FileDialog::new()
                         .add_filter("Keys", &["keys"])
@@ -133,6 +129,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     info!(?keyfile_path, "Selected keyfile");
 
                     // Dialog allows picking dir, atleast on GTK (prob a bug)
+                    //* ^^^^ doesn't seems to have this issue with the xdg portal backend
                     if !keyfile_path.is_file() {
                         bail!("{:?} is not a file", keyfile_path);
                     }
@@ -150,8 +147,8 @@ fn run(cli: YanuCli) -> Result<()> {
 
                 rfd::MessageDialog::new()
                     .set_level(rfd::MessageLevel::Info)
-                    .set_title("yanu • BASE")
-                    .set_description("Please select the BASE package file to update!")
+                    .set_title("Base package required")
+                    .set_description("Select the BASE package file to update")
                     .show();
                 let base_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                 if !base_path.is_file() {
@@ -160,8 +157,8 @@ fn run(cli: YanuCli) -> Result<()> {
 
                 rfd::MessageDialog::new()
                     .set_level(rfd::MessageLevel::Info)
-                    .set_title("yanu • UPDATE")
-                    .set_description("Please select the UPDATE package file to apply!")
+                    .set_title("Update package required")
+                    .set_description("Select the UPDATE package file to apply")
                     .show();
                 let update_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                 if !update_path.is_file() {
@@ -177,7 +174,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     .expect("File should've a filename")
                     .to_string_lossy();
 
-                match rfd::MessageDialog::new()
+                if rfd::MessageDialog::new()
                     .set_level(rfd::MessageLevel::Info)
                     .set_title("Is this correct?")
                     .set_description(&format!(
@@ -187,30 +184,28 @@ fn run(cli: YanuCli) -> Result<()> {
                     ))
                     .set_buttons(rfd::MessageButtons::YesNo)
                     .show()
+                    == true
                 {
-                    true => {
-                        info!("Started patching!");
-                        match patch_nsp_with_update(
-                            &mut Nsp::from(&base_path)?,
-                            &mut Nsp::from(&update_path)?,
-                            get_default_outdir()?,
-                        ) {
-                            Ok(patched) => {
-                                rfd::MessageDialog::new()
-                                    .set_level(rfd::MessageLevel::Info)
-                                    .set_title("Done patching!")
-                                    .set_description(&format!(
-                                        "Patched file saved as:\n{:?}",
-                                        patched.path
-                                    ))
-                                    .show();
-                            }
-                            Err(err) => {
-                                bail!(err);
-                            }
+                    info!("Started patching!");
+                    match patch_nsp_with_update(
+                        &mut Nsp::from(&base_path)?,
+                        &mut Nsp::from(&update_path)?,
+                        get_default_outdir()?,
+                    ) {
+                        Ok(patched) => {
+                            rfd::MessageDialog::new()
+                                .set_level(rfd::MessageLevel::Info)
+                                .set_title("Patching successful")
+                                .set_description(&format!(
+                                    "Patched file created at:\n{:?}",
+                                    patched.path
+                                ))
+                                .show();
+                        }
+                        Err(err) => {
+                            bail!(err);
                         }
                     }
-                    false => println!("bi bi"),
                 }
             }
 
@@ -339,19 +334,17 @@ fn run(cli: YanuCli) -> Result<()> {
                     choice, roms_path
                 ));
 
-                match inquire::Confirm::new("Are you sure?")
+                if inquire::Confirm::new("Are you sure?")
                     .with_default(false)
                     .prompt()?
+                    == true
                 {
-                    true => {
-                        info!("Started patching!");
-                        if let Err(err) =
-                            patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?)
-                        {
-                            bail!(err);
-                        }
+                    info!("Started patching!");
+                    if let Err(err) =
+                        patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?)
+                    {
+                        bail!(err);
                     }
-                    false => println!("bi bi"),
                 }
             }
         }

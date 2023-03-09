@@ -27,7 +27,7 @@ console = "0.15"
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 rfd = { git = "https://github.com/PolyMeilex/rfd.git", branch = "zenity", default_features = false, features = [
     "xdg-portal",
-    # "common-controls-v6"
+    # "common-controls-v6",
 ] }
 # rfd = { version = "0.11", features = [
 #     # "common-controls-v6"
