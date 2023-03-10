@@ -7,7 +7,7 @@ use std::{
 use tracing::{debug, info};
 
 #[cfg(target_os = "windows")]
-use crate::defines::{HACPACK, HACTOOL};
+use crate::defines::{HAC2L, HACPACK, HACTOOL};
 use crate::{defines::APP_CACHE_DIR, utils::move_file};
 
 #[derive(Debug, Clone, Copy)]
@@ -16,6 +16,8 @@ pub enum Cache {
     Hactool,
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     Hactoolnet,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    Hac2l,
 }
 
 impl fmt::Display for Cache {
@@ -27,12 +29,16 @@ impl fmt::Display for Cache {
             Cache::Hactool => write!(f, "hactool.exe"),
             #[cfg(target_os = "windows")]
             Cache::Hactoolnet => write!(f, "hactoolnet.exe"),
+            #[cfg(target_os = "windows")]
+            Cache::Hac2l => write!(f, "hac2l.exe"),
             #[cfg(any(target_os = "linux", target_os = "android"))]
             Cache::Hacpack => write!(f, "hacpack"),
             #[cfg(any(target_os = "linux", target_os = "android"))]
             Cache::Hactool => write!(f, "hactool"),
             #[cfg(target_os = "linux")]
             Cache::Hactoolnet => write!(f, "hactoolnet"),
+            #[cfg(target_os = "linux")]
+            Cache::Hac2l => write!(f, "hac2l"),
         }
     }
 }
@@ -136,6 +142,8 @@ impl Cache {
             Cache::Hacpack => HACPACK,
             #[cfg(target_os = "windows")]
             Cache::Hactool => HACTOOL,
+            #[cfg(target_os = "windows")]
+            Cache::Hac2l => HAC2L,
             Cache::Hactoolnet => HACTOOLNET,
             _ => unreachable!(),
         }

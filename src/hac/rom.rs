@@ -159,6 +159,8 @@ impl Nca {
             BackendKind::Hactool => "Title ID:",
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             BackendKind::Hactoolnet => "TitleID:",
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            BackendKind::Hac2l => "Program Id:",
             _ => unreachable!(),
         };
         for line in stdout.lines() {

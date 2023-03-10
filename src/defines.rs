@@ -10,6 +10,8 @@ pub const HACPACK: &[u8] = include_bytes!("../resources/x86_64-windows/hacpack.e
 pub const HACTOOL: &[u8] = include_bytes!("../resources/x86_64-windows/hactool.exe");
 #[cfg(target_os = "windows")]
 pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-windows/hactoolnet.exe");
+#[cfg(target_os = "windows")]
+pub const HAC2L: &[u8] = include_bytes!("../resources/x86_64-windows/hac2l.exe");
 
 // Hactoolnet v0.18
 #[cfg(target_os = "linux")]
