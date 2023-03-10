@@ -1,6 +1,5 @@
+use once_cell::sync::Lazy;
 use std::path::PathBuf;
-
-use eyre::{eyre, Result};
 
 pub const APP_NAME: &str = "yanu";
 pub const APP_DIR: &str = "com.github.nozwock.yanu";
@@ -16,21 +15,10 @@ pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-windows/hactoo
 #[cfg(target_os = "linux")]
 pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-linux/hactoolnet");
 
-pub fn app_cache_dir() -> PathBuf {
-    dirs::cache_dir().unwrap_or_default().join(APP_DIR)
-}
-
-pub fn app_config_dir() -> PathBuf {
-    dirs::config_dir().unwrap_or_default().join(APP_DIR)
-}
-
-pub fn app_config_path() -> PathBuf {
-    app_config_dir().join("yanu.ron")
-}
-
-pub fn get_default_keyfile_path() -> Result<PathBuf> {
-    Ok(dirs::home_dir()
-        .ok_or_else(|| eyre!("Failed to find home dir"))?
-        .join(".switch")
-        .join("prod.keys"))
-}
+pub static APP_CACHE_DIR: Lazy<PathBuf> =
+    Lazy::new(|| dirs::cache_dir().unwrap_or_default().join(APP_DIR));
+pub static APP_CONFIG_DIR: Lazy<PathBuf> =
+    Lazy::new(|| dirs::config_dir().unwrap_or_default().join(APP_DIR));
+pub static APP_CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| APP_CONFIG_DIR.join("yanu.ron"));
+pub static DEFAULT_KEYFILE_PATH: Lazy<PathBuf> =
+    Lazy::new(|| dirs::home_dir().unwrap().join(".switch").join("prod.keys"));

@@ -1,5 +1,5 @@
 use crate::{
-    defines::get_default_keyfile_path,
+    defines::DEFAULT_KEYFILE_PATH,
     hac::{
         backend::Backend,
         rom::{Nca, NcaType},
@@ -36,11 +36,7 @@ fn default_spinner() -> ProgressBar {
 
 const TITLEID_SZ: u8 = 16;
 
-pub fn patch_nsp_with_update<O: AsRef<Path>>(
-    base: &mut Nsp,
-    update: &mut Nsp,
-    outdir: O,
-) -> Result<Nsp> {
+pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     //* It's a mess, ik and I'm not sry ;-;
     let started = time::Instant::now();
 
@@ -190,7 +186,8 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         base_nca.path.as_path(),
         update_nca.path.as_path(),
         "--romfsdir".as_ref(),
-        romfs_dir.as_ref(), // ! hacshit seems to fail if the outdirs are in different mount places -_-
+        romfs_dir.as_ref(),
+        // ! Hacshit seems to fail if the outdirs are in different mount places ;-;
         "--exefsdir".as_ref(),
         exefs_dir.as_ref(),
     ]);
@@ -239,17 +236,17 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
         style("Packing romfs/exefs to NCA...").yellow().bold()
     ));
 
-    let keyset_path = get_default_keyfile_path()?;
+    let keyset_path = DEFAULT_KEYFILE_PATH.as_path();
     let mut title_id = base_nca
         .title_id
         .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
-    info!("Packing romfs/exefs into a NCA");
+    info!("Packing romfs/exefs to NCA");
     let mut cmd = Command::new(packer.path());
     cmd.args([
         "--keyset".as_ref(),
-        keyset_path.as_path(),
+        keyset_path,
         "--type".as_ref(),
         "nca".as_ref(),
         "--ncatype".as_ref(),
@@ -267,7 +264,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let output = cmd.output()?;
     if !output.status.success() {
         error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-        bail!("Failed to pack romfs/exefs into a NCA");
+        bail!("Failed to pack romfs/exefs to NCA");
     }
 
     let mut patched_nca: Option<Nca> = None;
@@ -284,7 +281,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
             _ => {}
         }
     }
-    let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs into a NCA"))?;
+    let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs to NCA"))?;
 
     sp.println(format!(
         "{} {}",
@@ -300,7 +297,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let mut cmd = Command::new(packer.path());
     cmd.args([
         "--keyset".as_ref(),
-        keyset_path.as_path(),
+        keyset_path,
         "--type".as_ref(),
         "nca".as_ref(),
         "--ncatype".as_ref(),
@@ -336,12 +333,12 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
 
     info!(
         patched_nsp = ?patched_nsp_path,
-        "Packing all 3 NCAs into a NSP"
+        "Packing all NCAs to NSP"
     );
     let mut cmd = Command::new(packer.path());
     cmd.args([
         "--keyset".as_ref(),
-        keyset_path.as_path(),
+        keyset_path,
         "--type".as_ref(),
         "nsp".as_ref(),
         "--ncadir".as_ref(),
@@ -354,7 +351,7 @@ pub fn patch_nsp_with_update<O: AsRef<Path>>(
     let output = cmd.output()?;
     if !output.status.success() {
         error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-        bail!("Failed to Pack all 3 NCAs into a NSP");
+        bail!("Failed to Pack all NCAs to NSP");
     }
 
     let dest = outdir

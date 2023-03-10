@@ -1,4 +1,3 @@
-use crate::defines::get_default_keyfile_path;
 use eyre::Result;
 use std::{
     fs,
@@ -21,13 +20,6 @@ pub fn str_truncate(s: &str, new_len: usize) -> &str {
         Some((idx, _)) => &s[..idx],
         None => s,
     }
-}
-
-pub fn keyfile_exists() -> Option<()> {
-    if !get_default_keyfile_path().ok()?.is_file() {
-        return None;
-    }
-    Some(())
 }
 
 pub fn move_file<P, Q>(from: P, to: Q) -> Result<()>

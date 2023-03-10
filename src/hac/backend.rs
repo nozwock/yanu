@@ -67,7 +67,7 @@ impl Backend {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hacpack() -> Result<PathBuf> {
-    use crate::{defines::app_cache_dir, utils::move_file};
+    use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::bail;
     use std::fs;
     use tracing::info;
@@ -101,7 +101,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
     }
 
     //* Moving bin from temp dir to cache dir
-    let dest = app_cache_dir().join(&name);
+    let dest = APP_CACHE_DIR.join(&name);
     move_file(src_dir.path().join(&name), &dest)?;
 
     Ok(dest)
@@ -109,7 +109,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn make_hactool() -> Result<PathBuf> {
-    use crate::{defines::app_cache_dir, utils::move_file};
+    use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::bail;
     use std::fs;
     use tracing::info;
@@ -166,7 +166,7 @@ pub fn make_hactool() -> Result<PathBuf> {
     }
 
     //* Moving bin from temp dir to cache dir
-    let dest = app_cache_dir().join(&name);
+    let dest = APP_CACHE_DIR.join(&name);
     move_file(src_dir.path().join(&name), &dest)?;
 
     Ok(dest)

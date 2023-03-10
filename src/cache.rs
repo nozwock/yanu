@@ -8,7 +8,7 @@ use tracing::{debug, info};
 
 #[cfg(target_os = "windows")]
 use crate::defines::{HACPACK, HACTOOL};
-use crate::{defines::app_cache_dir, utils::move_file};
+use crate::{defines::APP_CACHE_DIR, utils::move_file};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Cache {
@@ -44,8 +44,8 @@ impl Cache {
     pub fn from<P: AsRef<Path>>(self, path: P) -> Result<Self> {
         info!(?self, "Caching {:?}", path.as_ref());
 
-        let cache_dir = app_cache_dir();
-        fs::create_dir_all(&cache_dir)?;
+        let cache_dir = APP_CACHE_DIR.as_path();
+        fs::create_dir_all(cache_dir)?;
         let dest = cache_dir.join(self.to_string());
         if path.as_ref() != dest {
             move_file(path.as_ref(), dest)?;
@@ -58,8 +58,8 @@ impl Cache {
     pub fn from_embed(self) -> Result<Self> {
         info!(?self, "Caching from embed");
 
-        let cache_dir = app_cache_dir();
-        fs::create_dir_all(&cache_dir)?;
+        let cache_dir = APP_CACHE_DIR.as_path();
+        fs::create_dir_all(cache_dir)?;
         let mut file = fs::File::create(cache_dir.join(self.to_string()))?;
         file.write_all(self.as_bytes())?;
 
@@ -70,11 +70,11 @@ impl Cache {
     /// Cache is used if it exists else the embedded data is written to a file
     /// and the path is returned.
     pub fn path(&self) -> Result<PathBuf> {
-        let cache_dir = app_cache_dir();
-        fs::create_dir_all(&cache_dir)?;
+        let cache_dir = APP_CACHE_DIR.as_path();
+        fs::create_dir_all(cache_dir)?;
 
         let file_name = self.to_string();
-        for entry in fs::read_dir(&cache_dir)? {
+        for entry in fs::read_dir(cache_dir)? {
             let entry = entry?;
             if entry.file_name().to_string_lossy() == file_name {
                 // return cache if exists
@@ -89,8 +89,8 @@ impl Cache {
     pub fn make_executable(self) -> Result<Self> {
         use std::process::Command;
 
-        let cache_dir = app_cache_dir();
-        fs::create_dir_all(&cache_dir)?;
+        let cache_dir = APP_CACHE_DIR.as_path();
+        fs::create_dir_all(cache_dir)?;
 
         let file_path = cache_dir.join(self.to_string());
         if self.is_cached() {
@@ -114,11 +114,11 @@ impl Cache {
         false
     }
     fn _exists(&self) -> Result<()> {
-        let cache_dir = app_cache_dir();
-        fs::create_dir_all(&cache_dir)?;
+        let cache_dir = APP_CACHE_DIR.as_path();
+        fs::create_dir_all(cache_dir)?;
 
         let file_name = self.to_string();
-        for entry in fs::read_dir(&cache_dir)? {
+        for entry in fs::read_dir(cache_dir)? {
             let entry = entry?;
             if entry.file_name().to_string_lossy() == file_name {
                 return Ok(());

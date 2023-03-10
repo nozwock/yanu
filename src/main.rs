@@ -1,6 +1,5 @@
 use clap::Parser;
 use eyre::{bail, eyre, Result};
-#[cfg(any(target_os = "linux", target_os = "windows"))]
 use std::{env, ffi::OsStr, fs, path::PathBuf};
 use tracing::{debug, error, info, warn};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
@@ -8,9 +7,8 @@ use yanu::utils::pick_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{app_config_dir, app_config_path, get_default_keyfile_path},
-    hac::{patch::patch_nsp_with_update, rom::Nsp},
-    utils::keyfile_exists,
+    defines::{APP_CONFIG_PATH, DEFAULT_KEYFILE_PATH},
+    hac::{patch::patch_nsp, rom::Nsp},
 };
 
 fn process_init() {
@@ -73,7 +71,7 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: YanuCli) -> Result<()> {
-    let mut config: Config = confy::load_path(app_config_path())?;
+    let mut config: Config = confy::load_path(APP_CONFIG_PATH.as_path())?;
 
     match cli.command {
         Some(CliArgs::Commands::Cli(cli)) => {
@@ -91,7 +89,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     }
 
                     info!(?keyfile_path, "Selected keyfile");
-                    let default_path = get_default_keyfile_path()?;
+                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()
@@ -101,17 +99,17 @@ fn run(cli: YanuCli) -> Result<()> {
                     info!("Copied keys successfully to the C2 ^-^");
                 }
                 None => {
-                    if keyfile_exists().is_none() {
+                    if !DEFAULT_KEYFILE_PATH.is_file() {
                         bail!("Failed to find keyfile");
                     }
                 }
             }
 
             info!("Started patching!");
-            patch_nsp_with_update(
+            patch_nsp(
                 &mut Nsp::from(cli.base)?,
                 &mut Nsp::from(cli.update)?,
-                get_default_outdir()?,
+                default_outdir()?,
             )?;
         }
         #[cfg(target_os = "android")]
@@ -123,14 +121,14 @@ fn run(cli: YanuCli) -> Result<()> {
                 config.roms_dir = Some(roms_dir);
             }
 
-            info!("Updating config at {:?}", app_config_path());
-            confy::store_path(app_config_path(), config)?;
+            info!("Updating config at {:?}", APP_CONFIG_PATH);
+            confy::store_path(APP_CONFIG_PATH.as_path(), config)?;
         }
         None => {
             // Interactive mode
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
-                if keyfile_exists().is_none() {
+                if !DEFAULT_KEYFILE_PATH.is_file() {
                     rfd::MessageDialog::new()
                         .set_level(rfd::MessageLevel::Warning)
                         .set_title("Keyfile required")
@@ -149,7 +147,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     }
 
                     //? maybe validate if it's indeed prod.keys
-                    let default_path = get_default_keyfile_path()?;
+                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()
@@ -201,10 +199,10 @@ fn run(cli: YanuCli) -> Result<()> {
                     == true
                 {
                     info!("Started patching!");
-                    match patch_nsp_with_update(
+                    match patch_nsp(
                         &mut Nsp::from(&base_path)?,
                         &mut Nsp::from(&update_path)?,
-                        get_default_outdir()?,
+                        default_outdir()?,
                     ) {
                         Ok(patched) => {
                             rfd::MessageDialog::new()
@@ -225,7 +223,6 @@ fn run(cli: YanuCli) -> Result<()> {
 
             #[cfg(target_os = "android")]
             {
-                use std::{ffi::OsStr, path::PathBuf};
                 use walkdir::WalkDir;
 
                 if config.roms_dir.is_none() {
@@ -245,13 +242,13 @@ fn run(cli: YanuCli) -> Result<()> {
                         bail!("{:?} is not a valid directory", roms_dir);
                     }
                     config.roms_dir = Some(roms_dir);
-                    info!("Updating config at {:?}", app_config_path());
-                    confy::store_path(app_config_path(), config.clone())?;
+                    info!("Updating config at {:?}", APP_CONFIG_PATH);
+                    confy::store_path(APP_CONFIG_PATH.as_path(), config.clone())?;
                 }
 
                 let roms_dir = config.roms_dir.expect("roms_dir should've been Some()");
 
-                if keyfile_exists().is_none() {
+                if !DEFAULT_KEYFILE_PATH.is_file() {
                     // Looking for `prod.keys` in roms_dir
                     let mut keyfile_path: Option<PathBuf> = None;
                     for entry in WalkDir::new(&roms_dir)
@@ -276,7 +273,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
                     info!(?keyfile_path, "Selected keyfile");
 
-                    let default_path = get_default_keyfile_path()?;
+                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()
@@ -354,9 +351,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     == true
                 {
                     info!("Started patching!");
-                    if let Err(err) =
-                        patch_nsp_with_update(&mut base, &mut update, get_default_outdir()?)
-                    {
+                    if let Err(err) = patch_nsp(&mut base, &mut update, default_outdir()?) {
                         bail!(err);
                     }
                 }
@@ -367,23 +362,17 @@ fn run(cli: YanuCli) -> Result<()> {
     Ok(())
 }
 
-fn get_default_outdir() -> Result<PathBuf> {
-    let outdir: PathBuf;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    {
-        let exe_path = env::current_exe()?;
-        outdir = exe_path
-            .parent()
-            .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?
-            .to_owned();
-    }
-    #[cfg(target_os = "android")]
-    {
-        outdir = dirs::home_dir()
-            .ok_or_else(|| eyre!("Failed to find home dir"))?
-            .join("storage")
-            .join("shared");
-    }
+fn default_outdir() -> Result<PathBuf> {
+    let outdir: PathBuf = {
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        {
+            env::current_exe()?.parent().unwrap().to_owned()
+        }
+        #[cfg(target_os = "android")]
+        {
+            dirs::home_dir().unwrap().join("storage").join("shared")
+        }
+    };
 
     if !outdir.is_dir() {
         bail!("Failed to set {:?} as outdir", outdir);
