@@ -10,7 +10,7 @@ use crate::{
 use super::rom::Nsp;
 use console::style;
 use eyre::{bail, eyre, Result};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{
     cmp,
     ffi::OsStr,
@@ -242,7 +242,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     println!(
         "{} {}",
         style("Extracted romfs/exefs").green().bold(),
-        style(format!("({:?})", started.elapsed())).bold().dim()
+        style(format!("({})", HumanDuration(started.elapsed())))
+            .bold()
+            .dim()
     );
     let sp = default_spinner().with_message(format!(
         "{}",
@@ -258,7 +260,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     sp.println(format!(
         "{} {}",
         style("Cleaned up extracted NSPs data").green().bold(),
-        style(format!("({:?})", started.elapsed())).bold().dim(),
+        style(format!("({})", HumanDuration(started.elapsed())))
+            .bold()
+            .dim(),
     ));
     sp.set_message(format!(
         "{}",
@@ -315,7 +319,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     sp.println(format!(
         "{} {}",
         style("Packed romfs/exefs to NCA").green().bold(),
-        style(format!("({:?})", started.elapsed())).bold().dim(),
+        style(format!("({})", HumanDuration(started.elapsed())))
+            .bold()
+            .dim(),
     ));
     sp.set_message(format!(
         "{}",
@@ -353,7 +359,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     sp.println(format!(
         "{} {}",
         style("Created Meta NCA").green().bold(),
-        style(format!("({:?})", started.elapsed())).bold().dim(),
+        style(format!("({})", HumanDuration(started.elapsed())))
+            .bold()
+            .dim(),
     ));
     sp.set_message(format!(
         "{}",
@@ -393,7 +401,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     println!(
         "{} {}",
         style("Packed all NCAs to NSP").green().bold(),
-        style(format!("({:?})", started.elapsed())).bold().dim(),
+        style(format!("({})", HumanDuration(started.elapsed())))
+            .bold()
+            .dim(),
     );
     println!(
         "{} {:?}",
