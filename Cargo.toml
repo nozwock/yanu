@@ -23,6 +23,7 @@ walkdir = "2.3"
 ctrlc = "3.2"
 indicatif = "0.17"
 console = "0.15"
+once_cell = "1.17.1"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 rfd = { git = "https://github.com/PolyMeilex/rfd.git", rev = "52d1010b09a957d3f1e40931f154805e5e1e57a6", default_features = false, features = [
