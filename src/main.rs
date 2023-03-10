@@ -1,4 +1,5 @@
 use clap::Parser;
+use console::style;
 use eyre::{bail, eyre, Result};
 use std::{env, ffi::OsStr, fs, path::PathBuf};
 use tracing::{debug, error, info, warn};
@@ -25,6 +26,7 @@ fn process_init() {
 
 fn main() -> Result<()> {
     ctrlc::set_handler(move || {
+        eprintln!("{}", style("Process terminated by the user!").red().bold());
         error!("Process terminated by the user!");
     })?;
 

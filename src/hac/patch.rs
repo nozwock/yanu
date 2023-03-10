@@ -112,26 +112,28 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                                     base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
                                     break 'walk;
                                 }
-                                _ => break,
+                                _ => {}
                             };
                         }
                         Err(err) => {
                             warn!("{}", err);
                             #[cfg(any(target_os = "windows", target_os = "linux"))]
                             {
-                                if nca_extractor.kind() == fallback_extractor.kind() {
-                                    break;
+                                if nca_extractor.kind() != fallback_extractor.kind() {
+                                    info!(
+                                        "Using fallback extractor {:?}",
+                                        fallback_extractor.kind()
+                                    );
+                                    nca_extractor = &fallback_extractor;
+                                    continue;
                                 }
-                                info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                                nca_extractor = &fallback_extractor;
                             }
-                            #[cfg(target_os = "android")]
-                            break;
                         }
                     }
                 }
-                _ => break,
+                _ => {}
             }
+            break;
         }
     }
     let base_nca = base_nca
@@ -160,33 +162,30 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                         NcaType::Control => {
                             if control_nca.is_none() {
                                 control_nca = Some(nca);
-                                break;
                             }
                         }
                         NcaType::Program => {
                             if update_nca.is_none() {
                                 update_nca = Some(nca);
-                                break;
                             }
                         }
-                        _ => break,
+                        _ => {}
                     },
                     Err(err) => {
                         warn!("{}", err);
                         #[cfg(any(target_os = "windows", target_os = "linux"))]
                         {
-                            if nca_extractor.kind() == fallback_extractor.kind() {
-                                break;
+                            if nca_extractor.kind() != fallback_extractor.kind() {
+                                info!("Using fallback extractor {:?}", fallback_extractor.kind());
+                                nca_extractor = &fallback_extractor;
+                                continue;
                             }
-                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                            nca_extractor = &fallback_extractor;
                         }
-                        #[cfg(target_os = "android")]
-                        break;
                     }
                 },
-                _ => break,
+                _ => {}
             }
+            break;
         }
     }
     let update_nca = update_nca.ok_or_else(|| {
