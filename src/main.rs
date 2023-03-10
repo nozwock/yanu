@@ -13,6 +13,18 @@ use yanu::{
     utils::keyfile_exists,
 };
 
+fn process_init() {
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+
+    #[allow(unused_unsafe)]
+    INIT.call_once(|| unsafe {
+        #[cfg(target_os = "windows")]
+        winapi::um::winuser::SetProcessDPIAware();
+    });
+}
+
 fn main() -> Result<()> {
     ctrlc::set_handler(move || {
         error!("Process terminated by the user!");
@@ -24,6 +36,8 @@ fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .with_writer(non_blocking)
         .init();
+
+    process_init();
 
     info!(
         "Launching {} on {}!",
