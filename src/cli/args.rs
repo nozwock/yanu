@@ -20,7 +20,7 @@ pub enum Commands {
     /// Repack to NSP
     #[command()]
     Repack(Repack),
-    /// Unpack NSPs to fs files
+    /// Unpack NSPs
     #[command()]
     Unpack(Unpack),
     #[cfg(target_os = "android")]

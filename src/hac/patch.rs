@@ -63,8 +63,14 @@ fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Res
     ncas
 }
 
-pub fn repack_to_nsp<E, R, O>(control: &Nca, romfs_dir: R, exefs_dir: E, outdir: O) -> Result<Nsp>
+pub fn repack_to_nsp<N, E, R, O>(
+    control_path: N,
+    romfs_dir: R,
+    exefs_dir: E,
+    outdir: O,
+) -> Result<Nsp>
 where
+    N: AsRef<Path>,
     E: AsRef<Path>,
     R: AsRef<Path>,
     O: AsRef<Path>,
@@ -76,6 +82,36 @@ where
     #[cfg(target_os = "android")]
     let extractor = Backend::new(Backend::HACTOOL)?;
     let packer = Backend::new(Backend::HACPACK)?;
+
+    let control = match Nca::new(&extractor, control_path.as_ref()) {
+        Ok(control) => match control.content_type {
+            NcaType::Control => Some(control),
+            _ => None,
+        },
+        Err(err) => {
+            warn!("{}", err);
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            {
+                info!("Using fallback extractor {:?}", fallback_extractor.kind());
+                match Nca::new(&fallback_extractor, control_path.as_ref()) {
+                    Ok(control) => match control.content_type {
+                        NcaType::Control => Some(control),
+                        _ => None,
+                    },
+                    Err(err) => {
+                        warn!("{}", err);
+                        None
+                    }
+                }
+            }
+            #[cfg(target_os = "android")]
+            {
+                None
+            }
+        }
+    };
+    let control =
+        control.ok_or_else(|| eyre!("{:?} is not a Control Type NCA", control_path.as_ref()))?;
 
     let mut title_id = control
         .title_id
@@ -122,7 +158,7 @@ where
 
     let dest = outdir
         .as_ref()
-        .join(format!("{}[yanu-packed].nsp", title_id));
+        .join(format!("{}[yanu-repacked].nsp", title_id));
     info!(from = ?packed.path,to = ?dest,"Moving");
     move_file(&packed.path, &dest)?;
     packed.path = dest;
@@ -130,7 +166,7 @@ where
     Ok(packed)
 }
 
-pub fn unpack_to_fs<O>(base: &mut Nsp, patch: &mut Option<Nsp>, outdir: O) -> Result<()>
+pub fn unpack_to_fs<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Result<()>
 where
     O: AsRef<Path>,
 {
@@ -140,7 +176,6 @@ where
     let fallback_extractor = Backend::new(Backend::HAC2L)?;
     #[cfg(target_os = "android")]
     let extractor = Backend::new(Backend::HACTOOL)?;
-    // let packer = Backend::new(Backend::HACPACK)?;
 
     fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
     match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {

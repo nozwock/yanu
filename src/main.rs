@@ -1,8 +1,16 @@
 use clap::Parser;
 use console::style;
 use eyre::{bail, eyre, Result};
+<<<<<<< HEAD
 use fs_err as fs;
 use std::{env, ffi::OsStr, path::PathBuf};
+||||||| parent of 60a0989 (Implement missing cli functionalities)
+use std::{env, ffi::OsStr, fs, path::PathBuf};
+=======
+use once_cell::sync::Lazy;
+use std::{env, ffi::OsStr, fs, path::PathBuf};
+use tempdir::TempDir;
+>>>>>>> 60a0989 (Implement missing cli functionalities)
 use tracing::{debug, error, info, warn};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::pick_nsp_file;
@@ -11,8 +19,8 @@ use yanu::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     hac::{
-        patch::{patch_nsp, repack_to_nsp},
-        rom::{Nca, Nsp},
+        patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
+        rom::Nsp,
     },
 };
 
@@ -27,6 +35,9 @@ fn process_init() {
         winapi::um::winuser::SetProcessDPIAware();
     });
 }
+
+pub static EXE_DIR: Lazy<PathBuf> =
+    Lazy::new(|| env::current_exe().unwrap().parent().unwrap().into());
 
 fn main() -> Result<()> {
     color_eyre::config::HookBuilder::default()
@@ -121,11 +132,39 @@ fn run(cli: YanuCli) -> Result<()> {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 bail!("Failed to find keyfile");
             }
+
+            let outdir = if let Some(outdir) = args.outdir {
+                outdir
+            } else {
+                default_outdir()?
+            };
+
+            repack_to_nsp(args.controlnca, args.romfsdir, args.exefsdir, outdir)?;
         }
         Some(CliArgs::Commands::Unpack(args)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 bail!("Failed to find keyfile");
             }
+
+            let prefix = if args.patch.is_some() {
+                "base+patch"
+            } else {
+                "base"
+            };
+
+            let outdir = if let Some(outdir) = args.outdir {
+                outdir
+            } else {
+                TempDir::new_in(env::current_dir()?, prefix)?.into_path()
+            };
+
+            let patch = if let Some(path) = args.patch {
+                Some(Nsp::new(path)?)
+            } else {
+                None
+            };
+
+            unpack_to_fs(Nsp::new(args.base)?, patch, outdir)?;
         }
         #[cfg(target_os = "android")]
         Some(CliArgs::Commands::Config(new_config)) => {
