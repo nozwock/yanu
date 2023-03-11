@@ -1,4 +1,5 @@
 [package]
+build = "src/build.rs"
 name = "yanu"
 version = "0.4.1"
 edition = "2021"
@@ -20,7 +21,7 @@ tracing-appender = "0.2"
 strum = "0.24"
 strum_macros = "0.24"
 walkdir = "2.3"
-ctrlc = "3.2"
+ctrlc = { version = "3.2", features = ["termination"] }
 indicatif = "0.17"
 console = "0.15"
 once_cell = "1.17.1"
