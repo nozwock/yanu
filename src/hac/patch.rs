@@ -15,7 +15,7 @@ use std::{
     cmp,
     ffi::OsStr,
     fs, io,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{self, Duration},
 };
@@ -35,6 +35,32 @@ fn default_spinner() -> ProgressBar {
 }
 
 const TITLEID_SZ: u8 = 16;
+
+fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Result<Nca>)> {
+    let mut ncas = vec![];
+    for entry in WalkDir::new(from.as_ref())
+        .min_depth(1)
+        // Sort by descending order of sizes
+        .sort_by_key(|entry| {
+            cmp::Reverse(
+                entry
+                    .metadata()
+                    .expect(&format!("Failed to read metadata of {:?}", entry.path()))
+                    .len(),
+            )
+        })
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        match entry.path().extension().and_then(OsStr::to_str) {
+            Some("nca") => {
+                ncas.push((entry.path().to_owned(), Nca::new(extractor, entry.path())));
+            }
+            _ => {}
+        }
+    }
+    ncas
+}
 
 pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     //* It's a mess, ik and I'm not sry ;-;
@@ -72,8 +98,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Extracting NSP data...").yellow().bold());
 
-    base.extract_data(&extractor, base_data_dir.path())?;
-    update.extract_data(&extractor, update_data_dir.path())?;
+    base.unpack(&extractor, base_data_dir.path())?;
+    update.unpack(&extractor, update_data_dir.path())?;
 
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err, "This error is not being handeled right away!",);
@@ -89,49 +115,29 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     )?;
 
     let mut base_nca: Option<Nca> = None;
-    'walk: for entry in WalkDir::new(base_data_dir.path())
-        .min_depth(1)
-        .sort_by_key(|a| {
-            cmp::Reverse(
-                a.metadata()
-                    .expect(&format!("Failed to read metadata of {:?}", a.path()))
-                    .len(),
-            )
-        })
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let mut nca_extractor = &extractor;
+    'walk: for (path, mut nca) in fetch_ncas(&extractor, base_data_dir.path()) {
+        let mut fallback: bool = false;
         loop {
-            match entry.path().extension().and_then(OsStr::to_str) {
-                Some("nca") => {
-                    match Nca::new(nca_extractor, entry.path()) {
-                        Ok(nca) => {
-                            match nca.content_type {
-                                NcaType::Program => {
-                                    base_nca = Some(nca); // this will be the biggest NCA of 'Program' type
-                                    break 'walk;
-                                }
-                                _ => {}
-                            };
-                        }
-                        Err(err) => {
-                            warn!("{}", err);
-                            #[cfg(any(target_os = "windows", target_os = "linux"))]
-                            {
-                                if nca_extractor.kind() != fallback_extractor.kind() {
-                                    info!(
-                                        "Using fallback extractor {:?}",
-                                        fallback_extractor.kind()
-                                    );
-                                    nca_extractor = &fallback_extractor;
-                                    continue;
-                                }
-                            }
+            match nca {
+                Ok(nca) => match nca.content_type {
+                    NcaType::Program => {
+                        base_nca = Some(nca);
+                        break 'walk;
+                    }
+                    _ => {}
+                },
+                Err(err) => {
+                    warn!("{}", err);
+                    #[cfg(any(target_os = "windows", target_os = "linux"))]
+                    {
+                        if !fallback {
+                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
+                            nca = Nca::new(&fallback_extractor, &path);
+                            fallback = true;
+                            continue;
                         }
                     }
                 }
-                _ => {}
             }
             break;
         }
@@ -142,48 +148,35 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     let mut control_nca: Option<Nca> = None;
     let mut update_nca: Option<Nca> = None;
-    for entry in WalkDir::new(update_data_dir.path())
-        .min_depth(1)
-        .sort_by_key(|a| {
-            cmp::Reverse(
-                a.metadata()
-                    .expect(&format!("Failed to read metadata of {:?}", a.path()))
-                    .len(),
-            )
-        })
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let mut nca_extractor = &extractor;
+    for (path, mut nca) in fetch_ncas(&extractor, update_data_dir.path()) {
+        let mut fallback = false;
         loop {
-            match entry.path().extension().and_then(OsStr::to_str) {
-                Some("nca") => match Nca::new(&extractor, entry.path()) {
-                    Ok(nca) => match nca.content_type {
-                        NcaType::Control => {
-                            if control_nca.is_none() {
-                                control_nca = Some(nca);
-                            }
-                        }
-                        NcaType::Program => {
-                            if update_nca.is_none() {
-                                update_nca = Some(nca);
-                            }
-                        }
-                        _ => {}
-                    },
-                    Err(err) => {
-                        warn!("{}", err);
-                        #[cfg(any(target_os = "windows", target_os = "linux"))]
-                        {
-                            if nca_extractor.kind() != fallback_extractor.kind() {
-                                info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                                nca_extractor = &fallback_extractor;
-                                continue;
-                            }
+            match nca {
+                Ok(nca) => match nca.content_type {
+                    NcaType::Program => {
+                        if update_nca.is_none() {
+                            update_nca = Some(nca);
                         }
                     }
+                    NcaType::Control => {
+                        if control_nca.is_none() {
+                            control_nca = Some(nca);
+                        }
+                    }
+                    _ => {}
                 },
-                _ => {}
+                Err(err) => {
+                    warn!("{}", err);
+                    #[cfg(any(target_os = "windows", target_os = "linux"))]
+                    {
+                        if !fallback {
+                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
+                            nca = Nca::new(&fallback_extractor, &path);
+                            fallback = true;
+                            continue;
+                        }
+                    }
+                }
             }
             break;
         }
@@ -203,32 +196,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     })?;
     debug!(?control_nca);
 
-    println!("{}", style("Extracting romfs/exefs...").yellow().bold());
+    println!("{}", style("Unpacking NCAs...").yellow().bold());
 
     let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
-    info!(?base_nca.path, ?update_nca.path, "Extracting romfs/exefs");
-    let mut cmd = Command::new(extractor.path());
-    cmd.args([
-        "--basenca".as_ref(),
-        base_nca.path.as_path(),
-        update_nca.path.as_path(),
-        "--romfsdir".as_ref(),
-        romfs_dir.as_ref(),
-        // ! Hacshit seems to fail if the outdirs are in different mount places ;-;
-        "--exefsdir".as_ref(),
-        exefs_dir.as_ref(),
-    ]);
-    cmd.stdout(Stdio::inherit());
-    let output = cmd.output()?;
-    if !output.status.success() {
-        warn!(
-            exit_code = ?output.status.code(),
-            stderr = %String::from_utf8(output.stderr)?,
-            "The process responsible for extracting romfs/exefs terminated improperly"
-        );
-    }
+    _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
 
     let nca_dir = patch_dir.path().join("nca");
     fs::create_dir_all(&nca_dir)?;
@@ -241,7 +214,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!(
         "{} {}",
-        style("Extracted romfs/exefs").green().bold(),
+        style("Unpacked NCAs").green().bold(),
         style(format!("({})", HumanDuration(started.elapsed())))
             .bold()
             .dim()
@@ -269,52 +242,22 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         style("Packing romfs/exefs to NCA...").yellow().bold()
     ));
 
-    let keyset_path = DEFAULT_KEYFILE_PATH.as_path();
+    let keyfile_path = DEFAULT_KEYFILE_PATH.as_path();
     let mut title_id = base_nca
         .title_id
         .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
-    info!("Packing romfs/exefs to NCA");
-    let mut cmd = Command::new(packer.path());
-    cmd.args([
-        "--keyset".as_ref(),
-        keyset_path,
-        "--type".as_ref(),
-        "nca".as_ref(),
-        "--ncatype".as_ref(),
-        "program".as_ref(),
-        "--plaintext".as_ref(),
-        "--exefsdir".as_ref(),
-        exefs_dir.as_path(),
-        "--romfsdir".as_ref(),
-        romfs_dir.as_path(),
-        "--titleid".as_ref(),
-        title_id.as_ref(),
-        "--outdir".as_ref(),
-        nca_dir.as_path(),
-    ]);
-    let output = cmd.output()?;
-    if !output.status.success() {
-        error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-        bail!("Failed to pack romfs/exefs to NCA");
-    }
 
-    let mut patched_nca: Option<Nca> = None;
-    for entry in WalkDir::new(&nca_dir)
-        .min_depth(1)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        match entry.path().extension().and_then(OsStr::to_str) {
-            Some("nca") => {
-                patched_nca = Some(Nca::new(&extractor, entry.path())?);
-                break;
-            }
-            _ => {}
-        }
-    }
-    let patched_nca = patched_nca.ok_or_else(|| eyre!("Failed to pack romfs/exefs to NCA"))?;
+    let patched_nca = Nca::pack(
+        &extractor,
+        &packer,
+        &title_id,
+        keyfile_path,
+        &romfs_dir,
+        &exefs_dir,
+        &nca_dir,
+    )?;
 
     sp.println(format!(
         "{} {}",
@@ -328,79 +271,39 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         style("Generating Meta NCA...").yellow().bold()
     ));
 
-    info!("Generating Meta NCA from patched NCA & control NCA");
-    let mut cmd = Command::new(packer.path());
-    cmd.args([
-        "--keyset".as_ref(),
-        keyset_path,
-        "--type".as_ref(),
-        "nca".as_ref(),
-        "--ncatype".as_ref(),
-        "meta".as_ref(),
-        "--titletype".as_ref(),
-        "application".as_ref(),
-        "--programnca".as_ref(),
-        patched_nca.path.as_path(),
-        "--controlnca".as_ref(),
-        control_nca.path.as_path(),
-        "--titleid".as_ref(),
-        title_id.as_ref(),
-        "--outdir".as_ref(),
-        nca_dir.as_path(),
-    ]);
-    let output = cmd.output()?;
-    if !output.status.success() {
-        error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-        bail!("Failed to generate Meta NCA from patched NCA & control NCA");
-    }
-
-    let patched_nsp_path = root_dir.join(format!("{}.nsp", title_id));
+    Nca::create_meta(
+        &packer,
+        &title_id,
+        keyfile_path,
+        &patched_nca,
+        &control_nca,
+        &nca_dir,
+    )?;
 
     sp.println(format!(
         "{} {}",
-        style("Created Meta NCA").green().bold(),
+        style("Generated Meta NCA").green().bold(),
         style(format!("({})", HumanDuration(started.elapsed())))
             .bold()
             .dim(),
     ));
     sp.set_message(format!(
         "{}",
-        style("Packing all NCAs to NSP...").yellow().bold()
+        style("Packing NCAs to NSP...").yellow().bold()
     ));
 
-    info!(
-        patched_nsp = ?patched_nsp_path,
-        "Packing all NCAs to NSP"
-    );
-    let mut cmd = Command::new(packer.path());
-    cmd.args([
-        "--keyset".as_ref(),
-        keyset_path,
-        "--type".as_ref(),
-        "nsp".as_ref(),
-        "--ncadir".as_ref(),
-        nca_dir.as_path(),
-        "--titleid".as_ref(),
-        title_id.as_ref(),
-        "--outdir".as_ref(),
-        root_dir.as_ref(),
-    ]);
-    let output = cmd.output()?;
-    if !output.status.success() {
-        error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-        bail!("Failed to Pack all NCAs to NSP");
-    }
+    let patched_nsp = Nsp::pack(&packer, &title_id, keyfile_path, &nca_dir, root_dir)?;
 
     let dest = outdir
         .as_ref()
         .join(format!("{}[yanu-patched].nsp", title_id));
-    info!(from = ?patched_nsp_path,to = ?dest,"Moving");
-    move_file(patched_nsp_path, &dest)?;
+    info!(from = ?patched_nsp.path,to = ?dest,"Moving");
+    move_file(&patched_nsp.path, &dest)?;
 
     sp.finish_and_clear();
     println!(
         "{} {}",
-        style("Packed all NCAs to NSP").green().bold(),
+        style("Packed NCAs to NSP").green().bold(),
         style(format!("({})", HumanDuration(started.elapsed())))
             .bold()
             .dim(),
@@ -411,5 +314,6 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         dest
     );
 
-    Ok(Nsp::from(dest)?)
+    println!("{}", style("Cleaning up...").yellow().bold());
+    Ok(Nsp::new(dest)?)
 }

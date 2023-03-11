@@ -21,7 +21,7 @@ pub struct Nsp {
     pub title_key: Option<TitleKey>,
 }
 
-#[derive(Debug, Clone, EnumString)]
+#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
 pub enum NcaType {
     Control,
     Program,
@@ -38,12 +38,12 @@ impl fmt::Display for NcaType {
 #[derive(Debug, Clone)]
 pub struct Nca {
     pub path: PathBuf,
-    pub title_id: Option<String>,
+    pub title_id: Option<String>, //? does every NCA have TittleID?
     pub content_type: NcaType,
 }
 
 impl Nsp {
-    pub fn from<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         if path
             .as_ref()
             .extension()
@@ -63,8 +63,8 @@ impl Nsp {
             ..Default::default()
         })
     }
-    pub fn extract_data<P: AsRef<Path>>(&mut self, extractor: &Backend, to: P) -> Result<()> {
-        info!(nsp = ?self.path, "Extracting");
+    pub fn unpack<P: AsRef<Path>>(&self, extractor: &Backend, to: P) -> Result<()> {
+        info!(?self.path, "Extracting");
         let mut cmd = Command::new(extractor.path());
         cmd.args([
             "-t".as_ref(),
@@ -80,8 +80,43 @@ impl Nsp {
             bail!("Failed to extract {:?}", self.path);
         }
 
-        info!(nsp = ?self.path, data_dir = ?to.as_ref(), "Extraction done!");
+        info!(?self.path, to = ?to.as_ref(), "Extraction done");
         Ok(())
+    }
+    pub fn pack<K, P, Q>(
+        packer: &Backend,
+        title_id: &str,
+        keyfile: K,
+        nca_dir: P,
+        outdir: Q,
+    ) -> Result<Nsp>
+    where
+        K: AsRef<Path>,
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        info!(nca_dir = ?nca_dir.as_ref(), "Packing NCAs to NSP");
+        let mut cmd = Command::new(packer.path());
+        cmd.args([
+            "--keyset".as_ref(),
+            keyfile.as_ref(),
+            "--type".as_ref(),
+            "nsp".as_ref(),
+            "--ncadir".as_ref(),
+            nca_dir.as_ref(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            outdir.as_ref(),
+        ]);
+        let output = cmd.output()?;
+        if !output.status.success() {
+            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
+            bail!("Encountered an error while packing NCAs to NSP");
+        }
+
+        info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
+        Ok(Nsp::new(outdir.as_ref().join(format!("{}.nsp", title_id)))?)
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
@@ -197,5 +232,145 @@ impl Nca {
             content_type: content_type
                 .ok_or_else(|| eyre!("Failed to identify ContentType of {:?}", path.as_ref()))?,
         })
+    }
+    pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(
+        &self,
+        extractor: &Backend,
+        aux: &Nca,
+        romfs_dir: P,
+        exefs_dir: Q,
+    ) -> Result<()> {
+        info!(?self.path, ?aux.path, "Extracting");
+        let mut cmd = Command::new(extractor.path());
+        cmd.args([
+            "--basenca".as_ref(),
+            self.path.as_path(),
+            aux.path.as_path(),
+            "--romfsdir".as_ref(),
+            romfs_dir.as_ref(),
+            "--exefsdir".as_ref(),
+            exefs_dir.as_ref(),
+        ]);
+        cmd.stdout(Stdio::inherit());
+        let output = cmd.output()?;
+        if !output.status.success() {
+            error!(
+                exit_code = ?output.status.code(),
+                stderr = %String::from_utf8(output.stderr)?,
+                "The process responsible for extracting romfs/exefs terminated improperly"
+            );
+            bail!("Encountered an error while extracting NCAs");
+        }
+
+        info!(
+            ?self.path,
+            romfs = ?romfs_dir.as_ref(),
+            exefs = ?exefs_dir.as_ref(),
+            "Extraction done"
+        );
+        Ok(())
+    }
+    pub fn pack<P, Q, R, K>(
+        extractor: &Backend,
+        packer: &Backend,
+        title_id: &str,
+        keyfile: K,
+        romfs_dir: P,
+        exefs_dir: Q,
+        outdir: R,
+    ) -> Result<Nca>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+        R: AsRef<Path>,
+        K: AsRef<Path>,
+    {
+        info!(
+            romfs = ?romfs_dir.as_ref(),
+            exefs = ?exefs_dir.as_ref(),
+            to = ?outdir.as_ref(),
+            "Packing"
+        );
+        let mut cmd = Command::new(packer.path());
+        cmd.args([
+            "--keyset".as_ref(),
+            keyfile.as_ref(),
+            "--type".as_ref(),
+            "nca".as_ref(),
+            "--ncatype".as_ref(),
+            "program".as_ref(),
+            "--plaintext".as_ref(),
+            "--exefsdir".as_ref(),
+            exefs_dir.as_ref(),
+            "--romfsdir".as_ref(),
+            romfs_dir.as_ref(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            outdir.as_ref(),
+        ]);
+        let output = cmd.output()?;
+        if !output.status.success() {
+            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
+            bail!("Encountered an error while packing romfs/exefs to NCA");
+        }
+
+        for entry in WalkDir::new(outdir.as_ref())
+            .min_depth(1)
+            .max_depth(1)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            match entry.path().extension().and_then(OsStr::to_str) {
+                Some("nca") => {
+                    info!(outdir = ?outdir.as_ref(), "Packing done");
+                    // do this sep if in need of fallbacks
+                    return Ok(Nca::new(extractor, entry.path())?);
+                }
+                _ => {}
+            }
+        }
+        bail!("Failed to pack romfs/exefs to NCA");
+    }
+    pub fn create_meta<K, O>(
+        packer: &Backend,
+        title_id: &str,
+        keyfile: K,
+        program: &Nca,
+        control: &Nca,
+        outdir: O,
+    ) -> Result<()>
+    where
+        K: AsRef<Path>,
+        O: AsRef<Path>,
+    {
+        info!(?program.path, ?control.path, "Generating Meta NCA");
+        let mut cmd = Command::new(packer.path());
+        cmd.args([
+            "--keyset".as_ref(),
+            keyfile.as_ref(),
+            "--type".as_ref(),
+            "nca".as_ref(),
+            "--ncatype".as_ref(),
+            "meta".as_ref(),
+            "--titletype".as_ref(),
+            "application".as_ref(),
+            "--programnca".as_ref(),
+            program.path.as_path(),
+            "--controlnca".as_ref(),
+            control.path.as_path(),
+            "--titleid".as_ref(),
+            title_id.as_ref(),
+            "--outdir".as_ref(),
+            outdir.as_ref(),
+        ]);
+        let output = cmd.output()?;
+        if !output.status.success() {
+            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
+            bail!("Encountered an error while generating Meta NCA");
+        }
+
+        info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");
+        Ok(())
     }
 }

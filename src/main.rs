@@ -109,8 +109,8 @@ fn run(cli: YanuCli) -> Result<()> {
 
             info!("Started patching!");
             patch_nsp(
-                &mut Nsp::from(cli.base)?,
-                &mut Nsp::from(cli.update)?,
+                &mut Nsp::new(cli.base)?,
+                &mut Nsp::new(cli.update)?,
                 default_outdir()?,
             )?;
         }
@@ -201,25 +201,16 @@ fn run(cli: YanuCli) -> Result<()> {
                     == true
                 {
                     info!("Started patching!");
-                    match patch_nsp(
-                        &mut Nsp::from(&base_path)?,
-                        &mut Nsp::from(&update_path)?,
+                    let patched = patch_nsp(
+                        &mut Nsp::new(&base_path)?,
+                        &mut Nsp::new(&update_path)?,
                         default_outdir()?,
-                    ) {
-                        Ok(patched) => {
-                            rfd::MessageDialog::new()
-                                .set_level(rfd::MessageLevel::Info)
-                                .set_title("Patching successful")
-                                .set_description(&format!(
-                                    "Patched file created at:\n{:?}",
-                                    patched.path
-                                ))
-                                .show();
-                        }
-                        Err(err) => {
-                            bail!(err);
-                        }
-                    }
+                    )?;
+                    rfd::MessageDialog::new()
+                        .set_level(rfd::MessageLevel::Info)
+                        .set_title("Patching successful")
+                        .set_description(&format!("Patched file created at:\n{:?}", patched.path))
+                        .show();
                 }
             }
 
@@ -318,7 +309,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
                 for entry in &roms_path {
                     if entry.file_name().to_string_lossy() == choice {
-                        base = Some(Nsp::from(entry.path())?);
+                        base = Some(Nsp::new(entry.path())?);
                     }
                 }
                 let mut base = base.expect(&format!(
@@ -339,7 +330,7 @@ fn run(cli: YanuCli) -> Result<()> {
                 let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
                 for entry in &roms_path {
                     if entry.file_name().to_string_lossy() == choice {
-                        update = Some(Nsp::from(entry.path())?);
+                        update = Some(Nsp::new(entry.path())?);
                     }
                 }
                 let mut update = update.expect(&format!(
@@ -353,9 +344,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     == true
                 {
                     info!("Started patching!");
-                    if let Err(err) = patch_nsp(&mut base, &mut update, default_outdir()?) {
-                        bail!(err);
-                    }
+                    patch_nsp(&mut base, &mut update, default_outdir()?)?;
                 }
             }
         }
