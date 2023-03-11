@@ -63,7 +63,7 @@ fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Res
     ncas
 }
 
-pub fn pack_to_nsp<E, R, O>(control: &Nca, romfs_dir: R, exefs_dir: E, outdir: O) -> Result<Nsp>
+pub fn repack_to_nsp<E, R, O>(control: &Nca, romfs_dir: R, exefs_dir: E, outdir: O) -> Result<Nsp>
 where
     E: AsRef<Path>,
     R: AsRef<Path>,

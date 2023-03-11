@@ -10,7 +10,10 @@ use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
-    hac::{patch::patch_nsp, rom::Nsp},
+    hac::{
+        patch::{patch_nsp, repack_to_nsp},
+        rom::{Nca, Nsp},
+    },
 };
 
 fn process_init() {
@@ -52,7 +55,7 @@ fn main() -> Result<()> {
 
     let cli = YanuCli::parse();
     let mut cli_mode = false;
-    if let Some(CliArgs::Commands::Cli(_)) = cli.command {
+    if cli.command.is_some() || cli.import_keyfile.is_some() {
         cli_mode = true;
     }
 
@@ -79,44 +82,50 @@ fn main() -> Result<()> {
 fn run(cli: YanuCli) -> Result<()> {
     let mut config: Config = confy::load_path(APP_CONFIG_PATH.as_path())?;
 
-    match cli.command {
-        Some(CliArgs::Commands::Cli(cli)) => {
-            // Cli mode
-            match cli.keyfile {
-                Some(keyfile) => {
-                    let keyfile_path = PathBuf::from(keyfile);
-                    if keyfile_path
-                        .extension()
-                        .and_then(OsStr::to_str)
-                        .ok_or_else(|| eyre!("File should've an extension"))?
-                        != "keys"
-                    {
-                        bail!("Invalid keyfile");
-                    }
+    if let Some(keyfile) = cli.import_keyfile {
+        if keyfile
+            .extension()
+            .and_then(OsStr::to_str)
+            .ok_or_else(|| eyre!("File should've an extension"))?
+            != "keys"
+        {
+            bail!("Invalid keyfile");
+        }
 
-                    info!(?keyfile_path, "Selected keyfile");
-                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
-                    fs::create_dir_all(
-                        default_path
-                            .parent()
-                            .ok_or_else(|| eyre!("Failed to find parent"))?,
-                    )?;
-                    fs::copy(keyfile_path, default_path)?;
-                    info!("Copied keys successfully to the C2 ^-^");
-                }
-                None => {
-                    if !DEFAULT_PRODKEYS_PATH.is_file() {
-                        bail!("Failed to find keyfile");
-                    }
-                }
+        info!(?keyfile, "Selected keyfile");
+        let default_path = DEFAULT_PRODKEYS_PATH.as_path();
+        fs::create_dir_all(
+            default_path
+                .parent()
+                .ok_or_else(|| eyre!("Failed to find parent"))?,
+        )?;
+        fs::copy(keyfile, default_path)?;
+        info!("Copied keys successfully to the C2 ^-^");
+    }
+
+    match cli.command {
+        Some(CliArgs::Commands::Update(args)) => {
+            // Cli mode
+            if !DEFAULT_PRODKEYS_PATH.is_file() {
+                bail!("Failed to find keyfile");
             }
 
             info!("Started patching!");
             patch_nsp(
-                &mut Nsp::new(cli.base)?,
-                &mut Nsp::new(cli.update)?,
+                &mut Nsp::new(args.base)?,
+                &mut Nsp::new(args.patch)?,
                 default_outdir()?,
             )?;
+        }
+        Some(CliArgs::Commands::Repack(args)) => {
+            if !DEFAULT_PRODKEYS_PATH.is_file() {
+                bail!("Failed to find keyfile");
+            }
+        }
+        Some(CliArgs::Commands::Unpack(args)) => {
+            if !DEFAULT_PRODKEYS_PATH.is_file() {
+                bail!("Failed to find keyfile");
+            }
         }
         #[cfg(target_os = "android")]
         Some(CliArgs::Commands::Config(new_config)) => {
