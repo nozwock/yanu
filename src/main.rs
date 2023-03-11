@@ -9,7 +9,7 @@ use yanu::utils::pick_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{APP_CONFIG_PATH, DEFAULT_KEYFILE_PATH},
+    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     hac::{patch::patch_nsp, rom::Nsp},
 };
 
@@ -95,7 +95,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     }
 
                     info!(?keyfile_path, "Selected keyfile");
-                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
+                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()
@@ -105,7 +105,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     info!("Copied keys successfully to the C2 ^-^");
                 }
                 None => {
-                    if !DEFAULT_KEYFILE_PATH.is_file() {
+                    if !DEFAULT_PRODKEYS_PATH.is_file() {
                         bail!("Failed to find keyfile");
                     }
                 }
@@ -134,7 +134,7 @@ fn run(cli: YanuCli) -> Result<()> {
             // Interactive mode
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
-                if !DEFAULT_KEYFILE_PATH.is_file() {
+                if !DEFAULT_PRODKEYS_PATH.is_file() {
                     rfd::MessageDialog::new()
                         .set_level(rfd::MessageLevel::Warning)
                         .set_title("Keyfile required")
@@ -153,7 +153,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     }
 
                     //? maybe validate if it's indeed prod.keys
-                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
+                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()
@@ -245,7 +245,7 @@ fn run(cli: YanuCli) -> Result<()> {
 
                 let roms_dir = config.roms_dir.expect("roms_dir should've been Some()");
 
-                if !DEFAULT_KEYFILE_PATH.is_file() {
+                if !DEFAULT_PRODKEYS_PATH.is_file() {
                     // Looking for `prod.keys` in roms_dir
                     let mut keyfile_path: Option<PathBuf> = None;
                     for entry in WalkDir::new(&roms_dir)
@@ -270,7 +270,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
                     info!(?keyfile_path, "Selected keyfile");
 
-                    let default_path = DEFAULT_KEYFILE_PATH.as_path();
+                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
                     fs::create_dir_all(
                         default_path
                             .parent()

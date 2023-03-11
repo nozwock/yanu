@@ -1,5 +1,5 @@
 use crate::{
-    defines::DEFAULT_KEYFILE_PATH,
+    defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     hac::{
         backend::Backend,
         rom::{Nca, NcaType},
@@ -63,11 +63,10 @@ fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Res
     ncas
 }
 
-pub fn pack_to_nsp<N, R, E, O>(nca_dir: N, romfs_dir: R, exefs_dir: E, outdir: O) -> Result<Nsp>
+pub fn pack_to_nsp<E, R, O>(control: &Nca, romfs_dir: R, exefs_dir: E, outdir: O) -> Result<Nsp>
 where
-    N: AsRef<Path>,
-    R: AsRef<Path>,
     E: AsRef<Path>,
+    R: AsRef<Path>,
     O: AsRef<Path>,
 {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -77,42 +76,6 @@ where
     #[cfg(target_os = "android")]
     let extractor = Backend::new(Backend::HACTOOL)?;
     let packer = Backend::new(Backend::HACPACK)?;
-
-    let mut control: Option<Nca> = None;
-    'walk: for (path, mut nca) in fetch_ncas(&extractor, nca_dir.as_ref()) {
-        let mut fallback: bool = false;
-        loop {
-            match nca {
-                Ok(nca) => match nca.content_type {
-                    NcaType::Control => {
-                        control = Some(nca);
-                        break 'walk;
-                    }
-                    _ => {}
-                },
-                Err(err) => {
-                    warn!("{}", err);
-                    #[cfg(any(target_os = "windows", target_os = "linux"))]
-                    {
-                        if !fallback {
-                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                            nca = Nca::new(&fallback_extractor, &path);
-                            fallback = true;
-                            continue;
-                        }
-                    }
-                }
-            }
-            break;
-        }
-    }
-    let mut control = control.ok_or_else(|| {
-        eyre!(
-            "Couldn't find a Control NCA (Control Type) in {:?}",
-            nca_dir.as_ref()
-        )
-    })?;
-    debug!(?control);
 
     let mut title_id = control
         .title_id
@@ -131,7 +94,7 @@ where
         &extractor,
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         romfs_dir.as_ref(),
         exefs_dir.as_ref(),
         temp_dir.path(),
@@ -140,7 +103,7 @@ where
     Nca::create_meta(
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         &patched,
         &control,
         temp_dir.path(),
@@ -148,12 +111,11 @@ where
 
     let control_filename = control.path.file_name().expect("File should've a filename");
     fs::copy(&control.path, &temp_dir.path().join(control_filename))?;
-    control.path = temp_dir.path().join(control_filename);
 
     let mut packed = Nsp::pack(
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         temp_dir.path(),
         root_dir,
     )?;
@@ -168,7 +130,7 @@ where
     Ok(packed)
 }
 
-pub fn unpack_fs<O>(pkg: &mut Nsp, outdir: O) -> Result<()>
+pub fn unpack_to_fs<O>(base: &mut Nsp, patch: &mut Option<Nsp>, outdir: O) -> Result<()>
 where
     O: AsRef<Path>,
 {
@@ -178,19 +140,47 @@ where
     let fallback_extractor = Backend::new(Backend::HAC2L)?;
     #[cfg(target_os = "android")]
     let extractor = Backend::new(Backend::HACTOOL)?;
-    let packer = Backend::new(Backend::HACPACK)?;
+    // let packer = Backend::new(Backend::HACPACK)?;
 
-    let nca_dir = outdir.as_ref().join("nca");
-    pkg.unpack(&extractor, &nca_dir)?;
+    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
+    match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
+            bail!("{}", err);
+        }
+        _ => {}
+    }
 
-    let mut base: Option<Nca> = None;
-    'walk: for (path, mut nca) in fetch_ncas(&extractor, &nca_dir) {
+    let base_data_dir = outdir.as_ref().join("basedata");
+    let patch_data_dir = outdir.as_ref().join("patchdata");
+
+    base.unpack(&extractor, &base_data_dir)?;
+    if let Err(err) = base.derive_title_key(&base_data_dir) {
+        warn!(?err, "This error is not being handeled right away!");
+    }
+
+    if let Some(patch) = patch.as_mut() {
+        patch.unpack(&extractor, &patch_data_dir)?;
+        if let Err(err) = patch.derive_title_key(&patch_data_dir) {
+            warn!(?err, "This error is not being handeled right away!");
+        }
+    }
+
+    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
+    let contents = if let Some(patch) = patch.as_mut() {
+        format!("{}\n{}", base.get_title_key(), patch.get_title_key())
+    } else {
+        format!("{}", base.get_title_key())
+    };
+    fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
+
+    let mut base_nca: Option<Nca> = None;
+    'walk: for (path, mut nca) in fetch_ncas(&extractor, &base_data_dir) {
         let mut fallback: bool = false;
         loop {
             match nca {
                 Ok(nca) => match nca.content_type {
                     NcaType::Program => {
-                        base = Some(nca);
+                        base_nca = Some(nca);
                         break 'walk;
                     }
                     _ => {}
@@ -211,16 +201,67 @@ where
             break;
         }
     }
-    let base =
-        base.ok_or_else(|| eyre!("Couldn't find a Base NCA (Program Type) in {:?}", nca_dir))?;
-    debug!(?base);
+    let base_nca = base_nca.ok_or_else(|| {
+        eyre!(
+            "Couldn't find a Base NCA (Program Type) in {:?}",
+            base_data_dir
+        )
+    })?;
+    debug!(?base_nca);
 
-    _ = base.unpack(
-        &extractor,
-        &base,
-        outdir.as_ref().join("romfs"),
-        outdir.as_ref().join("exefs"),
-    );
+    let mut patch_nca: Option<Nca> = None;
+    if patch.is_some() {
+        'walk: for (path, mut nca) in fetch_ncas(&extractor, &patch_data_dir) {
+            let mut fallback: bool = false;
+            loop {
+                match nca {
+                    Ok(nca) => match nca.content_type {
+                        NcaType::Program => {
+                            patch_nca = Some(nca);
+                            break 'walk;
+                        }
+                        _ => {}
+                    },
+                    Err(err) => {
+                        warn!("{}", err);
+                        #[cfg(any(target_os = "windows", target_os = "linux"))]
+                        {
+                            if !fallback {
+                                info!("Using fallback extractor {:?}", fallback_extractor.kind());
+                                nca = Nca::new(&fallback_extractor, &path);
+                                fallback = true;
+                                continue;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        let patch_nca = patch_nca.ok_or_else(|| {
+            eyre!(
+                "Couldn't find a Base NCA (Program Type) in {:?}",
+                base_data_dir
+            )
+        })?;
+        debug!(?patch_nca);
+
+        _ = base_nca.unpack(
+            &extractor,
+            &patch_nca,
+            outdir.as_ref().join("romfs"),
+            outdir.as_ref().join("exefs"),
+        );
+    }
+
+    if patch.is_none() {
+        _ = base_nca.unpack(
+            &extractor,
+            &base_nca,
+            outdir.as_ref().join("romfs"),
+            outdir.as_ref().join("exefs"),
+        );
+    }
 
     Ok(())
 }
@@ -237,12 +278,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let extractor = Backend::new(Backend::HACTOOL)?;
     let packer = Backend::new(Backend::HACPACK)?;
 
-    let switch_dir = dirs::home_dir()
-        .ok_or_else(|| eyre!("Failed to find home dir"))?
-        .join(".switch");
-    fs::create_dir_all(&switch_dir)?;
-    let title_keys_path = switch_dir.join("title.keys");
-    match fs::remove_file(&title_keys_path) {
+    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
+    match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
         Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
             bail!("{}", err);
         }
@@ -270,9 +307,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         warn!(?err);
     }
 
-    info!(keyfile = ?title_keys_path, "Storing TitleKeys");
+    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
     fs::write(
-        &title_keys_path,
+        DEFAULT_TITLEKEYS_PATH.as_path(),
         format!("{}\n{}", base.get_title_key(), update.get_title_key()),
     )?;
 
@@ -418,7 +455,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &extractor,
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         &romfs_dir,
         &exefs_dir,
         &nca_dir,
@@ -439,7 +476,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     Nca::create_meta(
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         &patched_nca,
         &control_nca,
         &nca_dir,
@@ -460,7 +497,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let mut patched_nsp = Nsp::pack(
         &packer,
         &title_id,
-        DEFAULT_KEYFILE_PATH.as_path(),
+        DEFAULT_PRODKEYS_PATH.as_path(),
         &nca_dir,
         root_dir,
     )?;
