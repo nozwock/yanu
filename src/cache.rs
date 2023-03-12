@@ -1,6 +1,7 @@
 use eyre::{bail, Result};
+use fs_err as fs;
 use std::{
-    fmt, fs,
+    fmt,
     io::Write,
     path::{Path, PathBuf},
 };

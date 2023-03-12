@@ -10,11 +10,12 @@ use crate::{
 use super::rom::Nsp;
 use console::style;
 use eyre::{bail, eyre, Result};
+use fs_err as fs;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{
     cmp,
     ffi::OsStr,
-    fs, io,
+    io,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{self, Duration},

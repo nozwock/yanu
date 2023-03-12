@@ -1,12 +1,12 @@
 //! Improper cheap implementation
 
+use eyre::Result;
+use fs_err as fs;
 use std::{
-    fmt, fs,
+    fmt,
     io::{self, Read, Seek},
     path::Path,
 };
-
-use eyre::Result;
 use tracing::{debug, info};
 
 enum TicketData {
@@ -33,7 +33,7 @@ impl fmt::Display for TitleKey {
 
 pub fn get_title_key<P: AsRef<Path>>(tik_path: P) -> Result<TitleKey> {
     let mut title_key = TitleKey::default();
-    let mut ticket = fs::File::open(&tik_path)?;
+    let mut ticket = fs::File::open(tik_path.as_ref())?;
 
     info!(tik = ?tik_path.as_ref(), "Reading ticket");
 

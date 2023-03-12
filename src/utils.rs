@@ -1,8 +1,6 @@
 use eyre::Result;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use fs_err as fs;
+use std::path::{Path, PathBuf};
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 pub fn pick_nsp_file() -> Option<PathBuf> {

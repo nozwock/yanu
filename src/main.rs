@@ -1,7 +1,8 @@
 use clap::Parser;
 use console::style;
 use eyre::{bail, eyre, Result};
-use std::{env, ffi::OsStr, fs, path::PathBuf};
+use fs_err as fs;
+use std::{env, ffi::OsStr, path::PathBuf};
 use tracing::{debug, error, info, warn};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::pick_nsp_file;

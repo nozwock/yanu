@@ -85,7 +85,7 @@ static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
 pub fn make_hacpack() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
-    use std::fs;
+    use fs_err as fs;
     use tracing::info;
 
     let name = format!("{:?}", Backend::HACPACK).to_lowercase();
@@ -131,7 +131,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
 pub fn make_hactool() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
-    use std::fs;
+    use fs_err as fs;
     use tracing::info;
 
     let name = format!("{:?}", Backend::HACTOOL).to_lowercase();
