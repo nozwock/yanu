@@ -76,7 +76,10 @@ impl Nsp {
         cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(stderr = %String::from_utf8(output.stderr)?);
+            error!(
+                stderr = %String::from_utf8(output.stderr)?,
+                "Encountered an error while unpacking NSP"
+            );
             bail!("Failed to extract {:?}", self.path);
         }
 
@@ -111,7 +114,11 @@ impl Nsp {
         ]);
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
+            error!(
+                exit_code = ?output.status.code(),
+                stderr = %String::from_utf8(output.stderr)?,
+                "Encountered an error while packing NCAs to NSP"
+            );
             bail!("Encountered an error while packing NCAs to NSP");
         }
 
@@ -184,7 +191,7 @@ impl Nca {
             warn!(
                 nca = ?path.as_ref(),
                 stderr = %String::from_utf8(output.stderr)?,
-                "An error occured while trying to view info",
+                "Encountered an error while viewing info",
             );
         }
 
@@ -257,9 +264,9 @@ impl Nca {
             error!(
                 exit_code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
-                "The process responsible for extracting romfs/exefs terminated improperly"
+                "Encountered an error while unpacking NCAs"
             );
-            bail!("Encountered an error while extracting NCAs");
+            bail!("Encountered an error while unpacking NCAs");
         }
 
         info!(
@@ -311,8 +318,12 @@ impl Nca {
         ]);
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
-            bail!("Encountered an error while packing romfs/exefs to NCA");
+            error!(
+                exit_code = ?output.status.code(),
+                stderr = %String::from_utf8(output.stderr)?,
+                "Encountered an error while packing FS files to NCA"
+            );
+            bail!("Encountered an error while packing FS files to NCA");
         }
 
         for entry in WalkDir::new(outdir.as_ref())
@@ -366,7 +377,11 @@ impl Nca {
         ]);
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(exit_code = ?output.status.code(), stderr = %String::from_utf8(output.stderr)?);
+            error!(
+                exit_code = ?output.status.code(),
+                stderr = %String::from_utf8(output.stderr)?,
+                "Encountered an error while generating Meta NCA"
+            );
             bail!("Encountered an error while generating Meta NCA");
         }
 

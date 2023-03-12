@@ -91,9 +91,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let root_dir = exe_path
         .parent()
         .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let temp_dir = tempdir_in(&root_dir)?;
-    let base_data_dir = tempdir_in(&temp_dir)?;
-    let update_data_dir = tempdir_in(&temp_dir)?;
+    let base_data_dir = tempdir_in(&root_dir)?;
+    let update_data_dir = tempdir_in(&root_dir)?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -103,10 +102,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     update.unpack(&extractor, update_data_dir.path())?;
 
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
-        warn!(?err, "This error is not being handeled right away!",);
+        warn!(?err);
     }
     if let Err(err) = update.derive_title_key(update_data_dir.path()) {
-        warn!(?err, "This error is not being handeled right away!");
+        warn!(?err);
     }
 
     info!(keyfile = ?title_keys_path, "Storing TitleKeys");
@@ -128,7 +127,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                     _ => {}
                 },
                 Err(err) => {
-                    warn!("{}", err);
+                    warn!(?err);
                     #[cfg(any(target_os = "windows", target_os = "linux"))]
                     {
                         if !fallback {
@@ -167,7 +166,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                     _ => {}
                 },
                 Err(err) => {
-                    warn!("{}", err);
+                    warn!(?err);
                     #[cfg(any(target_os = "windows", target_os = "linux"))]
                     {
                         if !fallback {
@@ -199,7 +198,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Unpacking NCAs...").yellow().bold());
 
-    let patch_dir = tempdir_in(&temp_dir)?;
+    let patch_dir = tempdir_in(&root_dir)?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
@@ -321,9 +320,6 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Cleaning up...").yellow().bold());
     if let Err(err) = patch_dir.close() {
-        warn!(?err);
-    }
-    if let Err(err) = temp_dir.close() {
         warn!(?err);
     }
 

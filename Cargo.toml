@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 eyre = "0.6"
-color-eyre = "0.6.2"
+color-eyre = { version = "0.6.2" }
 dirs = "4.0"
 inquire = { git = "https://github.com/mikaelmello/inquire.git", rev = "5413efc4630b3426affeb23ffdb4edce562dc53f" }
 serde = { version = "1.0", features = ["derive"] }
