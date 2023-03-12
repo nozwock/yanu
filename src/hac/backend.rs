@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use std::process::Command;
 #[cfg(any(target_os = "linux", target_os = "android"))]
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 use crate::cache::Cache;
 
@@ -90,7 +90,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
 
     let name = format!("{:?}", Backend::HACPACK).to_lowercase();
     info!("Building {}", name);
-    let src_dir = TempDir::new(&name)?;
+    let src_dir = tempdir()?;
 
     if !Command::new("git")
         .args(["clone", "https://github.com/The-4n/hacPack"])
@@ -136,7 +136,7 @@ pub fn make_hactool() -> Result<PathBuf> {
 
     let name = format!("{:?}", Backend::HACTOOL).to_lowercase();
     info!("Building {}", name);
-    let src_dir = TempDir::new(&name)?;
+    let src_dir = tempdir()?;
 
     if !Command::new("git")
         .args(["clone", "https://github.com/SciresM/hactool"])
@@ -205,7 +205,7 @@ pub fn make_hac2l() -> Result<PathBuf> {
 
     let name = format!("{:?}", Backend::HAC2L).to_lowercase();
     info!("Building {}", name);
-    let src_dir = TempDir::new(&name)?;
+    let src_dir = tempdir()?;
 
     if !Command::new("git")
         .args(["clone", "https://github.com/Atmosphere-NX/Atmosphere.git"])

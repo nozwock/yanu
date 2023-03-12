@@ -17,7 +17,7 @@ clap = { version = "4.1", features = ["derive"] }
 tracing-subscriber = "0.3"
 tracing = "0.1"
 hex = "0.4"
-tempdir = "0.3"
+tempfile = "3.4.0"
 tracing-appender = "0.2"
 strum = "0.24"
 strum_macros = "0.24"

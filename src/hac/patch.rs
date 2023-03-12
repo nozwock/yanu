@@ -19,7 +19,7 @@ use std::{
     process::{Command, Stdio},
     time::{self, Duration},
 };
-use tempdir::TempDir;
+use tempfile::tempdir_in;
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
@@ -90,9 +90,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let root_dir = exe_path
         .parent()
         .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let temp_dir = TempDir::new_in(&root_dir, "yanu")?;
-    let base_data_dir = TempDir::new_in(&temp_dir, "basedata")?;
-    let update_data_dir = TempDir::new_in(&temp_dir, "updatedata")?;
+    let temp_dir = tempdir_in(&root_dir)?;
+    let base_data_dir = tempdir_in(&temp_dir)?;
+    let update_data_dir = tempdir_in(&temp_dir)?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -198,7 +198,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Unpacking NCAs...").yellow().bold());
 
-    let patch_dir = TempDir::new_in(&temp_dir, "patch")?;
+    let patch_dir = tempdir_in(&temp_dir)?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
@@ -226,9 +226,13 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
-    drop(base_data_dir);
+    if let Err(err) = base_data_dir.close() {
+        warn!(?err);
+    }
     info!(dir = ?update_data_dir.path(), "Cleaning up");
-    drop(update_data_dir);
+    if let Err(err) = update_data_dir.close() {
+        warn!(?err);
+    }
 
     sp.println(format!(
         "{} {}",
@@ -315,5 +319,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     );
 
     println!("{}", style("Cleaning up...").yellow().bold());
+    if let Err(err) = patch_dir.close() {
+        warn!(?err);
+    }
+    if let Err(err) = temp_dir.close() {
+        warn!(?err);
+    }
+
     Ok(Nsp::new(dest)?)
 }
