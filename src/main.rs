@@ -26,7 +26,9 @@ fn process_init() {
 }
 
 fn main() -> Result<()> {
-    color_eyre::install()?;
+    color_eyre::config::HookBuilder::default()
+        .display_env_section(false)
+        .install()?;
     ctrlc::set_handler(move || {
         eprintln!("{}", style("Process terminated by the user!").red().bold());
         error!("Process terminated by the user!");
