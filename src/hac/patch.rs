@@ -17,13 +17,13 @@ use std::{
     ffi::OsStr,
     io,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
     time::{self, Duration},
 };
 use tempfile::tempdir_in;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
+#[allow(unused)]
 fn default_spinner() -> ProgressBar {
     let sp = ProgressBar::new_spinner();
     sp.enable_steady_tick(Duration::from_millis(80));
@@ -46,18 +46,15 @@ fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Res
             cmp::Reverse(
                 entry
                     .metadata()
-                    .expect(&format!("Failed to read metadata of {:?}", entry.path()))
+                    .unwrap_or_else(|_| panic!("Failed to read metadata of {:?}", entry.path()))
                     .len(),
             )
         })
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        match entry.path().extension().and_then(OsStr::to_str) {
-            Some("nca") => {
-                ncas.push((entry.path().to_owned(), Nca::new(extractor, entry.path())));
-            }
-            _ => {}
+        if let Some("nca") = entry.path().extension().and_then(OsStr::to_str) {
+            ncas.push((entry.path().to_owned(), Nca::new(extractor, entry.path())));
         }
     }
     ncas
@@ -124,7 +121,7 @@ where
     let root_dir = exe_path
         .parent()
         .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let temp_dir = tempdir_in(&root_dir)?;
+    let temp_dir = tempdir_in(root_dir)?;
 
     let patched = Nca::pack(
         &extractor,
@@ -146,7 +143,7 @@ where
     )?;
 
     let control_filename = control.path.file_name().expect("File should've a filename");
-    fs::copy(&control.path, &temp_dir.path().join(control_filename))?;
+    fs::copy(&control.path, temp_dir.path().join(control_filename))?;
 
     let mut packed = Nsp::pack(
         &packer,
@@ -204,7 +201,7 @@ where
     let contents = if let Some(patch) = patch.as_mut() {
         format!("{}\n{}", base.get_title_key(), patch.get_title_key())
     } else {
-        format!("{}", base.get_title_key())
+        base.get_title_key()
     };
     fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
 
@@ -213,13 +210,12 @@ where
         let mut fallback: bool = false;
         loop {
             match nca {
-                Ok(nca) => match nca.content_type {
-                    NcaType::Program => {
+                Ok(nca) => {
+                    if nca.content_type == NcaType::Program {
                         base_nca = Some(nca);
                         break 'walk;
                     }
-                    _ => {}
-                },
+                }
                 Err(err) => {
                     warn!("{}", err);
                     #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -250,13 +246,12 @@ where
             let mut fallback: bool = false;
             loop {
                 match nca {
-                    Ok(nca) => match nca.content_type {
-                        NcaType::Program => {
+                    Ok(nca) => {
+                        if nca.content_type == NcaType::Program {
                             patch_nca = Some(nca);
                             break 'walk;
                         }
-                        _ => {}
-                    },
+                    }
                     Err(err) => {
                         warn!("{}", err);
                         #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -325,8 +320,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let root_dir = exe_path
         .parent()
         .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let base_data_dir = tempdir_in(&root_dir)?;
-    let update_data_dir = tempdir_in(&root_dir)?;
+    let base_data_dir = tempdir_in(root_dir)?;
+    let update_data_dir = tempdir_in(root_dir)?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -353,13 +348,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         let mut fallback: bool = false;
         loop {
             match nca {
-                Ok(nca) => match nca.content_type {
-                    NcaType::Program => {
+                Ok(nca) => {
+                    if nca.content_type == NcaType::Program {
                         base_nca = Some(nca);
                         break 'walk;
                     }
-                    _ => {}
-                },
+                }
                 Err(err) => {
                     warn!(?err);
                     #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -432,7 +426,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Unpacking NCAs...").yellow().bold());
 
-    let patch_dir = tempdir_in(&root_dir)?;
+    let patch_dir = tempdir_in(root_dir)?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
@@ -443,7 +437,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .path
         .file_name()
         .expect("File should've a filename");
-    fs::rename(&control_nca.path, &nca_dir.join(control_nca_filename))?;
+    fs::rename(&control_nca.path, nca_dir.join(control_nca_filename))?;
     control_nca.path = nca_dir.join(control_nca_filename);
 
     // println!(

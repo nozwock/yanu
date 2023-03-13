@@ -4,7 +4,7 @@ use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use once_cell::sync::Lazy;
 use std::{env, ffi::OsStr, path::PathBuf};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::pick_nsp_file;
 use yanu::{
@@ -84,6 +84,7 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: YanuCli) -> Result<()> {
+    #[allow(unused)]
     let mut config: Config = confy::load_path(APP_CONFIG_PATH.as_path())?;
 
     if let Some(keyfile) = cli.import_keyfile {
@@ -246,7 +247,6 @@ fn run(cli: YanuCli) -> Result<()> {
                     ))
                     .set_buttons(rfd::MessageButtons::YesNo)
                     .show()
-                    == true
                 {
                     info!("Started patching!");
                     let patched = patch_nsp(

@@ -2,7 +2,7 @@ use std::{
     ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
-    process::{self, Command, Stdio},
+    process::{Command, Stdio},
     str::FromStr,
 };
 
@@ -124,7 +124,7 @@ impl Nsp {
         }
 
         info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
-        Ok(Nsp::new(outdir.as_ref().join(format!("{}.nsp", title_id)))?)
+        Nsp::new(outdir.as_ref().join(format!("{}.nsp", title_id)))
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
@@ -136,7 +136,7 @@ impl Nsp {
             {
                 match entry.path().extension().and_then(OsStr::to_str) {
                     Some("tik") => {
-                        self.title_key = Some(ticket::get_title_key(&entry.path())?);
+                        self.title_key = Some(ticket::get_title_key(entry.path())?);
                         break;
                     }
                     _ => continue,
@@ -196,7 +196,7 @@ impl Nca {
             );
         }
 
-        let stdout = String::from_utf8(output.stdout)?.to_owned();
+        let stdout = String::from_utf8(output.stdout)?;
         let mut title_id: Option<String> = None;
         let title_id_pat = match extractor.kind() {
             BackendKind::Hactool => "Title ID:",
@@ -207,7 +207,7 @@ impl Nca {
             _ => unreachable!(),
         };
         for line in stdout.lines() {
-            if line.find(title_id_pat).is_some() {
+            if line.contains(title_id_pat) {
                 title_id = Some(
                     line.trim()
                         .split(' ')
@@ -222,7 +222,7 @@ impl Nca {
 
         let mut content_type: Option<NcaType> = None;
         for line in stdout.lines() {
-            if line.find("Content Type:").is_some() {
+            if line.contains("Content Type:") {
                 content_type = Some(NcaType::from_str(
                     line.trim()
                         .split(' ')
@@ -334,13 +334,10 @@ impl Nca {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            match entry.path().extension().and_then(OsStr::to_str) {
-                Some("nca") => {
-                    info!(outdir = ?outdir.as_ref(), "Packing done");
-                    // do this sep if in need of fallbacks
-                    return Ok(Nca::new(extractor, entry.path())?);
-                }
-                _ => {}
+            if let Some("nca") = entry.path().extension().and_then(OsStr::to_str) {
+                info!(outdir = ?outdir.as_ref(), "Packing done");
+                // do this sep if in need of fallbacks
+                return Nca::new(extractor, entry.path());
             }
         }
         bail!("Failed to pack romfs/exefs to NCA");
