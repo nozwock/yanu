@@ -1,16 +1,9 @@
 use clap::Parser;
 use console::style;
 use eyre::{bail, eyre, Result};
-<<<<<<< HEAD
 use fs_err as fs;
-use std::{env, ffi::OsStr, path::PathBuf};
-||||||| parent of 60a0989 (Implement missing cli functionalities)
-use std::{env, ffi::OsStr, fs, path::PathBuf};
-=======
 use once_cell::sync::Lazy;
-use std::{env, ffi::OsStr, fs, path::PathBuf};
-use tempdir::TempDir;
->>>>>>> 60a0989 (Implement missing cli functionalities)
+use std::{env, ffi::OsStr, path::PathBuf};
 use tracing::{debug, error, info, warn};
 #[cfg(any(target_os = "linux", target_os = "windows"))]
 use yanu::utils::pick_nsp_file;
@@ -155,7 +148,10 @@ fn run(cli: YanuCli) -> Result<()> {
             let outdir = if let Some(outdir) = args.outdir {
                 outdir
             } else {
-                TempDir::new_in(env::current_dir()?, prefix)?.into_path()
+                tempfile::Builder::new()
+                    .prefix(prefix)
+                    .tempdir_in(env::current_dir()?)?
+                    .into_path()
             };
 
             let patch = if let Some(path) = args.patch {
