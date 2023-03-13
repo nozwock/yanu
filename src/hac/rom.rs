@@ -112,6 +112,7 @@ impl Nsp {
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
+        cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
@@ -316,6 +317,7 @@ impl Nca {
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
+        cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
@@ -375,6 +377,7 @@ impl Nca {
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
+        cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
             error!(

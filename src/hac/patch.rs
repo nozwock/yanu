@@ -190,13 +190,13 @@ where
 
     base.unpack(&extractor, &base_data_dir)?;
     if let Err(err) = base.derive_title_key(&base_data_dir) {
-        warn!(?err, "This error is not being handeled right away!");
+        warn!(?err);
     }
 
     if let Some(patch) = patch.as_mut() {
         patch.unpack(&extractor, &patch_data_dir)?;
         if let Err(err) = patch.derive_title_key(&patch_data_dir) {
-            warn!(?err, "This error is not being handeled right away!");
+            warn!(?err);
         }
     }
 
@@ -446,17 +446,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     fs::rename(&control_nca.path, &nca_dir.join(control_nca_filename))?;
     control_nca.path = nca_dir.join(control_nca_filename);
 
-    println!(
-        "{} {}",
-        style("Unpacked NCAs").green().bold(),
-        style(format!("({})", HumanDuration(started.elapsed())))
-            .bold()
-            .dim()
-    );
-    let sp = default_spinner().with_message(format!(
-        "{}",
-        style("Cleaning up extracted NSPs data...").yellow().bold()
-    ));
+    // println!(
+    //     "{} {}",
+    //     style("Unpacked NCAs").green().bold(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim()
+    // );
+    // let sp = default_spinner().with_message(format!(
+    //     "{}",
+    //     style("Cleaning up extracted NSPs data...").yellow().bold()
+    // ));
 
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
@@ -468,17 +468,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         warn!(?err);
     }
 
-    sp.println(format!(
-        "{} {}",
-        style("Cleaned up extracted NSPs data").green().bold(),
-        style(format!("({})", HumanDuration(started.elapsed())))
-            .bold()
-            .dim(),
-    ));
-    sp.set_message(format!(
-        "{}",
-        style("Packing romfs/exefs to NCA...").yellow().bold()
-    ));
+    // sp.println(format!(
+    //     "{} {}",
+    //     style("Cleaned up extracted NSPs data").green().bold(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim(),
+    // ));
+    // sp.set_message(format!(
+    //     "{}",
+    //     style("Packing romfs/exefs to NCA...").yellow().bold()
+    // ));
 
     let mut title_id = base_nca
         .title_id
@@ -496,17 +496,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &nca_dir,
     )?;
 
-    sp.println(format!(
-        "{} {}",
-        style("Packed romfs/exefs to NCA").green().bold(),
-        style(format!("({})", HumanDuration(started.elapsed())))
-            .bold()
-            .dim(),
-    ));
-    sp.set_message(format!(
-        "{}",
-        style("Generating Meta NCA...").yellow().bold()
-    ));
+    // sp.println(format!(
+    //     "{} {}",
+    //     style("Packed romfs/exefs to NCA").green().bold(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim(),
+    // ));
+    // sp.set_message(format!(
+    //     "{}",
+    //     style("Generating Meta NCA...").yellow().bold()
+    // ));
 
     Nca::create_meta(
         &packer,
@@ -517,17 +517,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &nca_dir,
     )?;
 
-    sp.println(format!(
-        "{} {}",
-        style("Generated Meta NCA").green().bold(),
-        style(format!("({})", HumanDuration(started.elapsed())))
-            .bold()
-            .dim(),
-    ));
-    sp.set_message(format!(
-        "{}",
-        style("Packing NCAs to NSP...").yellow().bold()
-    ));
+    // sp.println(format!(
+    //     "{} {}",
+    //     style("Generated Meta NCA").green().bold(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim(),
+    // ));
+    // sp.set_message(format!(
+    //     "{}",
+    //     style("Packing NCAs to NSP...").yellow().bold()
+    // ));
 
     let mut patched_nsp = Nsp::pack(
         &packer,
@@ -543,18 +543,21 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     info!(from = ?patched_nsp.path,to = ?dest,"Moving");
     move_file(&patched_nsp.path, &dest)?;
 
-    sp.finish_and_clear();
+    // sp.finish_and_clear();
+    // println!(
+    //     "{} {}",
+    //     style("Packed NCAs to NSP").green().bold(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim(),
+    // );
     println!(
-        "{} {}",
-        style("Packed NCAs to NSP").green().bold(),
+        "{} {:?} {}",
+        style("Patched NSP created at").green().bold(),
+        dest,
         style(format!("({})", HumanDuration(started.elapsed())))
             .bold()
             .dim(),
-    );
-    println!(
-        "{} {:?}",
-        style("Patched NSP created at").cyan().bold(),
-        dest
     );
 
     patched_nsp.path = dest;
