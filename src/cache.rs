@@ -1,3 +1,4 @@
+use crate::{defines::APP_CACHE_DIR, utils::move_file};
 use eyre::{bail, Result};
 use fs_err as fs;
 use std::{
@@ -5,11 +6,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tracing::{debug, info};
-
-#[cfg(target_os = "windows")]
-use crate::defines::{HAC2L, HACPACK, HACTOOL};
-use crate::{defines::APP_CACHE_DIR, utils::move_file};
+use tracing::info;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Cache {
@@ -45,10 +42,7 @@ impl fmt::Display for Cache {
 }
 
 impl Cache {
-    /// Saves the given file as a cache for `self`.
-    ///
-    /// Overwrites the previous cache in the process if any.
-    pub fn from<P: AsRef<Path>>(self, path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(self, path: P) -> Result<Self> {
         info!(?self, "Caching {:?}", path.as_ref());
 
         let cache_dir = APP_CACHE_DIR.as_path();
@@ -60,93 +54,37 @@ impl Cache {
 
         Ok(self)
     }
-    /// Extracts the embedded files to the cache dir
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    pub fn from_embed(self) -> Result<Self> {
-        info!(?self, "Caching from embed");
+    pub fn from_bytes(self, slice: &[u8]) -> Result<Self> {
+        info!(?self, "Caching from given bytes");
 
         let cache_dir = APP_CACHE_DIR.as_path();
         fs::create_dir_all(cache_dir)?;
         let mut file = fs::File::create(cache_dir.join(self.to_string()))?;
-        file.write_all(self.as_bytes())?;
+        file.write_all(slice)?;
 
         Ok(self)
     }
-    /// Returns the path to the embedded resource.
-    ///
-    /// Cache is used if it exists else the embedded data is written to a file
-    /// and the path is returned.
     pub fn path(&self) -> Result<PathBuf> {
-        let cache_dir = APP_CACHE_DIR.as_path();
-        fs::create_dir_all(cache_dir)?;
-
         let file_name = self.to_string();
-        for entry in fs::read_dir(cache_dir)? {
-            let entry = entry?;
-            if entry.file_name().to_string_lossy() == file_name {
-                // return cache if exists
-                return Ok(entry.path());
+        for entry in walkdir::WalkDir::new(APP_CACHE_DIR.as_path())
+            .min_depth(1)
+            .max_depth(1)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if entry.file_name() == file_name.as_str() {
+                return Ok(entry.path().into());
             }
         }
-
         bail!("Failed to find {:?} in cache", self);
     }
-    /// chmod +x
-    #[cfg(any(target_os = "linux", target_os = "android"))]
-    pub fn make_executable(self) -> Result<Self> {
-        use std::process::Command;
-
-        let cache_dir = APP_CACHE_DIR.as_path();
-        fs::create_dir_all(cache_dir)?;
-
-        let file_path = cache_dir.join(self.to_string());
-        if self.is_cached() {
-            if Command::new("chmod")
-                .arg("+x")
-                .arg(&file_path)
-                .status()?
-                .success()
-            {
-                info!(?file_path, "Given executable permission");
-                return Ok(self);
-            }
-        }
-
-        bail!("Failed to give executable permission to {:?}", file_path);
-    }
     pub fn is_cached(&self) -> bool {
-        if self._exists().is_ok() {
-            return true;
-        }
-        false
+        self.path().is_ok()
     }
-    fn _exists(&self) -> Result<()> {
-        let cache_dir = APP_CACHE_DIR.as_path();
-        fs::create_dir_all(cache_dir)?;
-
-        let file_name = self.to_string();
-        for entry in fs::read_dir(cache_dir)? {
-            let entry = entry?;
-            if entry.file_name().to_string_lossy() == file_name {
-                return Ok(());
-            }
-        }
-
-        bail!("{:?} isn't cached", file_name);
-    }
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    fn as_bytes(&self) -> &'static [u8] {
-        use crate::defines::HACTOOLNET;
-
-        match self {
-            #[cfg(target_os = "windows")]
-            Cache::Hacpack => HACPACK,
-            #[cfg(target_os = "windows")]
-            Cache::Hactool => HACTOOL,
-            #[cfg(target_os = "windows")]
-            Cache::Hac2l => HAC2L,
-            Cache::Hactoolnet => HACTOOLNET,
-            _ => unreachable!(),
-        }
+    #[cfg(target_family = "unix")]
+    pub fn with_executable_bit(self, on: bool) -> Result<Self> {
+        use crate::utils::set_executable_bit;
+        set_executable_bit(self.path()?, on)?;
+        Ok(self)
     }
 }

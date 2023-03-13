@@ -34,3 +34,18 @@ where
         }
     }
 }
+
+#[cfg(target_family = "unix")]
+pub fn set_executable_bit<P: AsRef<Path>>(path: P, on: bool) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = fs::File::open(path.as_ref())?
+        .metadata()?
+        .permissions()
+        .mode();
+    fs::set_permissions(
+        path.as_ref(),
+        std::fs::Permissions::from_mode(if on { mode | 0o111 } else { mode & 0o666 }),
+    )?;
+    tracing::info!(path = ?path.as_ref(), "Given executable permission");
+    Ok(())
+}

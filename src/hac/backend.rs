@@ -6,7 +6,7 @@ use std::process::Command;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use tempfile::tempdir;
 
-use crate::cache::Cache;
+use crate::{cache::Cache, defines};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendKind {
@@ -38,17 +38,31 @@ impl Backend {
         } else {
             #[cfg(target_os = "windows")]
             {
-                tool.from_embed()?.path()?
+                match tool {
+                    Cache::Hacpack => tool.from_bytes(defines::HACPACK)?.path()?,
+                    Cache::Hactool => tool.from_bytes(defines::HACTOOL)?.path()?,
+                    Cache::Hactoolnet => tool.from_bytes(defines::HACTOOLNET)?.path()?,
+                    Cache::Hac2l => tool.from_bytes(defines::HAC2L)?.path()?,
+                }
             }
             #[cfg(any(target_os = "linux", target_os = "android"))]
             {
                 match tool {
-                    Cache::Hacpack => tool.from(make_hacpack()?)?.make_executable()?.path()?,
-                    Cache::Hactool => tool.from(make_hactool()?)?.make_executable()?.path()?,
+                    Cache::Hacpack => tool
+                        .new(make_hacpack()?)?
+                        .with_executable_bit(true)?
+                        .path()?,
+                    Cache::Hactool => tool
+                        .new(make_hactool()?)?
+                        .with_executable_bit(true)?
+                        .path()?,
                     #[cfg(target_os = "linux")]
-                    Cache::Hactoolnet => tool.from_embed()?.make_executable()?.path()?,
+                    Cache::Hactoolnet => tool
+                        .from_bytes(defines::HACTOOLNET)?
+                        .with_executable_bit(true)?
+                        .path()?,
                     #[cfg(target_os = "linux")]
-                    Cache::Hac2l => tool.from(make_hac2l()?)?.make_executable()?.path()?,
+                    Cache::Hac2l => tool.new(make_hac2l()?)?.with_executable_bit(true)?.path()?,
                 }
             }
         };
@@ -74,14 +88,14 @@ impl Backend {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_family = "unix")]
 static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
     Ok(String::from_utf8(Command::new("nproc").output()?.stdout)?
         .trim()
         .parse()?)
 });
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_family = "unix")]
 pub fn make_hacpack() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
@@ -127,7 +141,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
     Ok(dest)
 }
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_family = "unix")]
 pub fn make_hactool() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
