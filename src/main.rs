@@ -262,6 +262,8 @@ fn run(cli: YanuCli) -> Result<()> {
                 }
             }
 
+            // TODO: Make the tui available on all platforms with a "tui" subcommand
+
             #[cfg(target_os = "android")]
             {
                 use walkdir::WalkDir;
