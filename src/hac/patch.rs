@@ -1,7 +1,7 @@
 use crate::{
     defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     hac::{
-        backend::Backend,
+        backend::{Backend, BackendKind},
         rom::{Nca, NcaType},
     },
     utils::move_file,
@@ -73,12 +73,12 @@ where
     O: AsRef<Path>,
 {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let extractor = Backend::new(Backend::HACTOOLNET)?;
+    let extractor = Backend::new(BackendKind::Hactoolnet)?;
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let fallback_extractor = Backend::new(Backend::HAC2L)?;
+    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
     #[cfg(target_os = "android")]
-    let extractor = Backend::new(Backend::HACTOOL)?;
-    let packer = Backend::new(Backend::HACPACK)?;
+    let extractor = Backend::new(BackendKind::Hactool)?;
+    let packer = Backend::new(BackendKind::Hacpack)?;
 
     let control = match Nca::new(&extractor, control_path.as_ref()) {
         Ok(control) => match control.content_type {
@@ -168,11 +168,11 @@ where
     O: AsRef<Path>,
 {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let extractor = Backend::new(Backend::HACTOOLNET)?;
+    let extractor = Backend::new(BackendKind::Hactoolnet)?;
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let fallback_extractor = Backend::new(Backend::HAC2L)?;
+    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
     #[cfg(target_os = "android")]
-    let extractor = Backend::new(Backend::HACTOOL)?;
+    let extractor = Backend::new(BackendKind::Hactool)?;
 
     fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
     match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
@@ -301,12 +301,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let started = time::Instant::now();
 
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let extractor = Backend::new(Backend::HACTOOLNET)?;
+    let extractor = Backend::new(BackendKind::Hactoolnet)?;
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    let fallback_extractor = Backend::new(Backend::HAC2L)?;
+    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
     #[cfg(target_os = "android")]
-    let extractor = Backend::new(Backend::HACTOOL)?;
-    let packer = Backend::new(Backend::HACPACK)?;
+    let extractor = Backend::new(BackendKind::Hactool)?;
+    let packer = Backend::new(BackendKind::Hacpack)?;
 
     fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
     match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {

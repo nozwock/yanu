@@ -17,6 +17,9 @@ pub const HAC2L: &[u8] = include_bytes!("../resources/x86_64-windows/hac2l.exe")
 #[cfg(target_os = "linux")]
 pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-linux/hactoolnet");
 
+// #[cfg(target_os = "android")]
+// pub const HAC2L: &[u8] = include_bytes!("../resources/aarch64-linux/hac2l");
+
 pub static APP_CACHE_DIR: Lazy<PathBuf> =
     Lazy::new(|| dirs::cache_dir().unwrap_or_default().join(APP_DIR));
 pub static APP_CONFIG_DIR: Lazy<PathBuf> =

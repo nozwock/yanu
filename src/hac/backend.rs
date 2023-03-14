@@ -6,6 +6,8 @@ use std::process::Command;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use tempfile::tempdir;
 
+#[cfg(target_family = "unix")]
+use crate::utils::set_executable_bit;
 use crate::{cache::Cache, defines};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,52 +20,53 @@ pub enum BackendKind {
     Hac2l,
 }
 
+impl BackendKind {
+    fn to_filename(&self) -> String {
+        #[cfg(unix)]
+        {
+            format!("{:?}", self).to_lowercase()
+        }
+        #[cfg(windows)]
+        {
+            format!("{:?}.exe", self).to_lowercase()
+        }
+    }
+}
+
 pub struct Backend {
     kind: BackendKind,
     path: PathBuf,
 }
 
 impl Backend {
-    pub const HACPACK: BackendKind = BackendKind::Hacpack;
-    pub const HACTOOL: BackendKind = BackendKind::Hactool;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    pub const HACTOOLNET: BackendKind = BackendKind::Hactoolnet;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    pub const HAC2L: BackendKind = BackendKind::Hac2l;
-
     pub fn new(kind: BackendKind) -> Result<Self> {
-        let tool = Backend::map_to_cache(kind);
-        let path = if tool.is_cached() {
-            tool.path()?
+        let filename = kind.to_filename();
+        let path = if Cache::is_cached(&filename) {
+            Cache::path(&filename)?
         } else {
             #[cfg(target_os = "windows")]
             {
-                match tool {
-                    Cache::Hacpack => tool.from_bytes(defines::HACPACK)?.path()?,
-                    Cache::Hactool => tool.from_bytes(defines::HACTOOL)?.path()?,
-                    Cache::Hactoolnet => tool.from_bytes(defines::HACTOOLNET)?.path()?,
-                    Cache::Hac2l => tool.from_bytes(defines::HAC2L)?.path()?,
+                match kind {
+                    BackendKind::Hacpack => Cache::store_bytes(defines::HACPACK, &filename)?,
+                    BackendKind::Hactool => Cache::store_bytes(defines::HACTOOL, &filename)?,
+                    BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
+                    BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
                 }
             }
             #[cfg(any(target_os = "linux", target_os = "android"))]
             {
-                match tool {
-                    Cache::Hacpack => tool
-                        .new(make_hacpack()?)?
-                        .with_executable_bit(true)?
-                        .path()?,
-                    Cache::Hactool => tool
-                        .new(make_hactool()?)?
-                        .with_executable_bit(true)?
-                        .path()?,
+                let path = match kind {
+                    BackendKind::Hacpack => Cache::store_path(make_hacpack()?)?,
+                    BackendKind::Hactool => Cache::store_path(make_hactool()?)?,
                     #[cfg(target_os = "linux")]
-                    Cache::Hactoolnet => tool
-                        .from_bytes(defines::HACTOOLNET)?
-                        .with_executable_bit(true)?
-                        .path()?,
+                    BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
                     #[cfg(target_os = "linux")]
-                    Cache::Hac2l => tool.new(make_hac2l()?)?.with_executable_bit(true)?.path()?,
-                }
+                    BackendKind::Hac2l => Cache::store_path(make_hac2l()?)?,
+                    // #[cfg(target_os = "android")]
+                    // BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
+                };
+                set_executable_bit(&path, true)?;
+                path
             }
         };
 
@@ -74,17 +77,6 @@ impl Backend {
     }
     pub fn kind(&self) -> BackendKind {
         self.kind
-    }
-    //* there's prob a better way to do this mapping
-    fn map_to_cache(tool: BackendKind) -> Cache {
-        match tool {
-            BackendKind::Hacpack => Cache::Hacpack,
-            BackendKind::Hactool => Cache::Hactool,
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            BackendKind::Hactoolnet => Cache::Hactoolnet,
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            BackendKind::Hac2l => Cache::Hac2l,
-        }
     }
 }
 
@@ -102,7 +94,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
     use fs_err as fs;
     use tracing::info;
 
-    let name = format!("{:?}", Backend::HACPACK).to_lowercase();
+    let name = format!("{:?}", BackendKind::Hacpack).to_lowercase();
     info!("Building {}", name);
     let src_dir = tempdir()?;
 
@@ -148,7 +140,7 @@ pub fn make_hactool() -> Result<PathBuf> {
     use fs_err as fs;
     use tracing::info;
 
-    let name = format!("{:?}", Backend::HACTOOL).to_lowercase();
+    let name = format!("{:?}", BackendKind::Hactool).to_lowercase();
     info!("Building {}", name);
     let src_dir = tempdir()?;
 
@@ -217,7 +209,7 @@ pub fn make_hac2l() -> Result<PathBuf> {
 
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
 
-    let name = format!("{:?}", Backend::HAC2L).to_lowercase();
+    let name = format!("{:?}", BackendKind::Hac2l).to_lowercase();
     info!("Building {}", name);
     let src_dir = tempdir()?;
 
