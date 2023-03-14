@@ -15,9 +15,8 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
-> **Note:** 
-> - Doesn't support DLCs yet.
-> - PC builds supports more games.
+> **Note**\
+> **Doesn't support DLCs yet.**
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
@@ -26,11 +25,14 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 - [ ] XCI
 - [ ] NSZ
 
-> **Note:** Support for others might be added.
+> **Note** Support for others might be added.
 
 ## Installation
 
 ### Android w/Termux
+
+> **Warning**\
+> **PC builds supports more games for now.**
 
 > [Video Tutorial](https://www.youtube.com/watch?v=rsYHWL7G3EI) by Zerokimchi for Android.
 
@@ -40,7 +42,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
   pkg upgrade -y && pkg in clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[;92mInstalled yanu successfully\nRun it by typing in\n\e[0m\e[;96myanu\e[0m" || echo -e "\e[;91mInstallation failed\e[0m"
   ```
 
-> MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)</br>
+> MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)\
 > MiXplorer GDrive [download link](https://drive.google.com/drive/folders/1BfeK39boriHy-9q76eXLLqbCwfV17-Gv)
 
 
@@ -59,8 +61,9 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 - Just [download](https://github.com/nozwock/yanu/releases) & run.
 
-> Since the builds are not code-signed, some AVs might false positively flag the program as malicious.</br>
-> Not much can be done about it since I'm not willing to pay for those expensive certs.</br>
+> **Note**\
+> Since the builds are not code-signed, some AVs might false positively flag the program as malicious.\
+> Not much can be done about it since I'm not willing to pay for those expensive certs.\
 > Use these with common sense if you're paranoid ig :weary: -
 > - https://www.virustotal.com
 > - https://www.hybrid-analysis.com 
