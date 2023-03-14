@@ -74,15 +74,34 @@ View CLI help with:
 yanu --help
 ```
 
-For updating a ROM using CLI:
+For updating a ROM:
 ```sh
-yanu cli --keyfile /path/to/keyfile --base /path/to/base --update /path/to/update
+yanu update --keyfile "/path/to/keyfile" --base "/path/to/base" --patch "/path/to/patch"
 ```
 
 Set a new `Roms Directory` with (**Android only**):
 ```sh
-yanu config --roms-dir /new/path/here
+yanu config --roms-dir "/new/path/here"
 ```
+
+For unpacking ROMs:
+```sh
+yanu unpack --base "/path/to/base" --patch "/path/to/patch"
+```
+
+OR, for only unpacking a single ROM:
+```sh
+yanu unpack --base "/path/to/base"
+```
+
+For repacking unpacked ROM data:
+```sh
+yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir "./base+update.lielaws/romfs" --exefsdir "./base+update.bilies/exefs"
+```
+
+> **Note**
+> - Control NCA is usually the largest NCA under 1MiB.
+> - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
 ---
 

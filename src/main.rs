@@ -141,9 +141,9 @@ fn run(cli: YanuCli) -> Result<()> {
             }
 
             let prefix = if args.patch.is_some() {
-                "base+patch"
+                "base+patch."
             } else {
-                "base"
+                "base."
             };
 
             let outdir = if let Some(outdir) = args.outdir {
