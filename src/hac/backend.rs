@@ -20,10 +20,6 @@ pub enum BackendKind {
         any(target_os = "windows", target_os = "linux")
     ))]
     Hactoolnet,
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
     Hac2l,
 }
 
@@ -69,8 +65,8 @@ impl Backend {
                     BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
                     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
                     BackendKind::Hac2l => Cache::store_path(make_hac2l(["linux_x64_release"])?)?,
-                    // #[cfg(feature = "android-proot")]
-                    // BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
+                    #[cfg(feature = "android-proot")]
+                    BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
                 };
                 set_executable_bit(&path, true)?;
                 path

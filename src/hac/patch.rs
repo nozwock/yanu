@@ -83,7 +83,7 @@ where
     ))]
     let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
     #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hactool)?;
+    let extractor = Backend::new(BackendKind::Hac2l)?;
     let packer = Backend::new(BackendKind::Hacpack)?;
 
     let control = match Nca::new(&extractor, control_path.as_ref()) {
@@ -211,6 +211,10 @@ where
             warn!(?err);
         }
     }
+
+    // switching to hac2l for NCAs
+    #[cfg(feature = "android-proot")]
+    let extractor = Backend::new(BackendKind::Hac2l)?;
 
     info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
     let contents = if let Some(patch) = patch.as_mut() {
@@ -356,6 +360,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     base.unpack(&extractor, base_data_dir.path())?;
     update.unpack(&extractor, update_data_dir.path())?;
+
+    // switching to hac2l for NCAs
+    #[cfg(feature = "android-proot")]
+    let extractor = Backend::new(BackendKind::Hac2l)?;
 
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err);
