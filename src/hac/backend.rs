@@ -130,8 +130,10 @@ pub fn make_hacpack() -> Result<PathBuf> {
     }
 
     //* Moving bin from temp dir to cache dir
-    let dest = APP_CACHE_DIR.join(&name);
-    move_file(src_dir.path().join(&name), &dest)?;
+    let filename = BackendKind::Hacpack.to_filename();
+    fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
+    let dest = APP_CACHE_DIR.join(&filename);
+    move_file(src_dir.path().join(&filename), &dest)?;
 
     Ok(dest)
 }
@@ -199,8 +201,10 @@ pub fn make_hactool() -> Result<PathBuf> {
     }
 
     //* Moving bin from temp dir to cache dir
-    let dest = APP_CACHE_DIR.join(&name);
-    move_file(src_dir.path().join(&name), &dest)?;
+    let filename = BackendKind::Hactool.to_filename();
+    fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
+    let dest = APP_CACHE_DIR.join(&filename);
+    move_file(src_dir.path().join(&filename), &dest)?;
 
     Ok(dest)
 }
@@ -254,11 +258,13 @@ where
     }
 
     //* Moving bin from temp dir to cache dir
-    let dest = APP_CACHE_DIR.join(&name);
+    let filename = BackendKind::Hac2l.to_filename();
+    fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
+    let dest = APP_CACHE_DIR.join(&filename);
     move_file(
         hac2l_src_dir
             .join("out/generic_linux_x64/release")
-            .join(&name),
+            .join(&filename),
         &dest,
     )?;
 

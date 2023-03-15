@@ -205,9 +205,12 @@ impl Nca {
                 any(target_os = "windows", target_os = "linux")
             ))]
             BackendKind::Hactoolnet => "TitleID:",
-            #[cfg(all(
-                target_arch = "x86_64",
-                any(target_os = "windows", target_os = "linux")
+            #[cfg(any(
+                feature = "android-proot",
+                all(
+                    target_arch = "x86_64",
+                    any(target_os = "windows", target_os = "linux")
+                )
             ))]
             BackendKind::Hac2l => "Program Id:",
             _ => unreachable!(),
