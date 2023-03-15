@@ -72,11 +72,17 @@ where
     R: AsRef<Path>,
     O: AsRef<Path>,
 {
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
-    #[cfg(target_os = "android")]
+    #[cfg(feature = "android-proot")]
     let extractor = Backend::new(BackendKind::Hactool)?;
     let packer = Backend::new(BackendKind::Hacpack)?;
 
@@ -87,7 +93,10 @@ where
         },
         Err(err) => {
             warn!("{}", err);
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            #[cfg(all(
+                target_arch = "x86_64",
+                any(target_os = "windows", target_os = "linux")
+            ))]
             {
                 info!("Using fallback extractor {:?}", fallback_extractor.kind());
                 match Nca::new(&fallback_extractor, control_path.as_ref()) {
@@ -101,7 +110,7 @@ where
                     }
                 }
             }
-            #[cfg(target_os = "android")]
+            #[cfg(feature = "android-proot")]
             {
                 None
             }
@@ -167,11 +176,17 @@ pub fn unpack_to_fs<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Resu
 where
     O: AsRef<Path>,
 {
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
-    #[cfg(target_os = "android")]
+    #[cfg(feature = "android-proot")]
     let extractor = Backend::new(BackendKind::Hactool)?;
 
     fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
@@ -218,7 +233,10 @@ where
                 }
                 Err(err) => {
                     warn!("{}", err);
-                    #[cfg(any(target_os = "windows", target_os = "linux"))]
+                    #[cfg(all(
+                        target_arch = "x86_64",
+                        any(target_os = "windows", target_os = "linux")
+                    ))]
                     {
                         if !fallback {
                             info!("Using fallback extractor {:?}", fallback_extractor.kind());
@@ -254,7 +272,10 @@ where
                     }
                     Err(err) => {
                         warn!("{}", err);
-                        #[cfg(any(target_os = "windows", target_os = "linux"))]
+                        #[cfg(all(
+                            target_arch = "x86_64",
+                            any(target_os = "windows", target_os = "linux")
+                        ))]
                         {
                             if !fallback {
                                 info!("Using fallback extractor {:?}", fallback_extractor.kind());
@@ -300,11 +321,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //* It's a mess, ik and I'm not sry ;-;
     let started = time::Instant::now();
 
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
-    #[cfg(target_os = "android")]
+    #[cfg(feature = "android-proot")]
     let extractor = Backend::new(BackendKind::Hactool)?;
     let packer = Backend::new(BackendKind::Hacpack)?;
 
@@ -356,7 +383,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                 }
                 Err(err) => {
                     warn!(?err);
-                    #[cfg(any(target_os = "windows", target_os = "linux"))]
+                    #[cfg(all(
+                        target_arch = "x86_64",
+                        any(target_os = "windows", target_os = "linux")
+                    ))]
                     {
                         if !fallback {
                             info!("Using fallback extractor {:?}", fallback_extractor.kind());
@@ -395,7 +425,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
                 },
                 Err(err) => {
                     warn!(?err);
-                    #[cfg(any(target_os = "windows", target_os = "linux"))]
+                    #[cfg(all(
+                        target_arch = "x86_64",
+                        any(target_os = "windows", target_os = "linux")
+                    ))]
                     {
                         if !fallback {
                             info!("Using fallback extractor {:?}", fallback_extractor.kind());

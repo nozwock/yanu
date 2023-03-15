@@ -4,8 +4,13 @@ use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use once_cell::sync::Lazy;
 use std::{env, ffi::OsStr, path::PathBuf};
+#[cfg(unix)]
+use tilde_expand::tilde_expand;
 use tracing::{error, info};
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    any(target_os = "windows", target_os = "linux")
+))]
 use yanu::utils::pick_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
@@ -70,7 +75,10 @@ fn main() -> Result<()> {
         }
         Err(err) => {
             error!(?err);
-            #[cfg(any(target_os = "linux", target_os = "windows"))]
+            #[cfg(all(
+                target_arch = "x86_64",
+                any(target_os = "windows", target_os = "linux")
+            ))]
             if !cli_mode {
                 rfd::MessageDialog::new()
                     .set_level(rfd::MessageLevel::Error)
@@ -84,7 +92,6 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: YanuCli) -> Result<()> {
-    #[allow(unused)]
     let mut config: Config = confy::load_path(APP_CONFIG_PATH.as_path())?;
 
     if let Some(keyfile) = cli.import_keyfile {
@@ -163,7 +170,6 @@ fn run(cli: YanuCli) -> Result<()> {
 
             unpack_to_fs(Nsp::new(args.base)?, patch, outdir)?;
         }
-        #[cfg(target_os = "android")]
         Some(CliArgs::Commands::Config(new_config)) => {
             if let Some(roms_dir) = new_config.roms_dir {
                 if !roms_dir.is_dir() {
@@ -175,229 +181,231 @@ fn run(cli: YanuCli) -> Result<()> {
             info!("Updating config at {:?}", APP_CONFIG_PATH);
             confy::store_path(APP_CONFIG_PATH.as_path(), config)?;
         }
+        Some(CliArgs::Commands::Tui) => {
+            tui(&mut config)?;
+        }
         None => {
             // Interactive mode
-            #[cfg(any(target_os = "linux", target_os = "windows"))]
-            {
-                if !DEFAULT_PRODKEYS_PATH.is_file() {
-                    rfd::MessageDialog::new()
-                        .set_level(rfd::MessageLevel::Warning)
-                        .set_title("Keyfile required")
-                        .set_description("Select `prod.keys` keyfile to continue")
-                        .show();
-                    let keyfile_path = rfd::FileDialog::new()
-                        .add_filter("Keys", &["keys"])
-                        .pick_file()
-                        .ok_or_else(|| eyre!("No keyfile was selected"))?;
-                    info!(?keyfile_path, "Selected keyfile");
+            if cfg!(feature = "android-proot") {
+                tui(&mut config)?;
+            } else {
+                #[cfg(all(
+                    target_arch = "x86_64",
+                    any(target_os = "windows", target_os = "linux")
+                ))]
+                {
+                    if !DEFAULT_PRODKEYS_PATH.is_file() {
+                        rfd::MessageDialog::new()
+                            .set_level(rfd::MessageLevel::Warning)
+                            .set_title("Keyfile required")
+                            .set_description("Select `prod.keys` keyfile to continue")
+                            .show();
+                        let keyfile_path = rfd::FileDialog::new()
+                            .add_filter("Keys", &["keys"])
+                            .pick_file()
+                            .ok_or_else(|| eyre!("No keyfile was selected"))?;
+                        info!(?keyfile_path, "Selected keyfile");
 
-                    // Dialog allows picking dir, atleast on GTK (prob a bug)
-                    //* ^^^^ doesn't seems to have this issue with the xdg portal backend
-                    if !keyfile_path.is_file() {
-                        bail!("{:?} is not a file", keyfile_path);
+                        // Dialog allows picking dir, atleast on GTK (prob a bug)
+                        //* ^^^^ doesn't seems to have this issue with the xdg portal backend
+                        if !keyfile_path.is_file() {
+                            bail!("{:?} is not a file", keyfile_path);
+                        }
+
+                        //? maybe validate if it's indeed prod.keys
+                        let default_path = DEFAULT_PRODKEYS_PATH.as_path();
+                        fs::create_dir_all(
+                            default_path
+                                .parent()
+                                .ok_or_else(|| eyre!("Failed to find parent"))?,
+                        )?;
+                        fs::copy(keyfile_path, default_path)?;
+                        info!("Copied keys successfully to the C2 ^-^");
                     }
 
-                    //? maybe validate if it's indeed prod.keys
-                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
-                    fs::create_dir_all(
-                        default_path
-                            .parent()
-                            .ok_or_else(|| eyre!("Failed to find parent"))?,
-                    )?;
-                    fs::copy(keyfile_path, default_path)?;
-                    info!("Copied keys successfully to the C2 ^-^");
-                }
-
-                rfd::MessageDialog::new()
-                    .set_level(rfd::MessageLevel::Info)
-                    .set_title("Base package required")
-                    .set_description("Select the BASE package file to update")
-                    .show();
-                let base_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
-                if !base_path.is_file() {
-                    bail!("{:?} is not a file", base_path);
-                }
-
-                rfd::MessageDialog::new()
-                    .set_level(rfd::MessageLevel::Info)
-                    .set_title("Update package required")
-                    .set_description("Select the UPDATE package file to apply")
-                    .show();
-                let update_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
-                if !update_path.is_file() {
-                    bail!("{:?} is not a file", update_path);
-                }
-
-                let base_name = base_path
-                    .file_name()
-                    .expect("File should've a filename")
-                    .to_string_lossy();
-                let update_name = update_path
-                    .file_name()
-                    .expect("File should've a filename")
-                    .to_string_lossy();
-
-                if rfd::MessageDialog::new()
-                    .set_level(rfd::MessageLevel::Info)
-                    .set_title("Is this correct?")
-                    .set_description(&format!(
-                        "Selected BASE package: \n\"{}\"\n\
-                        Selected UPDATE package: \n\"{}\"",
-                        base_name, update_name
-                    ))
-                    .set_buttons(rfd::MessageButtons::YesNo)
-                    .show()
-                {
-                    info!("Started patching!");
-                    let patched = patch_nsp(
-                        &mut Nsp::new(&base_path)?,
-                        &mut Nsp::new(&update_path)?,
-                        default_outdir()?,
-                    )?;
                     rfd::MessageDialog::new()
                         .set_level(rfd::MessageLevel::Info)
-                        .set_title("Patching successful")
-                        .set_description(&format!("Patched file created at:\n{:?}", patched.path))
+                        .set_title("Base package required")
+                        .set_description("Select the BASE package file to update")
                         .show();
-                }
-            }
-
-            // TODO: Make the tui available on all platforms with a "tui" subcommand
-
-            #[cfg(target_os = "android")]
-            {
-                use walkdir::WalkDir;
-
-                if config.roms_dir.is_none() {
-                    let roms_dir = PathBuf::from(
-                        inquire::Text::new("Enter the path to a directory:")
-                            .with_default("/storage/emulated/0")
-                            .with_placeholder("for eg- /storage/emulated/0/SwitchRoms")
-                            .with_help_message(
-                                "Help:\n1. This directory will be used to look for ROMs (base/update)\n\
-                                2. `prod.keys` from the given directory will be used, if any",
-                            )
-                            .prompt()?,
-                    );
-                    info!(?roms_dir);
-
-                    if !roms_dir.is_dir() {
-                        bail!("{:?} is not a valid directory", roms_dir);
+                    let base_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
+                    if !base_path.is_file() {
+                        bail!("{:?} is not a file", base_path);
                     }
-                    config.roms_dir = Some(roms_dir);
-                    info!("Updating config at {:?}", APP_CONFIG_PATH);
-                    confy::store_path(APP_CONFIG_PATH.as_path(), config.clone())?;
-                }
 
-                let roms_dir = config.roms_dir.expect("roms_dir should've been Some()");
+                    rfd::MessageDialog::new()
+                        .set_level(rfd::MessageLevel::Info)
+                        .set_title("Update package required")
+                        .set_description("Select the UPDATE package file to apply")
+                        .show();
+                    let update_path =
+                        pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
+                    if !update_path.is_file() {
+                        bail!("{:?} is not a file", update_path);
+                    }
 
-                if !DEFAULT_PRODKEYS_PATH.is_file() {
-                    // Looking for `prod.keys` in roms_dir
-                    let mut keyfile_path: Option<PathBuf> = None;
-                    for entry in WalkDir::new(&roms_dir)
-                        .min_depth(1)
-                        .into_iter()
-                        .filter_map(|e| e.ok())
+                    let base_name = base_path
+                        .file_name()
+                        .expect("File should've a filename")
+                        .to_string_lossy();
+                    let update_name = update_path
+                        .file_name()
+                        .expect("File should've a filename")
+                        .to_string_lossy();
+
+                    if rfd::MessageDialog::new()
+                        .set_level(rfd::MessageLevel::Info)
+                        .set_title("Is this correct?")
+                        .set_description(&format!(
+                            "Selected BASE package: \n\"{}\"\n\
+                        Selected UPDATE package: \n\"{}\"",
+                            base_name, update_name
+                        ))
+                        .set_buttons(rfd::MessageButtons::YesNo)
+                        .show()
                     {
-                        if entry.file_name() == "prod.keys" {
-                            keyfile_path = Some(entry.path().into());
-                            break;
-                        }
-                    }
-
-                    if keyfile_path.is_none() {
-                        eprintln!("Failed to find keyfile!");
-                        keyfile_path = Some(PathBuf::from(
-                            inquire::Text::new("Enter the path to `prod.keys` keyfile:")
-                                .prompt()?,
-                        ));
-                    }
-
-                    let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
-                    info!(?keyfile_path, "Selected keyfile");
-
-                    let default_path = DEFAULT_PRODKEYS_PATH.as_path();
-                    fs::create_dir_all(
-                        default_path
-                            .parent()
-                            .ok_or_else(|| eyre!("Failed to find parent"))?,
-                    )?;
-                    match keyfile_path.extension().and_then(OsStr::to_str) {
-                        Some("keys") => {}
-                        _ => bail!("No keyfile was selected"),
-                    }
-                    fs::copy(keyfile_path, default_path)?;
-                    info!("Copied keys successfully to the C2 ^-^");
-                }
-
-                let roms_path = WalkDir::new(&roms_dir)
-                    .min_depth(1)
-                    .max_depth(1)
-                    .into_iter()
-                    .filter_map(|e| e.ok())
-                    .filter(|entry| {
-                        if entry.file_type().is_file()
-                            && entry
-                                .path()
-                                .extension()
-                                .and_then(|s| Some(s.to_ascii_lowercase()))
-                                == Some("nsp".into())
-                        {
-                            return true;
-                        }
-                        false
-                    })
-                    .collect::<Vec<_>>();
-
-                // ! ummm...I don't feel so gud here
-                let mut base: Option<Nsp> = None;
-                let mut options = roms_path
-                    .iter()
-                    .map(|entry| entry.file_name().to_string_lossy())
-                    .collect::<Vec<_>>();
-                let choice =
-                    inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
-                for entry in &roms_path {
-                    if entry.file_name().to_string_lossy() == choice {
-                        base = Some(Nsp::new(entry.path())?);
+                        info!("Started patching!");
+                        let patched = patch_nsp(
+                            &mut Nsp::new(&base_path)?,
+                            &mut Nsp::new(&update_path)?,
+                            default_outdir()?,
+                        )?;
+                        rfd::MessageDialog::new()
+                            .set_level(rfd::MessageLevel::Info)
+                            .set_title("Patching successful")
+                            .set_description(&format!(
+                                "Patched file created at:\n{:?}",
+                                patched.path
+                            ))
+                            .show();
                     }
                 }
-                let mut base = base.expect(&format!(
-                    "Selected package {:?} should be in {:?}",
-                    choice, roms_path
-                ));
+            };
+        }
+    }
 
-                let mut update: Option<Nsp> = None;
-                options = options
-                    .into_iter()
-                    .filter(|s| {
-                        if s == &choice {
-                            return false;
-                        }
-                        true
-                    })
-                    .collect();
-                let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
-                for entry in &roms_path {
-                    if entry.file_name().to_string_lossy() == choice {
-                        update = Some(Nsp::new(entry.path())?);
-                    }
-                }
-                let mut update = update.expect(&format!(
-                    "Selected package {:?} should be in {:?}",
-                    choice, roms_path
-                ));
+    Ok(())
+}
 
-                if inquire::Confirm::new("Are you sure?")
-                    .with_default(false)
-                    .prompt()?
-                    == true
-                {
-                    info!("Started patching!");
-                    patch_nsp(&mut base, &mut update, default_outdir()?)?;
-                }
+fn tui(config: &mut Config) -> Result<()> {
+    use walkdir::WalkDir;
+
+    if config.roms_dir.is_none() {
+        let prompt = inquire::Text::new("Enter the path to a directory:").with_help_message(
+            "Help:\n1. This directory will be used to look for ROMs (base/update)\n\
+            2. `prod.keys` from the given directory will be used, if any",
+        );
+        #[cfg(feature = "android-proot")]
+        let prompt = prompt
+            .with_default("/storage/emulated/0/yanu")
+            .with_placeholder("for eg- /storage/emulated/0/SwitchcwRoms");
+        let prompt_input = prompt.prompt()?;
+        #[cfg(unix)]
+        let prompt_input = String::from_utf8(tilde_expand(prompt_input.as_bytes()))?;
+        let roms_dir = PathBuf::from(prompt_input);
+        info!(?roms_dir);
+
+        if !roms_dir.is_dir() {
+            bail!("{:?} is not a valid directory", roms_dir);
+        }
+        config.roms_dir = Some(roms_dir);
+        info!("Updating config at {:?}", APP_CONFIG_PATH);
+        confy::store_path(APP_CONFIG_PATH.as_path(), config.clone())?;
+    }
+
+    let roms_dir = config
+        .roms_dir
+        .as_ref()
+        .expect("roms_dir should've been Some()");
+
+    if !DEFAULT_PRODKEYS_PATH.is_file() {
+        // Looking for `prod.keys` in roms_dir
+        let mut keyfile_path: Option<PathBuf> = None;
+        for entry in WalkDir::new(&roms_dir)
+            .min_depth(1)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if entry.file_name() == "prod.keys" {
+                keyfile_path = Some(entry.path().into());
+                break;
             }
         }
+
+        if keyfile_path.is_none() {
+            eprintln!("Failed to find keyfile!");
+            keyfile_path = Some(PathBuf::from(
+                inquire::Text::new("Enter the path to `prod.keys` keyfile:").prompt()?,
+            ));
+        }
+
+        let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
+        info!(?keyfile_path, "Selected keyfile");
+
+        let default_path = DEFAULT_PRODKEYS_PATH.as_path();
+        fs::create_dir_all(
+            default_path
+                .parent()
+                .ok_or_else(|| eyre!("Failed to find parent"))?,
+        )?;
+        match keyfile_path.extension().and_then(OsStr::to_str) {
+            Some("keys") => {}
+            _ => bail!("No keyfile was selected"),
+        }
+        fs::copy(keyfile_path, default_path)?;
+        info!("Copied keys successfully to the C2 ^-^");
+    }
+
+    let roms_path = WalkDir::new(&roms_dir)
+        .min_depth(1)
+        .max_depth(1)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|entry| {
+            entry.file_type().is_file()
+                && entry
+                    .path()
+                    .extension()
+                    .and_then(|s| Some(s.to_ascii_lowercase()))
+                    == Some("nsp".into())
+        })
+        .collect::<Vec<_>>();
+
+    let mut base: Option<Nsp> = None;
+    let mut options = roms_path
+        .iter()
+        .map(|entry| entry.file_name().to_string_lossy())
+        .collect::<Vec<_>>();
+    let choice = inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
+    for entry in &roms_path {
+        if entry.file_name() == choice.as_ref() {
+            base = Some(Nsp::new(entry.path())?);
+        }
+    }
+    let mut base = base.expect(&format!(
+        "Selected package {:?} should be in {:?}",
+        choice, roms_path
+    ));
+
+    let mut update: Option<Nsp> = None;
+    options = options.into_iter().filter(|s| s != &choice).collect();
+    let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
+    for entry in &roms_path {
+        if entry.file_name().to_string_lossy() == choice {
+            update = Some(Nsp::new(entry.path())?);
+        }
+    }
+    let mut update = update.expect(&format!(
+        "Selected package {:?} should be in {:?}",
+        choice, roms_path
+    ));
+
+    if inquire::Confirm::new("Are you sure?")
+        .with_default(false)
+        .prompt()?
+    {
+        info!("Started patching!");
+        patch_nsp(&mut base, &mut update, default_outdir()?)?;
     }
 
     Ok(())
@@ -405,13 +413,11 @@ fn run(cli: YanuCli) -> Result<()> {
 
 fn default_outdir() -> Result<PathBuf> {
     let outdir: PathBuf = {
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
-        {
-            env::current_exe()?.parent().unwrap().to_owned()
-        }
-        #[cfg(target_os = "android")]
-        {
-            dirs::home_dir().unwrap().join("storage").join("shared")
+        if cfg!(feature = "android-proot") {
+            PathBuf::from("/storage/emulated/0")
+        } else {
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            EXE_DIR.to_owned()
         }
     };
 

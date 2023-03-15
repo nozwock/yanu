@@ -1,9 +1,10 @@
 use eyre::Result;
 use once_cell::sync::Lazy;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(unix)]
 use std::process::Command;
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(unix)]
 use tempfile::tempdir;
 
 #[cfg(target_family = "unix")]
@@ -14,9 +15,15 @@ use crate::{cache::Cache, defines};
 pub enum BackendKind {
     Hacpack,
     Hactool,
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     Hactoolnet,
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        any(target_os = "windows", target_os = "linux")
+    ))]
     Hac2l,
 }
 
@@ -44,7 +51,7 @@ impl Backend {
         let path = if Cache::is_cached(&filename) {
             Cache::path(&filename)?
         } else {
-            #[cfg(target_os = "windows")]
+            #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
             {
                 match kind {
                     BackendKind::Hacpack => Cache::store_bytes(defines::HACPACK, &filename)?,
@@ -53,16 +60,16 @@ impl Backend {
                     BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
                 }
             }
-            #[cfg(any(target_os = "linux", target_os = "android"))]
+            #[cfg(unix)]
             {
                 let path = match kind {
                     BackendKind::Hacpack => Cache::store_path(make_hacpack()?)?,
                     BackendKind::Hactool => Cache::store_path(make_hactool()?)?,
-                    #[cfg(target_os = "linux")]
+                    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
                     BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
-                    #[cfg(target_os = "linux")]
-                    BackendKind::Hac2l => Cache::store_path(make_hac2l()?)?,
-                    // #[cfg(target_os = "android")]
+                    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+                    BackendKind::Hac2l => Cache::store_path(make_hac2l(["linux_x64_release"])?)?,
+                    // #[cfg(feature = "android-proot")]
                     // BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
                 };
                 set_executable_bit(&path, true)?;
@@ -80,14 +87,14 @@ impl Backend {
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
     Ok(String::from_utf8(Command::new("nproc").output()?.stdout)?
         .trim()
         .parse()?)
 });
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 pub fn make_hacpack() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
@@ -133,7 +140,7 @@ pub fn make_hacpack() -> Result<PathBuf> {
     Ok(dest)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 pub fn make_hactool() -> Result<PathBuf> {
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
@@ -202,8 +209,12 @@ pub fn make_hactool() -> Result<PathBuf> {
     Ok(dest)
 }
 
-#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-pub fn make_hac2l() -> Result<PathBuf> {
+#[cfg(all(target_arch = "x86_64", unix))]
+pub fn make_hac2l<I, S>(args: I) -> Result<PathBuf>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
     use eyre::{bail, eyre};
     use tracing::info;
 
@@ -236,7 +247,6 @@ pub fn make_hac2l() -> Result<PathBuf> {
 
     if !Command::new("make")
         .args([
-            "linux_x64_release",
             "-j",
             &(NPROC.as_ref().map_err(|err| eyre!(err))? / 2).to_string(),
         ])

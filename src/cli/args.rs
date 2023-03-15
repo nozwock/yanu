@@ -23,10 +23,12 @@ pub enum Commands {
     /// Unpack NSPs
     #[command()]
     Unpack(Unpack),
-    #[cfg(target_os = "android")]
     /// Manage yanu's config
     #[command()]
     Config(Config),
+    /// Update NSPs in TUI mode
+    #[command()]
+    Tui,
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]

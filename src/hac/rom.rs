@@ -200,9 +200,15 @@ impl Nca {
         let mut title_id: Option<String> = None;
         let title_id_pat = match extractor.kind() {
             BackendKind::Hactool => "Title ID:",
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            #[cfg(all(
+                target_arch = "x86_64",
+                any(target_os = "windows", target_os = "linux")
+            ))]
             BackendKind::Hactoolnet => "TitleID:",
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            #[cfg(all(
+                target_arch = "x86_64",
+                any(target_os = "windows", target_os = "linux")
+            ))]
             BackendKind::Hac2l => "Program Id:",
             _ => unreachable!(),
         };
