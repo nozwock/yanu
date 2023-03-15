@@ -31,15 +31,15 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Android w/Termux
 
-> **Warning**\
-> **PC builds supports more games for now.**
+> **Note**\
+> **Android build should now support all the games with the exception of sparse ones.**
 
 > [Video Tutorial](https://www.youtube.com/watch?v=rsYHWL7G3EI) by Zerokimchi for Android.
 
 1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
 2. Copy-paste the following in `Termux` and hit enter:
   ```console
-  pkg upgrade -y && pkg in clang make binutils git -y && curl -sLo "$PATH/yanu" https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-linux-android && chmod +x "$PATH/yanu" && termux-setup-storage && echo -e "\e[;92mInstalled yanu successfully\nRun it by typing in\n\e[0m\e[;96myanu\e[0m" || echo -e "\e[;91mInstallation failed\e[0m"
+  bash <(curl -sL https://raw.githubusercontent.com/nozwock/yanu/main/resources/scripts/yanu-bootstrap-termux_proot.sh)
   ```
 
 > MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)\
