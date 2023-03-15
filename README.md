@@ -15,8 +15,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
-> **Note**\
-> **Doesn't support DLCs yet.**
+> **Note** - **Doesn't support DLCs yet.**
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
@@ -25,16 +24,15 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 - [ ] XCI
 - [ ] NSZ
 
-> **Note** Support for others might be added.
+> **Note** - Support for others might be added.
 
 ## Installation
 
 ### Android w/Termux
 
-> **Note**\
-> **Android build should now support all the games with the exception of sparse ones.**
+> **Note** - Android build should now support many newer games with the exception of Sparse type games.
 
-> [Video Tutorial](https://www.youtube.com/watch?v=rsYHWL7G3EI) by Zerokimchi for Android.
+> **Check out [Video Tutorial](https://www.youtube.com/watch?v=rsYHWL7G3EI) by Zerokimchi for Android.**
 
 1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
 2. Copy-paste the following in `Termux` and hit enter:
@@ -42,8 +40,9 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
   bash <(curl -sL https://raw.githubusercontent.com/nozwock/yanu/main/resources/scripts/yanu-bootstrap-termux_proot.sh)
   ```
 
-> MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)\
-> MiXplorer GDrive [download link](https://drive.google.com/drive/folders/1BfeK39boriHy-9q76eXLLqbCwfV17-Gv)
+Relevant resources:
+- MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)
+- MiXplorer GDrive [download link](https://drive.google.com/drive/folders/1BfeK39boriHy-9q76eXLLqbCwfV17-Gv)
 
 
 ### Linux
@@ -103,7 +102,8 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 > - Control NCA is usually the largest NCA under 1MiB.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
----
+## Special Thanks
 
-Credits to [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack) and [hactoolnet](https://github.com/Thealexbarney/LibHac).</br>
-Used [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
+- [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack), [hac2l](https://github.com/Atmosphere-NX/hac2l) and [hactoolnet](https://github.com/Thealexbarney/LibHac) used internally for the heavy lifting.
+- [@Pipetto-crypto](https://github.com/Pipetto-crypto) for the `aarch64-linux` `hac2l` binary.
+- [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
