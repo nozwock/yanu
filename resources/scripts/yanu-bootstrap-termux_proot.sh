@@ -17,9 +17,10 @@ proot() {
 termux-setup-storage || err
 pkg upgrade -y || err
 pkg in proot-distro || err
-proot-distro install ubuntu || err
+proot-distro install ubuntu || echo 'NOTE: `ubuntu` already installed.'
 proot apt update -y || err
 proot apt upgrade -y || err
+proot apt install git gcc binutils make || err
 proot rm -f /usr/bin/yanu || err
 proot curl -sLo /usr/bin/yanu https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-termux_proot-linux-musl || err
 proot chmod +x /usr/bin/yanu || err
