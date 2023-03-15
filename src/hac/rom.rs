@@ -155,12 +155,6 @@ impl Nsp {
 
         Ok(())
     }
-    pub fn get_title_key(&self) -> String {
-        match self.title_key {
-            Some(ref key) => key.to_string(),
-            None => "=".to_string(),
-        }
-    }
 }
 
 impl Nca {

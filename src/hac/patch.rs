@@ -217,11 +217,17 @@ where
     let extractor = Backend::new(BackendKind::Hac2l)?;
 
     info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
-    let contents = if let Some(patch) = patch.as_mut() {
-        format!("{}\n{}\n", base.get_title_key(), patch.get_title_key())
-    } else {
-        format!("{}\n", base.get_title_key())
-    };
+    let mut contents = String::new();
+    if let Some(key) = &base.title_key {
+        contents.push_str(&key.to_string());
+        contents.push('\n');
+    }
+    if let Some(patch) = patch.as_ref() {
+        if let Some(key) = &patch.title_key {
+            contents.push_str(&key.to_string());
+            contents.push('\n');
+        }
+    }
     fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
 
     let mut base_nca: Option<Nca> = None;
@@ -373,10 +379,16 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     }
 
     info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
-    fs::write(
-        DEFAULT_TITLEKEYS_PATH.as_path(),
-        format!("{}\n{}\n", base.get_title_key(), update.get_title_key()),
-    )?;
+    let mut contents = String::new();
+    if let Some(key) = &base.title_key {
+        contents.push_str(&key.to_string());
+        contents.push('\n');
+    }
+    if let Some(key) = &update.title_key {
+        contents.push_str(&key.to_string());
+        contents.push('\n');
+    }
+    fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
 
     let mut base_nca: Option<Nca> = None;
     'walk: for (path, mut nca) in fetch_ncas(&extractor, base_data_dir.path()) {
