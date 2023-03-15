@@ -505,6 +505,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //     style("Cleaning up extracted NSPs data...").yellow().bold()
     // ));
 
+    println!(
+        "{}",
+        style("Cleaning up extracted NSPs data...").yellow().bold()
+    );
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
     if let Err(err) = base_data_dir.close() {
@@ -533,6 +537,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
 
+    println!("{}", style("Packing romfs/exefs to NCA...").yellow().bold());
     let patched_nca = Nca::pack(
         &extractor,
         &packer,
@@ -555,6 +560,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //     style("Generating Meta NCA...").yellow().bold()
     // ));
 
+    println!("{}", style("Generating Meta NCA...").yellow().bold());
     Nca::create_meta(
         &packer,
         &title_id,
@@ -576,6 +582,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //     style("Packing NCAs to NSP...").yellow().bold()
     // ));
 
+    println!("{}", style("Packing NCAs to NSP...").yellow().bold());
     let mut patched_nsp = Nsp::pack(
         &packer,
         &title_id,
