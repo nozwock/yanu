@@ -17,6 +17,7 @@ proot() {
 termux-setup-storage || err
 pkg upgrade -y || err
 pkg in proot-distro || err
+proot-distro install ubuntu || err
 proot apt update -y || err
 proot apt upgrade -y || err
 proot rm -f /usr/bin/yanu || err
