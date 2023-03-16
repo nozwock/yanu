@@ -15,7 +15,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
 
-> **Note** - **Doesn't support DLCs yet.**
+> **Warning** - **Doesn't support DLCs.**
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
@@ -78,7 +78,7 @@ For updating a ROM:
 yanu update --keyfile "/path/to/keyfile" --base "/path/to/base" --patch "/path/to/patch"
 ```
 
-Set a new `Roms Directory` with (**Android only**):
+Set a new `Roms Directory` (Used in `tui`) with:
 ```sh
 yanu config --roms-dir "/new/path/here"
 ```
@@ -99,6 +99,7 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 ```
 
 > **Note**
+> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and having absolute name of the executable).
 > - Control NCA is usually the largest NCA under 1MiB.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
