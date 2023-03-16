@@ -216,7 +216,7 @@ where
     S: AsRef<OsStr>,
 {
     use eyre::{bail, eyre};
-    use tracing::info;
+    use tracing::{debug, info};
 
     use crate::{defines::APP_CACHE_DIR, utils::move_file};
 
@@ -250,6 +250,7 @@ where
             "-j",
             &(NPROC.as_ref().map_err(|err| eyre!(err))? / 2).to_string(),
         ])
+        .args(args)
         .current_dir(&hac2l_src_dir)
         .status()?
         .success()
@@ -261,12 +262,22 @@ where
     let filename = BackendKind::Hac2l.to_filename();
     fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
     let dest = APP_CACHE_DIR.join(&filename);
-    move_file(
-        hac2l_src_dir
-            .join("out/generic_linux_x64/release")
-            .join(&filename),
-        &dest,
-    )?;
+    for entry in walkdir::WalkDir::new(hac2l_src_dir.join("out"))
+        .min_depth(1)
+        .contents_first(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        debug!(
+            ?entry,
+            is_file = entry.file_type().is_file(),
+            parent_is_release = entry.path().parent().unwrap().ends_with("release")
+        );
+        if entry.file_type().is_file() && entry.path().parent().unwrap().ends_with("release") {
+            move_file(entry.path(), &dest)?;
+            return Ok(dest);
+        }
+    }
 
-    Ok(dest)
+    bail!("Failed to build {}", name);
 }

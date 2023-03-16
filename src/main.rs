@@ -2,7 +2,6 @@ use clap::Parser;
 use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use once_cell::sync::Lazy;
 use std::{env, ffi::OsStr, path::PathBuf};
 #[cfg(unix)]
 use tilde_expand::tilde_expand;
@@ -20,7 +19,10 @@ use yanu::{
         patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
         rom::Nsp,
     },
+    utils::EXE_DIR,
 };
+
+// TODO: cherry pick commit rev of backend tools from the config file
 
 fn process_init() {
     use std::sync::Once;
@@ -33,9 +35,6 @@ fn process_init() {
         winapi::um::winuser::SetProcessDPIAware();
     });
 }
-
-pub static EXE_DIR: Lazy<PathBuf> =
-    Lazy::new(|| env::current_exe().unwrap().parent().unwrap().into());
 
 fn main() -> Result<()> {
     color_eyre::config::HookBuilder::default()

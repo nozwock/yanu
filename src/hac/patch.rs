@@ -4,7 +4,7 @@ use crate::{
         backend::{Backend, BackendKind},
         rom::{Nca, NcaType},
     },
-    utils::move_file,
+    utils::{move_file, EXE_DIR},
 };
 
 use super::rom::Nsp;
@@ -126,11 +126,7 @@ where
         .to_lowercase();
     title_id.truncate(TITLEID_SZ as _);
 
-    let exe_path = std::env::current_exe()?;
-    let root_dir = exe_path
-        .parent()
-        .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let temp_dir = tempdir_in(root_dir)?;
+    let temp_dir = tempdir_in(EXE_DIR.as_path())?;
 
     let patched = Nca::pack(
         &extractor,
@@ -159,7 +155,7 @@ where
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         temp_dir.path(),
-        root_dir,
+        outdir.as_ref(),
     )?;
 
     let dest = outdir
@@ -353,12 +349,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         _ => {}
     }
 
-    let exe_path = std::env::current_exe()?;
-    let root_dir = exe_path
-        .parent()
-        .ok_or_else(|| eyre!("Failed to get parent of {:?}", exe_path))?;
-    let base_data_dir = tempdir_in(root_dir)?;
-    let update_data_dir = tempdir_in(root_dir)?;
+    let base_data_dir = tempdir_in(EXE_DIR.as_path())?;
+    let update_data_dir = tempdir_in(EXE_DIR.as_path())?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -479,7 +471,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     println!("{}", style("Unpacking NCAs...").yellow().bold());
 
-    let patch_dir = tempdir_in(root_dir)?;
+    let patch_dir = tempdir_in(EXE_DIR.as_path())?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
@@ -588,7 +580,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         &nca_dir,
-        root_dir,
+        outdir.as_ref(),
     )?;
 
     let dest = outdir
