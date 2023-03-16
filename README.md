@@ -103,6 +103,14 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 > - Control NCA is usually the largest NCA under 1MiB.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
+## Directories Used
+
+| Used for | Windows | Linux |
+| --- | --- | --- |
+| Keys | `%USERPROFILE%\.switch` | `$HOME/.switch` |
+| Cache | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
+| Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu` |
+
 ## Special Thanks
 
 - [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack), [hac2l](https://github.com/Atmosphere-NX/hac2l) and [hactoolnet](https://github.com/Thealexbarney/LibHac) used internally for the heavy lifting.
