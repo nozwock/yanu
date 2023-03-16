@@ -91,7 +91,7 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: YanuCli) -> Result<()> {
-    let mut config: Config = confy::load_path(APP_CONFIG_PATH.as_path())?;
+    let mut config = Config::load()?;
 
     if let Some(keyfile) = cli.import_keyfile {
         if keyfile
@@ -178,7 +178,7 @@ fn run(cli: YanuCli) -> Result<()> {
             }
 
             info!("Updating config at {:?}", APP_CONFIG_PATH);
-            confy::store_path(APP_CONFIG_PATH.as_path(), config)?;
+            Config::store(config)?;
         }
         Some(CliArgs::Commands::Tui) => {
             tui(&mut config)?;
@@ -309,7 +309,7 @@ fn tui(config: &mut Config) -> Result<()> {
         }
         config.roms_dir = Some(roms_dir);
         info!("Updating config at {:?}", APP_CONFIG_PATH);
-        confy::store_path(APP_CONFIG_PATH.as_path(), config.clone())?;
+        Config::store(config.clone())?;
     }
 
     let roms_dir = config

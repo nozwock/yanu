@@ -92,11 +92,12 @@ static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
 
 #[cfg(unix)]
 pub fn make_hacpack() -> Result<PathBuf> {
-    use crate::{defines::APP_CACHE_DIR, utils::move_file};
+    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
     use fs_err as fs;
     use tracing::info;
 
+    let config = Config::load()?;
     let name = format!("{:?}", BackendKind::Hacpack).to_lowercase();
     info!("Building {}", name);
     let src_dir = tempdir()?;
@@ -108,6 +109,15 @@ pub fn make_hacpack() -> Result<PathBuf> {
         .success()
     {
         bail!("Failed to clone {} repo", name);
+    }
+
+    if !Command::new("git")
+        .args(["checkout", &config.hacpack_rev])
+        .current_dir(src_dir.path())
+        .status()?
+        .success()
+    {
+        bail!("Failed to checkout");
     }
 
     info!("Renaming config file");
@@ -140,11 +150,12 @@ pub fn make_hacpack() -> Result<PathBuf> {
 
 #[cfg(unix)]
 pub fn make_hactool() -> Result<PathBuf> {
-    use crate::{defines::APP_CACHE_DIR, utils::move_file};
+    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
     use fs_err as fs;
     use tracing::info;
 
+    let config = Config::load()?;
     let name = format!("{:?}", BackendKind::Hactool).to_lowercase();
     info!("Building {}", name);
     let src_dir = tempdir()?;
@@ -156,6 +167,15 @@ pub fn make_hactool() -> Result<PathBuf> {
         .success()
     {
         bail!("Failed to clone {} repo", name);
+    }
+
+    if !Command::new("git")
+        .args(["checkout", &config.hactool_rev])
+        .current_dir(src_dir.path())
+        .status()?
+        .success()
+    {
+        bail!("Failed to checkout");
     }
 
     info!("Renaming config file");
@@ -215,10 +235,11 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
+    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
     use eyre::{bail, eyre};
     use tracing::{debug, info};
 
-    use crate::{defines::APP_CACHE_DIR, utils::move_file};
+    let config = Config::load()?;
 
     let name = format!("{:?}", BackendKind::Hac2l).to_lowercase();
     info!("Building {}", name);
@@ -233,6 +254,15 @@ where
         bail!("Failed to clone Atmosphere repo");
     }
 
+    if !Command::new("git")
+        .args(["checkout", &config.atmosphere_rev])
+        .current_dir(src_dir.path())
+        .status()?
+        .success()
+    {
+        bail!("Failed to checkout");
+    }
+
     let hac2l_src_dir = src_dir.path().join("tools/hac2l");
     if !Command::new("git")
         .args(["clone", "https://github.com/Atmosphere-NX/hac2l.git"])
@@ -241,6 +271,15 @@ where
         .success()
     {
         bail!("Failed to clone {} repo", name);
+    }
+
+    if !Command::new("git")
+        .args(["checkout", &config.hac2l_rev])
+        .current_dir(&hac2l_src_dir)
+        .status()?
+        .success()
+    {
+        bail!("Failed to checkout");
     }
 
     info!("Running make");
