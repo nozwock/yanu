@@ -22,9 +22,13 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            #[cfg(unix)]
             hacpack_rev: "7845e7be8d03a263c33430f9e8c2512f7c280c88".into(),
+            #[cfg(unix)]
             hactool_rev: "c2c907430e674614223959f0377f5e71f9e44a4a".into(),
+            #[cfg(unix)]
             hac2l_rev: "7fc1b3a32c6a870c47d7459b23fd7c7b63014186".into(),
+            #[cfg(unix)]
             atmosphere_rev: "1afb184c143f4319e5d6d4ea27260e61830c42a0".into(),
             roms_dir: Default::default(),
         }
