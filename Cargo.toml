@@ -7,13 +7,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+# ! Intended only for a aarch64 linux env in termux
 android-proot = []
 
 [dependencies]
 eyre = "0.6"
 color-eyre = "0.6.2"
 dirs = "4.0"
-inquire = { git = "https://github.com/mikaelmello/inquire.git", rev = "5413efc4630b3426affeb23ffdb4edce562dc53f" }
+inquire = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 confy = { version = "0.5", default-features = false, features = ["ron_conf"] }
 clap = { version = "4.1", features = ["derive"] }
@@ -35,6 +36,7 @@ fs-err = "2.9.0"
 tilde-expand = "0.1.1"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
+# Switch to main branch once zenity is merged
 rfd = { git = "https://github.com/PolyMeilex/rfd.git", rev = "52d1010b09a957d3f1e40931f154805e5e1e57a6", default_features = false, features = [
     "xdg-portal",
 ] }
@@ -44,7 +46,6 @@ winapi = "0.3.9"
 strip = true
 opt-level = "s"
 lto = true
-# panic = "abort"
 
 [build-dependencies]
 embed-resource = "1.8.0"
