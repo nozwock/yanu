@@ -4,14 +4,14 @@ use tracing::{info, warn};
 
 pub fn clipboard_get() -> Result<String> {
     let output = String::from_utf8(Command::new("termux-clipboard-get").output()?.stdout)?;
-    info!("Copied from clipboard {:?}", output);
+    info!("Copied from clipboard \"{}\"", output);
     Ok(output)
 }
 
 pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
     warn!(
-        "Using unstable API \"termux-storage-get {:?}\"",
-        output.as_ref()
+        "Using unstable API \"termux-storage-get \"{}\"\"",
+        output.as_ref().display()
     );
     if !Command::new("termux-storage-get")
         .arg(output.as_ref())
@@ -25,7 +25,7 @@ pub fn storage_get<P: AsRef<Path>>(output: P) -> Result<()> {
     if !output.as_ref().is_file() {
         bail!("Failed to get file from storage");
     } else {
-        info!("Copied file to {:?}", output.as_ref());
+        info!("Copied file to \"{}\"", output.as_ref().display());
     }
     Ok(())
 }

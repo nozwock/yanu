@@ -51,9 +51,10 @@ impl Nsp {
             != "nsp"
         {
             bail!(
-                "{:?} is not a nsp file",
+                "\"{}\" is not a nsp file",
                 path.as_ref()
                     .file_name()
+                    .map(|ostr| ostr.to_string_lossy())
                     .ok_or_else(|| eyre!("Failed to get filename"))?
             );
         }
@@ -80,7 +81,7 @@ impl Nsp {
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while unpacking NSP"
             );
-            bail!("Failed to extract {:?}", self.path);
+            bail!("Failed to extract \"{}\"", self.path.display());
         }
 
         info!(?self.path, to = ?to.as_ref(), "Extraction done");
@@ -144,8 +145,8 @@ impl Nsp {
             }
             if self.title_key.is_none() {
                 bail!(
-                    "Couldn't derive TitleKey, {:?} doesn't have a .tik file",
-                    self.path
+                    "Couldn't derive TitleKey, \"{}\" doesn't have a .tik file",
+                    self.path.display()
                 );
             }
             info!("Derived TitleKey successfully!");
@@ -167,9 +168,10 @@ impl Nca {
                 != "nca"
         {
             bail!(
-                "{:?} is not a nca file",
+                "\"{}\" is not a nca file",
                 path.as_ref()
                     .file_name()
+                    .map(|ostr| ostr.to_string_lossy())
                     .ok_or_else(|| eyre!("Failed to get filename"))?
             );
         }
@@ -240,8 +242,12 @@ impl Nca {
         Ok(Self {
             path: path.as_ref().to_owned(),
             title_id,
-            content_type: content_type
-                .ok_or_else(|| eyre!("Failed to identify ContentType of {:?}", path.as_ref()))?,
+            content_type: content_type.ok_or_else(|| {
+                eyre!(
+                    "Failed to identify ContentType of \"{}\"",
+                    path.as_ref().display()
+                )
+            })?,
         })
     }
     pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(

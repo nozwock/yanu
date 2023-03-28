@@ -18,13 +18,11 @@ impl Cache {
         Ok(Self::store_bytes_as(slice, APP_CACHE_DIR.join(filename))?)
     }
     pub fn store_path_in<P: AsRef<Path>, Q: AsRef<Path>>(from: P, dir: Q) -> Result<PathBuf> {
-        info!(dir = ?dir.as_ref(), "Caching {:?}", from.as_ref());
+        info!(dir = ?dir.as_ref(), "Caching \"{}\"", from.as_ref().display());
         fs::create_dir_all(dir.as_ref())?;
-        let dest = dir.as_ref().join(
-            from.as_ref()
-                .file_name()
-                .ok_or_else(|| eyre::eyre!("Failed to get filename of {:?}", from.as_ref()))?,
-        );
+        let dest = dir.as_ref().join(from.as_ref().file_name().ok_or_else(|| {
+            eyre::eyre!("Failed to get filename of \"{}\"", from.as_ref().display())
+        })?);
         if from.as_ref() != dest {
             move_file(from.as_ref(), &dest)?;
         }
@@ -32,11 +30,9 @@ impl Cache {
     }
     pub fn store_bytes_as<P: AsRef<Path>>(slice: &[u8], path: P) -> Result<PathBuf> {
         info!(path = ?path.as_ref(), "Storing given bytes");
-        fs::create_dir_all(
-            path.as_ref()
-                .parent()
-                .ok_or_else(|| eyre::eyre!("Failed to find parent of {:?}", path.as_ref()))?,
-        )?;
+        fs::create_dir_all(path.as_ref().parent().ok_or_else(|| {
+            eyre::eyre!("Failed to find parent of \"{}\"", path.as_ref().display())
+        })?)?;
         let mut file = fs::File::create(path.as_ref())?;
         file.write_all(slice)?;
         Ok(file.path().into())
@@ -52,7 +48,7 @@ impl Cache {
                 return Ok(entry.path().into());
             }
         }
-        bail!("Failed to find {:?} in cache", filename);
+        bail!("Failed to find \"{}\" in cache", filename);
     }
     pub fn is_cached(filename: &str) -> bool {
         Self::path(filename).is_ok()

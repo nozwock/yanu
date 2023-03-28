@@ -46,7 +46,9 @@ fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Res
             cmp::Reverse(
                 entry
                     .metadata()
-                    .unwrap_or_else(|_| panic!("Failed to read metadata of {:?}", entry.path()))
+                    .unwrap_or_else(|_| {
+                        panic!("Failed to read metadata of \"{}\"", entry.path().display())
+                    })
                     .len(),
             )
         })
@@ -116,13 +118,17 @@ where
             }
         }
     };
-    let control =
-        control.ok_or_else(|| eyre!("{:?} is not a Control Type NCA", control_path.as_ref()))?;
+    let control = control.ok_or_else(|| {
+        eyre!(
+            "\"{}\" is not a Control Type NCA",
+            control_path.as_ref().display()
+        )
+    })?;
 
     let mut title_id = control
         .title_id
         .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in {:?}", control.path))?
+        .ok_or_else(|| eyre!("Failed to find TitleID in \"{}\"", control.path.display()))?
         .to_lowercase();
     title_id.truncate(TITLEID_SZ as _);
 
@@ -258,8 +264,8 @@ where
     }
     let base_nca = base_nca.ok_or_else(|| {
         eyre!(
-            "Couldn't find a Base NCA (Program Type) in {:?}",
-            base_data_dir
+            "Couldn't find a Base NCA (Program Type) in \"{}\"",
+            base_data_dir.display()
         )
     })?;
     debug!(?base_nca);
@@ -297,8 +303,8 @@ where
         }
         let patch_nca = patch_nca.ok_or_else(|| {
             eyre!(
-                "Couldn't find a Base NCA (Program Type) in {:?}",
-                base_data_dir
+                "Couldn't find a Base NCA (Program Type) in \"{}\"",
+                base_data_dir.display()
             )
         })?;
         debug!(?patch_nca);
@@ -412,8 +418,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
             break;
         }
     }
-    let base_nca = base_nca
-        .ok_or_else(|| eyre!("Couldn't find a Base NCA (Program Type) in {:?}", base.path))?;
+    let base_nca = base_nca.ok_or_else(|| {
+        eyre!(
+            "Couldn't find a Base NCA (Program Type) in \"{}\"",
+            base.path.display()
+        )
+    })?;
     debug!(?base_nca);
 
     let mut control_nca: Option<Nca> = None;
@@ -456,15 +466,15 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     }
     let update_nca = update_nca.ok_or_else(|| {
         eyre!(
-            "Couldn't find a Update NCA (Program Type) in {:?}",
-            update.path
+            "Couldn't find a Update NCA (Program Type) in \"{}\"",
+            update.path.display()
         )
     })?;
     debug!(?update_nca);
     let mut control_nca = control_nca.ok_or_else(|| {
         eyre!(
-            "Couldn't find a Control NCA (Control Type) in {:?}",
-            update.path
+            "Couldn't find a Control NCA (Control Type) in \"{}\"",
+            update.path.display()
         )
     })?;
     debug!(?control_nca);
@@ -525,7 +535,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     let mut title_id = base_nca
         .title_id
-        .ok_or_else(|| eyre!("Base NCA ({:?}) should've a TitleID", base_nca.path))?
+        .ok_or_else(|| {
+            eyre!(
+                "Base NCA (\"{}\") should've a TitleID",
+                base_nca.path.display()
+            )
+        })?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
 
@@ -598,9 +613,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //         .dim(),
     // );
     println!(
-        "{} {:?} {}",
+        "{} \"{}\" {}",
         style("Patched NSP created at").green().bold(),
-        dest,
+        dest.display(),
         style(format!("({})", HumanDuration(started.elapsed())))
             .bold()
             .dim(),

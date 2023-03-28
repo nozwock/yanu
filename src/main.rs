@@ -169,12 +169,12 @@ fn run(cli: YanuCli) -> Result<()> {
         Some(CliArgs::Commands::Config(new_config)) => {
             if let Some(roms_dir) = new_config.roms_dir {
                 if !roms_dir.is_dir() {
-                    bail!("{:?} is not a valid directory", roms_dir);
+                    bail!("\"{}\" is not a valid directory", roms_dir.display());
                 }
                 config.roms_dir = Some(roms_dir);
             }
 
-            info!("Updating config at {:?}", APP_CONFIG_PATH);
+            info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
             Config::store(config)?;
         }
         Some(CliArgs::Commands::Tui) => {
@@ -205,7 +205,7 @@ fn run(cli: YanuCli) -> Result<()> {
                         // Dialog allows picking dir, atleast on GTK (prob a bug)
                         //* ^^^^ doesn't seems to have this issue with the xdg portal backend
                         if !keyfile_path.is_file() {
-                            bail!("{:?} is not a file", keyfile_path);
+                            bail!("\"{}\" is not a file", keyfile_path.display());
                         }
 
                         //? maybe validate if it's indeed prod.keys
@@ -226,7 +226,7 @@ fn run(cli: YanuCli) -> Result<()> {
                         .show();
                     let base_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                     if !base_path.is_file() {
-                        bail!("{:?} is not a file", base_path);
+                        bail!("\"{}\" is not a file", base_path.display());
                     }
 
                     rfd::MessageDialog::new()
@@ -237,7 +237,7 @@ fn run(cli: YanuCli) -> Result<()> {
                     let update_path =
                         pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
                     if !update_path.is_file() {
-                        bail!("{:?} is not a file", update_path);
+                        bail!("\"{}\" is not a file", update_path.display());
                     }
 
                     let base_name = base_path
@@ -270,8 +270,8 @@ fn run(cli: YanuCli) -> Result<()> {
                             .set_level(rfd::MessageLevel::Info)
                             .set_title("Patching successful")
                             .set_description(&format!(
-                                "Patched file created at:\n{:?}",
-                                patched.path
+                                "Patched file created at:\n\"{}\"",
+                                patched.path.display()
                             ))
                             .show();
                     }
@@ -302,10 +302,10 @@ fn tui(config: &mut Config) -> Result<()> {
         info!(?roms_dir);
 
         if !roms_dir.is_dir() {
-            bail!("{:?} is not a valid directory", roms_dir);
+            bail!("\"{}\" is not a valid directory", roms_dir.display());
         }
         config.roms_dir = Some(roms_dir);
-        info!("Updating config at {:?}", APP_CONFIG_PATH);
+        info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
         Config::store(config.clone())?;
     }
 
@@ -379,7 +379,7 @@ fn tui(config: &mut Config) -> Result<()> {
         }
     }
     let mut base = base.expect(&format!(
-        "Selected package {:?} should be in {:?}",
+        "Selected package \"{}\" should be in {:#?}",
         choice, roms_path
     ));
 
@@ -392,7 +392,7 @@ fn tui(config: &mut Config) -> Result<()> {
         }
     }
     let mut update = update.expect(&format!(
-        "Selected package {:?} should be in {:?}",
+        "Selected package \"{}\" should be in {:#?}",
         choice, roms_path
     ));
 
@@ -418,7 +418,7 @@ fn default_outdir() -> Result<PathBuf> {
     };
 
     if !outdir.is_dir() {
-        bail!("Failed to set {:?} as outdir", outdir);
+        bail!("Failed to set \"{}\" as outdir", outdir.display());
     }
 
     Ok(outdir)
