@@ -14,15 +14,12 @@ use yanu::utils::pick_nsp_file;
 use yanu::{
     cli::{args as CliArgs, args::YanuCli},
     config::Config,
-    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
+    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
     hac::{
         patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
         rom::Nsp,
     },
-    utils::EXE_DIR,
 };
-
-// TODO: cherry pick commit rev of backend tools from the config file
 
 fn process_init() {
     use std::sync::Once;

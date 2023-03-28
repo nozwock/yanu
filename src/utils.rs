@@ -6,9 +6,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub static EXE_DIR: Lazy<PathBuf> =
-    Lazy::new(|| env::current_exe().unwrap().parent().unwrap().into());
-
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 pub fn pick_nsp_file() -> Option<PathBuf> {
     let path = rfd::FileDialog::new()

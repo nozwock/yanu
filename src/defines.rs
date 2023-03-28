@@ -29,3 +29,10 @@ pub static DEFAULT_PRODKEYS_PATH: Lazy<PathBuf> =
     Lazy::new(|| dirs::home_dir().unwrap().join(".switch").join("prod.keys"));
 pub static DEFAULT_TITLEKEYS_PATH: Lazy<PathBuf> =
     Lazy::new(|| dirs::home_dir().unwrap().join(".switch").join("title.keys"));
+
+pub static EXE_DIR: Lazy<PathBuf> =
+    Lazy::new(|| std::env::current_exe().unwrap().parent().unwrap().into());
+#[cfg(not(feature = "android-proot"))]
+pub static TEMP_DIR_IN: Lazy<PathBuf> = Lazy::new(|| std::env::temp_dir());
+#[cfg(feature = "android-proot")]
+pub static TEMP_DIR_IN: Lazy<PathBuf> = Lazy::new(|| dirs::home_dir().unwrap());
