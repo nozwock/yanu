@@ -106,8 +106,8 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 | Used for | Windows | Linux |
 | --- | --- | --- |
 | Keys | `%USERPROFILE%\.switch` | `$HOME/.switch` |
-| Cache | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
-| Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu` |
+| Cache | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu` |
+| Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
 
 ## Special Thanks
 
