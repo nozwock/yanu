@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Handle errors
+#? Kind of useless with 'set -e'
 err() {
-    printf >&2 "\e[;91m%s\n\e[0m" "Error: $(if [[ -n "$*" ]]; then echo -e "$*"; else echo 'An error occurred!'; fi)"
+    printf >&2 "\e[;91m%s\n\e[0m" "Error: $(if [[ -n "$*" ]]; then echo -e "$*"; else echo 'an error occurred'; fi)"
     exit 1
 }
 
@@ -19,7 +20,7 @@ if [ "$?" != 4 ]; then
     err "wrong version of 'getopt' detected"
 fi
 
-set -o errexit -o noclobber -o nounset -o pipefail
+set -euo noclobber -o pipefail
 params="$(getopt -o t: -l tag: --name "$0" -- "$@")"
 eval set -- "$params"
 
@@ -45,12 +46,15 @@ termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage
 pkg update || err "Failed to sync package repos"
 pkg upgrade -y || err "Failed to update packages"
 pkg in proot-distro || err "Failed to install 'proot-distro'"
-proot-distro install ubuntu || echo -e "\e[;34mNOTE: 'ubuntu' seems to be already installed\e[0m"
+proot-distro install ubuntu || true # ignore err
 proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
 proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
 
+set +e
 proot 'which eget'
-if [ $? -ne 0 ]; then
+rc=$?
+set -e
+if [ $rc -ne 0 ]; then
     # 'eget' installation
     proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot"
 fi
