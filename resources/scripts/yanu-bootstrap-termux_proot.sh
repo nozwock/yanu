@@ -40,7 +40,7 @@ while true; do
 done
 # Argparsing - END
 
-# Setting up deps
+# Setup deps
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 pkg update || err "Failed to sync package repos"
 pkg upgrade -y || err "Failed to update packages"
@@ -48,12 +48,8 @@ pkg in proot-distro || err "Failed to install 'proot-distro'"
 proot-distro install ubuntu || echo -e "\e[;34mNOTE: 'ubuntu' seems to be already installed\e[0m"
 proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
 proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
-
-# 'eget' installation
-if [[ -z "$(proot 'which eget')" ]]; then
-    proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot"
-else
-    proot 'rm -f $(which eget)'
+if [ -z "$(proot 'which eget')" ]; then
+    # 'eget' installation
     proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot"
 fi
 
@@ -67,7 +63,7 @@ else
     proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag="${arg_tag}" --to="/usr/bin/"" || err "Failed to fetch 'yanu' binary in proot"
 fi
 
-# Setting up entry script
+# Setup entry script
 rm -f "$PATH/yanu" || err "Failed to clean up old entry script"
 echo '
 #!/bin/bash
