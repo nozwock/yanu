@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Handle errors
-#? Kind of useless with 'set -e'
 err() {
     printf >&2 "\e[;91m%s\n\e[0m" "Error: $(if [[ -n "$*" ]]; then echo -e "$*"; else echo 'an error occurred'; fi)"
     exit 1
@@ -20,8 +19,8 @@ if [ "$?" != 4 ]; then
     err "wrong version of 'getopt' detected"
 fi
 
-set -euo noclobber -o pipefail
-params="$(getopt -o t: -l tag: --name "$0" -- "$@")"
+set -uo noclobber -o pipefail
+params="$(getopt -o t: -l tag: --name "$0" -- "$@")" || exit $?
 eval set -- "$params"
 
 while true; do
@@ -49,23 +48,15 @@ pkg in proot-distro || err "Failed to install 'proot-distro'"
 proot-distro install ubuntu || true # ignore err
 proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
 proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
-
-set +e
-proot 'which eget'
-rc=$?
-set -e
-if [ $rc -ne 0 ]; then
-    # 'eget' installation
-    proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot"
-fi
+proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot")
 
 # Fetch 'yanu' binary
 proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
 if [ -z ${arg_tag+x}]; then # https://stackoverflow.com/a/13864829
-    # i.e. Unset
+    # Unset
     proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to="/usr/bin/"' || err "Failed to fetch 'yanu' binary in proot"
 else
-    # i.e. Set
+    # Set
     proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag="${arg_tag}" --to="/usr/bin/"" || err "Failed to fetch 'yanu' binary in proot"
 fi
 
