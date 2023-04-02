@@ -110,8 +110,9 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 | Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
 
 ## Special Thanks
-- [@havocr](https://github.com/havocr1), Lead Yanu dev (real)
-- [@nekomekoraiyuu](https://github.com/nekomekoraiyuu), Bash da goat ~~pain~~
 - [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack), [hac2l](https://github.com/Atmosphere-NX/hac2l) and [hactoolnet](https://github.com/Thealexbarney/LibHac) used internally for the heavy lifting.
+- [@havocr](https://github.com/havocr1), Lead Yanu dev (real)
+- [@nozwock](https://github.com/nozwock), Yanu co-lead dev aka. Aspiring rust 🦀 dev working under havocr (not real)
 - [@Pipetto-crypto](https://github.com/Pipetto-crypto) for the `aarch64-linux` `hac2l` binary.
+- [@nekomekoraiyuu](https://github.com/nekomekoraiyuu), Bash da goat 🐐~~pain~~
 - [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
