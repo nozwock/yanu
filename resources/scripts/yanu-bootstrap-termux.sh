@@ -52,12 +52,12 @@ proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; 
 
 # Fetch 'yanu' binary
 proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
-if [ -z ${arg_tag+x}]; then # https://stackoverflow.com/a/13864829
+if [ -z ${arg_tag+x} ]; then # https://stackoverflow.com/a/13864829
     # Unset
-    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to="/usr/bin/"' || err "Failed to fetch 'yanu' binary in proot"
+    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to=/usr/bin/' || err "Failed to fetch 'yanu' binary in proot"
 else
     # Set
-    proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag="${arg_tag}" --to="/usr/bin/"" || err "Failed to fetch 'yanu' binary in proot"
+    proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag=$arg_tag --to=/usr/bin/" || err "Failed to fetch 'yanu' binary in proot"
 fi
 
 # Setup entry script
