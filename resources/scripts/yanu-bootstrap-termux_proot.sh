@@ -1,5 +1,4 @@
 #!/bin/bash
-global_args=($@)
 # Handle errors
 err() {
     printf >&2 "\e[;91m%s\n\e[0m" "Error: $(if [[ -n "$*" ]]; then echo -e "$*"; else echo 'An error occurred!'; fi)"
