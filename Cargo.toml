@@ -13,7 +13,7 @@ android-proot = []
 [dependencies]
 eyre = "0.6"
 color-eyre = "0.6.2"
-dirs = "4.0"
+dirs = "5.0"
 inquire = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 confy = { version = "0.5", default-features = false, features = ["ron_conf"] }
@@ -48,4 +48,4 @@ opt-level = "s"
 lto = true
 
 [build-dependencies]
-embed-resource = "1.8.0"
+embed-resource = "2.1"
