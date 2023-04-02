@@ -13,24 +13,61 @@ proot() {
     proot-distro login ubuntu -- bash -c "$1"
 }
 
-# Setting up deps
+# Argparsing
+getopt -T
+if [ "$?" != 4 ]; then
+    err "wrong version of 'getopt' detected"
+fi
+
+set -o errexit -o noclobber -o nounset -o pipefail
+params="$(getopt -o t: -l tag: --name "$0" -- "$@")"
+eval set -- "$params"
+
+while true; do
+    case "$1" in
+    -t | --tag)
+        arg_tag=$2
+        shift 2
+        ;;
+    --)
+        shift
+        break
+        ;;
+    *)
+        err "Unknown: $1"
+        ;;
+    esac
+done
+# Argparsing - END
+
+# Setup deps
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 pkg update || err "Failed to sync package repos"
 pkg upgrade -y || err "Failed to update packages"
-pkg in proot-distro || err "Failed to install proot-distro"
-proot-distro install ubuntu || echo -e "\e[;34mNOTE: \`ubuntu\` seems to be already installed\e[0m"
+pkg in proot-distro || err "Failed to install 'proot-distro'"
+proot-distro install ubuntu || echo -e "\e[;34mNOTE: 'ubuntu' seems to be already installed\e[0m"
 proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
 proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
+if [ -z "$(proot 'which eget')" ]; then
+    # 'eget' installation
+    proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot"
+fi
 
-proot 'rm -f /usr/bin/yanu' || err "Failed to clean up old yanu in proot"
-proot 'curl -sLo /usr/bin/yanu https://github.com/nozwock/yanu/releases/latest/download/yanu-aarch64-termux_proot-linux-musl' || err "Failed to fetch yanu binary in proot"
-proot 'chmod +x /usr/bin/yanu' || err "Failed to give executable permission"
+# Fetch 'yanu' binary
+proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
+if [ -z ${arg_tag+x}]; then # https://stackoverflow.com/a/13864829
+    # i.e. Unset
+    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to="/usr/bin/"' || err "Failed to fetch 'yanu' binary in proot"
+else
+    # i.e. Set
+    proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag="${arg_tag}" --to="/usr/bin/"" || err "Failed to fetch 'yanu' binary in proot"
+fi
 
-# Setting up entry script
+# Setup entry script
 rm -f "$PATH/yanu" || err "Failed to clean up old entry script"
 echo '
 #!/bin/bash
 proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu "$@"' >>"$PATH/yanu" || err "Failed to write entry script"
-chmod +x "$PATH/yanu" || err "Failed to give executable permission."
+chmod +x "$PATH/yanu" || err "Failed to give executable permission"
 
-echo -e "\e[;92mInstalled \`yanu\` successfully\nYou can run it by typing in\n\e[0m\e[;96myanu\e[0m"
+echo -e "\e[;92mInstalled 'yanu' successfully\nYou can run it by typing in\n\e[0m\e[;96myanu\e[0m"
