@@ -25,6 +25,7 @@ serde = { workspace = true }
 inquire = "0.6"
 walkdir = { workspace = true }
 fs-err = { workspace = true }
+owo-colors = "3.5"
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }

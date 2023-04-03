@@ -1,10 +1,11 @@
 mod opts;
 
-use std::{ffi::OsStr, path::PathBuf};
+use std::{ffi::OsStr, path::PathBuf, time::Instant};
 
 use clap::Parser;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
+use indicatif::HumanDuration;
 use libyanu_common::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
@@ -15,6 +16,7 @@ use libyanu_common::{
     },
 };
 use opts::YanuCli;
+use owo_colors::OwoColorize;
 use tracing::{error, info};
 
 fn main() -> Result<()> {
@@ -83,6 +85,7 @@ fn run() -> Result<()> {
         info!("Copied keys successfully to the C2 ^-^");
     }
 
+    let mut started: Option<Instant> = None;
     match opts.command {
         Some(opts::Commands::Update(opts)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
@@ -90,11 +93,18 @@ fn run() -> Result<()> {
             }
 
             info!("Started patching!");
-            patch_nsp(
-                &mut Nsp::new(opts.base)?,
-                &mut Nsp::new(opts.update)?,
-                default_outdir()?,
-            )?;
+            started = Some(Instant::now());
+            eprintln!(
+                "{} \"{}\"",
+                "Patched NSP created at".green().bold(),
+                patch_nsp(
+                    &mut Nsp::new(opts.base)?,
+                    &mut Nsp::new(opts.update)?,
+                    default_outdir()?,
+                )?
+                .path
+                .display()
+            );
         }
         Some(opts::Commands::Repack(opts)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
@@ -107,6 +117,7 @@ fn run() -> Result<()> {
                 default_outdir()?
             };
 
+            started = Some(Instant::now());
             repack_to_nsp(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?;
         }
         Some(opts::Commands::Unpack(opts)) => {
@@ -129,6 +140,7 @@ fn run() -> Result<()> {
                     .into_path()
             };
 
+            started = Some(Instant::now());
             unpack_to_fs(
                 Nsp::new(opts.base)?,
                 opts.update.map(|f| Nsp::new(f).ok()).flatten(),
@@ -204,7 +216,7 @@ fn run() -> Result<()> {
                 }
 
                 if keyfile_path.is_none() {
-                    eprintln!("Failed to find keyfile!");
+                    eprintln!("{}", "Failed to find keyfile!".red().bold());
                     keyfile_path = Some(PathBuf::from(
                         inquire::Text::new("Enter the path to `prod.keys` keyfile:").prompt()?,
                     ));
@@ -276,7 +288,14 @@ fn run() -> Result<()> {
                 .prompt()?
             {
                 info!("Started patching!");
-                patch_nsp(&mut base, &mut update, default_outdir()?)?;
+                started = Some(Instant::now());
+                eprintln!(
+                    "{} \"{}\"",
+                    "Patched NSP created at".green().bold(),
+                    patch_nsp(&mut base, &mut update, default_outdir()?)?
+                        .path
+                        .display()
+                );
             }
         }
         Some(opts::Commands::BuildBackend) => {
@@ -289,9 +308,19 @@ fn run() -> Result<()> {
             Backend::new(BackendKind::Hactool)?;
             Backend::new(BackendKind::Hac2l)?;
             Backend::new(BackendKind::Hacpack)?;
-            eprintln!("Done building backend utilities");
+            eprintln!("{}", "Done building backend utilities".cyan().bold());
         }
-        None => todo!(),
+        None => unreachable!(),
+    }
+
+    if let Some(started) = started {
+        eprintln!(
+            "{} {}",
+            "Process completed".green().bold(),
+            format!("({})", HumanDuration(started.elapsed()))
+                .bold()
+                .dimmed()
+        );
     }
 
     Ok(())
