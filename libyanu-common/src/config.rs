@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tracing::warn;
 
-use crate::defines::APP_CONFIG_PATH;
+use crate::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub roms_dir: Option<PathBuf>,
+    pub temp_dir: PathBuf,
     #[cfg(unix)]
     pub hacpack_rev: String,
     #[cfg(unix)]
@@ -31,6 +32,7 @@ impl Default for Config {
             #[cfg(unix)]
             atmosphere_rev: "1afb184c143f4319e5d6d4ea27260e61830c42a0".into(),
             roms_dir: Default::default(),
+            temp_dir: TEMP_DIR_IN.to_owned(),
         }
     }
 }

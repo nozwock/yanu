@@ -41,8 +41,9 @@ fn main() -> Result<()> {
     process_init();
 
     info!(
-        os = std::env::consts::OS,
         version = env!("CARGO_PKG_VERSION"),
+        arch = std::env::consts::ARCH,
+        os = std::env::consts::OS,
         "Launching {}",
         env!("CARGO_PKG_NAME"),
     );

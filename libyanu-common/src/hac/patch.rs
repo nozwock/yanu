@@ -1,5 +1,6 @@
 use crate::{
-    defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH, TEMP_DIR_IN},
+    config::Config,
+    defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     hac::{
         backend::{Backend, BackendKind},
         rom::{Nca, NcaType},
@@ -132,7 +133,7 @@ where
         .to_lowercase();
     title_id.truncate(TITLEID_SZ as _);
 
-    let temp_dir = tempdir_in(TEMP_DIR_IN.as_path())?;
+    let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
     let patched = Nca::pack(
         &extractor,
@@ -333,6 +334,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //* It's a mess, ik and I'm not sry ;-;
     // let started = time::Instant::now();
 
+    let config = Config::load()?;
+
     #[cfg(all(
         target_arch = "x86_64",
         any(target_os = "windows", target_os = "linux")
@@ -355,8 +358,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         _ => {}
     }
 
-    let base_data_dir = tempdir_in(TEMP_DIR_IN.as_path())?;
-    let update_data_dir = tempdir_in(TEMP_DIR_IN.as_path())?;
+    let base_data_dir = tempdir_in(config.temp_dir.as_path())?;
+    let update_data_dir = tempdir_in(config.temp_dir.as_path())?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -481,7 +484,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
 
     // println!("{}", style("Unpacking NCAs...").yellow().bold());
 
-    let patch_dir = tempdir_in(TEMP_DIR_IN.as_path())?;
+    let patch_dir = tempdir_in(config.temp_dir.as_path())?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);

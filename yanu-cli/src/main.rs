@@ -38,12 +38,27 @@ fn main() -> Result<()> {
     })?;
 
     info!(
-        os = std::env::consts::OS,
         version = env!("CARGO_PKG_VERSION"),
+        arch = std::env::consts::ARCH,
+        os = std::env::consts::OS,
         "Launching {}",
         env!("CARGO_PKG_NAME"),
     );
 
+    match run() {
+        Ok(_) => {
+            info!("Done");
+            Ok(())
+        }
+        Err(err) => {
+            error!(?err);
+            bail!(err);
+        }
+    }
+}
+
+fn run() -> Result<()> {
+    info!("Parsing args, will exit on error");
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
 
@@ -123,9 +138,18 @@ fn main() -> Result<()> {
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {
-                    config.roms_dir = Some(roms_dir);
+                    config.roms_dir = Some(fs::canonicalize(roms_dir)?);
                 } else {
                     bail!("\"{}\" is not a valid directory", roms_dir.display());
+                }
+            }
+
+            // check for unicode
+            if let Some(temp_dir) = opts.temp_dir {
+                if temp_dir.is_dir() {
+                    config.temp_dir = fs::canonicalize(temp_dir)?;
+                } else {
+                    bail!("\"{}\" is not a valid directory", temp_dir.display());
                 }
             }
 
@@ -269,6 +293,7 @@ fn main() -> Result<()> {
         }
         None => todo!(),
     }
+
     Ok(())
 }
 

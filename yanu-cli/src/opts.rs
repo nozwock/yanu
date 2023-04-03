@@ -77,7 +77,11 @@ pub struct Unpack {
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
-    /// Set roms directory path, used in TUI
-    #[arg(long, value_name = "PATH")]
+    /// Set roms directory path, used in TUI to look for ROMS
+    #[arg(long, value_name = "DIR")]
     pub roms_dir: Option<PathBuf>,
+    /// Temp files will be stored here while patching,
+    /// PATH must not contain Unicode characters due to a limitation of Backend tools
+    #[arg(long, value_name = "DIR")]
+    pub temp_dir: Option<PathBuf>,
 }
