@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, arg_required_else_help = true)]
 pub struct YanuCli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -37,9 +37,9 @@ pub struct Update {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
     pub base: PathBuf,
-    /// Select patch package
+    /// Select update package
     #[arg(short, long, value_name = "FILE")]
-    pub patch: PathBuf,
+    pub update: PathBuf,
     #[arg(short, long, value_name = "DIR")]
     pub outdir: Option<PathBuf>,
 }
@@ -63,9 +63,9 @@ pub struct Unpack {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
     pub base: PathBuf,
-    /// Select patch package
+    /// Select update package
     #[arg(short, long, value_name = "FILE")]
-    pub patch: Option<PathBuf>,
+    pub update: Option<PathBuf>,
     #[arg(short, long, value_name = "DIR")]
     pub outdir: Option<PathBuf>,
 }

@@ -5,20 +5,20 @@ pub const APP_NAME: &str = "yanu";
 pub const APP_DIR: &str = "com.github.nozwock.yanu";
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
-pub const HACPACK: &[u8] = include_bytes!("../resources/x86_64-windows/hacpack.exe");
+pub const HACPACK: &[u8] = include_bytes!("../../resources/x86_64-windows/hacpack.exe");
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
-pub const HACTOOL: &[u8] = include_bytes!("../resources/x86_64-windows/hactool.exe");
+pub const HACTOOL: &[u8] = include_bytes!("../../resources/x86_64-windows/hactool.exe");
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
-pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-windows/hactoolnet.exe");
+pub const HACTOOLNET: &[u8] = include_bytes!("../../resources/x86_64-windows/hactoolnet.exe");
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
-pub const HAC2L: &[u8] = include_bytes!("../resources/x86_64-windows/hac2l.exe");
+pub const HAC2L: &[u8] = include_bytes!("../../resources/x86_64-windows/hac2l.exe");
 
 // Hactoolnet v0.18
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-pub const HACTOOLNET: &[u8] = include_bytes!("../resources/x86_64-linux/hactoolnet");
+pub const HACTOOLNET: &[u8] = include_bytes!("../../resources/x86_64-linux/hactoolnet");
 
 #[cfg(feature = "android-proot")]
-pub const HAC2L: &[u8] = include_bytes!("../resources/aarch64-linux/hac2l");
+pub const HAC2L: &[u8] = include_bytes!("../../resources/aarch64-linux/hac2l");
 
 pub static APP_CACHE_DIR: Lazy<PathBuf> =
     Lazy::new(|| dirs::cache_dir().unwrap_or_default().join(APP_DIR));
