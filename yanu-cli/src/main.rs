@@ -179,7 +179,7 @@ fn run() -> Result<()> {
                 if !roms_dir.is_dir() {
                     bail!("\"{}\" is not a valid directory", roms_dir.display());
                 }
-                config.roms_dir = Some(roms_dir);
+                config.roms_dir = Some(fs::canonicalize(roms_dir)?);
                 info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
                 Config::store(config.clone())?;
             }

@@ -78,10 +78,16 @@ impl Nsp {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
+                backend = ?extractor.kind(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while unpacking NSP"
             );
             bail!("Failed to extract \"{}\"", self.path.display());
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(backend = ?extractor.kind(), %stderr);
+            }
         }
 
         info!(?self.path, to = ?to.as_ref(), "Extraction done");
@@ -117,11 +123,17 @@ impl Nsp {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
-                exit_code = ?output.status.code(),
+                backend = ?packer.kind(),
+                code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while packing NCAs to NSP"
             );
             bail!("Encountered an error while packing NCAs to NSP");
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(backend = ?packer.kind(), %stderr);
+            }
         }
 
         info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
@@ -177,7 +189,7 @@ impl Nca {
         }
 
         info!(
-            nca = ?path.as_ref(),
+            nca = %path.as_ref().display(),
             "Identifying TitleID and ContentType",
         );
 
@@ -186,28 +198,28 @@ impl Nca {
             .output()?; // Capture stdout aswell :-)
         if !output.status.success() {
             warn!(
-                nca = ?path.as_ref(),
+                nca = %path.as_ref().display(),
+                backend = ?extractor.kind(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while viewing info",
             );
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(backend = ?extractor.kind(), %stderr);
+            }
         }
 
         let stdout = String::from_utf8(output.stdout)?;
         let mut title_id: Option<String> = None;
         let title_id_pat = match extractor.kind() {
-            BackendKind::Hactool => "Title ID:",
             #[cfg(all(
                 target_arch = "x86_64",
                 any(target_os = "windows", target_os = "linux")
             ))]
             BackendKind::Hactoolnet => "TitleID:",
-            #[cfg(any(
-                feature = "android-proot",
-                all(
-                    target_arch = "x86_64",
-                    any(target_os = "windows", target_os = "linux")
-                )
-            ))]
+            // On all supported platforms
+            BackendKind::Hactool => "Title ID:",
             BackendKind::Hac2l => "Program Id:",
             _ => unreachable!(),
         };
@@ -228,12 +240,23 @@ impl Nca {
         let mut content_type: Option<NcaType> = None;
         for line in stdout.lines() {
             if line.contains("Content Type:") {
-                content_type = Some(NcaType::from_str(
+                content_type = match NcaType::from_str(
                     line.trim()
                         .split(' ')
                         .last()
                         .ok_or_else(|| eyre!("ContentType line should've an item"))?,
-                )?);
+                ) {
+                    Ok(content_type) => Some(content_type),
+                    Err(err) => {
+                        warn!(
+                            nca = %path.as_ref().display(),
+                            backend = ?extractor.kind(),
+                            stdout = %stdout,
+                            "Dumping stdout"
+                        );
+                        bail!(err);
+                    }
+                };
                 debug!(?content_type);
                 break;
             }
@@ -272,11 +295,17 @@ impl Nca {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
-                exit_code = ?output.status.code(),
+                backend = ?extractor.kind(),
+                code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while unpacking NCAs"
             );
             bail!("Encountered an error while unpacking NCAs");
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(backend = ?extractor.kind(), %stderr);
+            }
         }
 
         info!(
@@ -330,11 +359,22 @@ impl Nca {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
+                extractor = ?extractor.kind(),
+                packer = ?packer.kind(),
                 exit_code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while packing FS files to NCA"
             );
             bail!("Encountered an error while packing FS files to NCA");
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(
+                    extractor = ?extractor.kind(),
+                    packer = ?packer.kind(),
+                    %stderr
+                );
+            }
         }
 
         for entry in WalkDir::new(outdir.as_ref())
@@ -387,11 +427,17 @@ impl Nca {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
-                exit_code = ?output.status.code(),
+                backend = ?packer.kind(),
+                code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while generating Meta NCA"
             );
             bail!("Encountered an error while generating Meta NCA");
+        } else {
+            let stderr = String::from_utf8(output.stderr)?;
+            if !stderr.trim().is_empty() {
+                warn!(backend = ?packer.kind(), %stderr);
+            }
         }
 
         info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");
