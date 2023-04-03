@@ -8,14 +8,14 @@ pub struct YanuCli {
     #[command(subcommand)]
     pub command: Option<Commands>,
     /// Import `prod.keys` keyfile
-    #[arg(long, value_name = "FILE")]
+    #[arg(short = 'k', long, value_name = "FILE")]
     pub import_keyfile: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Update NSPs in CLI mode
-    #[command(short_flag = 'U')]
+    /// Update NSPs
+    #[command()]
     Update(Update),
     /// Repack to NSP
     #[command()]
@@ -24,11 +24,15 @@ pub enum Commands {
     #[command()]
     Unpack(Unpack),
     /// Manage yanu's config
-    #[command()]
+    #[command(visible_alias = "cfg")]
     Config(Config),
     /// Update NSPs in TUI mode
     #[command()]
-    Tui,
+    UpdateTui,
+    #[cfg(unix)]
+    /// Build backend utilities
+    #[command()]
+    BuildBackend,
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
@@ -73,7 +77,7 @@ pub struct Unpack {
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
-    /// Set roms directory path
+    /// Set roms directory path, used in TUI
     #[arg(long, value_name = "PATH")]
     pub roms_dir: Option<PathBuf>,
 }

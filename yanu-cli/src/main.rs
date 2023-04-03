@@ -9,6 +9,7 @@ use libyanu_common::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
     hac::{
+        backend::{Backend, BackendKind},
         patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
         rom::Nsp,
     },
@@ -131,7 +132,7 @@ fn main() -> Result<()> {
             info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
             Config::store(config)?;
         }
-        Some(opts::Commands::Tui) => {
+        Some(opts::Commands::UpdateTui) => {
             use walkdir::WalkDir;
 
             if config.roms_dir.is_none() {
@@ -253,6 +254,18 @@ fn main() -> Result<()> {
                 info!("Started patching!");
                 patch_nsp(&mut base, &mut update, default_outdir()?)?;
             }
+        }
+        Some(opts::Commands::BuildBackend) => {
+            #[cfg(all(
+                target_arch = "x86_64",
+                any(target_os = "windows", target_os = "linux")
+            ))]
+            Backend::new(BackendKind::Hactoolnet)?;
+            #[cfg(feature = "android-proot")]
+            Backend::new(BackendKind::Hactool)?;
+            Backend::new(BackendKind::Hac2l)?;
+            Backend::new(BackendKind::Hacpack)?;
+            eprintln!("Done building backend utilities");
         }
         None => todo!(),
     }
