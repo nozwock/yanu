@@ -8,32 +8,32 @@ use crate::{
 };
 
 use super::rom::Nsp;
-use console::style;
+// use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
+// use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{
     cmp,
     ffi::OsStr,
     io,
     path::{Path, PathBuf},
-    time::{self, Duration},
+    // time,
 };
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
-#[allow(unused)]
-fn default_spinner() -> ProgressBar {
-    let sp = ProgressBar::new_spinner();
-    sp.enable_steady_tick(Duration::from_millis(80));
-    sp.set_style(
-        ProgressStyle::with_template("{spinner:.cyan} {msg}")
-            .unwrap()
-            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
-    );
-    sp
-}
+// #[allow(unused)]
+// fn default_spinner() -> ProgressBar {
+//     let sp = ProgressBar::new_spinner();
+//     sp.enable_steady_tick(Duration::from_millis(80));
+//     sp.set_style(
+//         ProgressStyle::with_template("{spinner:.cyan} {msg}")
+//             .unwrap()
+//             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+//     );
+//     sp
+// }
 
 const TITLEID_SZ: u8 = 16;
 
@@ -331,7 +331,7 @@ where
 
 pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     //* It's a mess, ik and I'm not sry ;-;
-    let started = time::Instant::now();
+    // let started = time::Instant::now();
 
     #[cfg(all(
         target_arch = "x86_64",
@@ -360,7 +360,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
-    println!("{}", style("Extracting NSP data...").yellow().bold());
+    // println!("{}", style("Extracting NSP data...").yellow().bold());
 
     base.unpack(&extractor, base_data_dir.path())?;
     update.unpack(&extractor, update_data_dir.path())?;
@@ -479,7 +479,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     })?;
     debug!(?control_nca);
 
-    println!("{}", style("Unpacking NCAs...").yellow().bold());
+    // println!("{}", style("Unpacking NCAs...").yellow().bold());
 
     let patch_dir = tempdir_in(TEMP_DIR_IN.as_path())?;
     let romfs_dir = patch_dir.path().join("romfs");
@@ -502,15 +502,16 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //         .bold()
     //         .dim()
     // );
+
     // let sp = default_spinner().with_message(format!(
     //     "{}",
     //     style("Cleaning up extracted NSPs data...").yellow().bold()
     // ));
 
-    println!(
-        "{}",
-        style("Cleaning up extracted NSPs data...").yellow().bold()
-    );
+    // println!(
+    //     "{}",
+    //     style("Cleaning up extracted NSPs data...").yellow().bold()
+    // );
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
     if let Err(err) = base_data_dir.close() {
@@ -544,7 +545,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
 
-    println!("{}", style("Packing romfs/exefs to NCA...").yellow().bold());
+    // println!("{}", style("Packing romfs/exefs to NCA...").yellow().bold());
     let patched_nca = Nca::pack(
         &extractor,
         &packer,
@@ -567,7 +568,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //     style("Generating Meta NCA...").yellow().bold()
     // ));
 
-    println!("{}", style("Generating Meta NCA...").yellow().bold());
+    // println!("{}", style("Generating Meta NCA...").yellow().bold());
     Nca::create_meta(
         &packer,
         &title_id,
@@ -589,7 +590,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //     style("Packing NCAs to NSP...").yellow().bold()
     // ));
 
-    println!("{}", style("Packing NCAs to NSP...").yellow().bold());
+    // println!("{}", style("Packing NCAs to NSP...").yellow().bold());
     let mut patched_nsp = Nsp::pack(
         &packer,
         &title_id,
@@ -612,18 +613,18 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     //         .bold()
     //         .dim(),
     // );
-    println!(
-        "{} \"{}\" {}",
-        style("Patched NSP created at").green().bold(),
-        dest.display(),
-        style(format!("({})", HumanDuration(started.elapsed())))
-            .bold()
-            .dim(),
-    );
+    // println!(
+    //     "{} \"{}\" {}",
+    //     style("Patched NSP created at").green().bold(),
+    //     dest.display(),
+    //     style(format!("({})", HumanDuration(started.elapsed())))
+    //         .bold()
+    //         .dim(),
+    // );
 
     patched_nsp.path = dest;
 
-    println!("{}", style("Cleaning up...").yellow().bold());
+    // println!("{}", style("Cleaning up...").yellow().bold());
     if let Err(err) = patch_dir.close() {
         warn!(?err);
     }

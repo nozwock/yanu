@@ -1,0 +1,30 @@
+[package]
+name = "yanu-cli"
+version.workspace = true
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# ! Intended only for a aarch64-linux target in termux
+android-proot = ["libyanu-common/android-proot"]
+
+[dependencies]
+eyre = { workspace = true }
+color-eyre = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+tempfile = { workspace = true }
+console = "0.15"
+indicatif = "0.17"
+ctrlc = { version = "3.2", features = ["termination"] }
+libyanu-common = { path = "../libyanu-common" }
+clap = { version = "4.1", features = ["derive"] }
+serde = { workspace = true }
+inquire = "0.6"
+walkdir = { workspace = true }
+fs-err = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+tilde-expand = { workspace = true }

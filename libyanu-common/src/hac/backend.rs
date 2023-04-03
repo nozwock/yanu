@@ -1,5 +1,7 @@
 use eyre::Result;
+#[cfg(unix)]
 use once_cell::sync::Lazy;
+#[cfg(all(target_arch = "x86_64", unix))]
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 #[cfg(unix)]
