@@ -1,14 +1,16 @@
+mod utils;
+
+#[cfg(all(
+    target_arch = "x86_64",
+    any(target_os = "windows", target_os = "linux")
+))]
+use crate::utils::pick_nsp_file;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use libyanu_common::defines::{DEFAULT_PRODKEYS_PATH, EXE_DIR};
 use libyanu_common::hac::{patch::patch_nsp, rom::Nsp};
 use std::{env, path::PathBuf};
 use tracing::{error, info};
-#[cfg(all(
-    target_arch = "x86_64",
-    any(target_os = "windows", target_os = "linux")
-))]
-use yanu::utils::pick_nsp_file;
 
 #[cfg(windows)]
 fn process_init() {

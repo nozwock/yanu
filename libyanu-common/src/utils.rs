@@ -1,6 +1,6 @@
 use eyre::Result;
 use fs_err as fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn str_truncate(s: &str, new_len: usize) -> &str {
     match s.char_indices().nth(new_len) {
