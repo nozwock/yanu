@@ -43,9 +43,6 @@ libyanu-common = { path = "libyanu-common" }
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }
 
-[target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winuser"] }
-
 [profile.release]
 strip = true
 opt-level = "s"

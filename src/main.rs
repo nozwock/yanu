@@ -12,18 +12,6 @@ use libyanu_common::hac::{patch::patch_nsp, rom::Nsp};
 use std::{env, path::PathBuf};
 use tracing::{error, info};
 
-#[cfg(windows)]
-fn process_init() {
-    use std::sync::Once;
-
-    static INIT: Once = Once::new();
-
-    #[allow(unused_unsafe)]
-    INIT.call_once(|| unsafe {
-        winapi::um::winuser::SetProcessDPIAware();
-    });
-}
-
 fn main() -> Result<()> {
     // Colorful errors
     color_eyre::config::HookBuilder::default()
@@ -37,10 +25,6 @@ fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .with_writer(non_blocking)
         .init();
-
-    // Make process DPI aware
-    #[cfg(windows)]
-    process_init();
 
     info!(
         version = env!("CARGO_PKG_VERSION"),
