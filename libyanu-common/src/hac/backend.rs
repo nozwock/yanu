@@ -46,32 +46,33 @@ pub struct Backend {
 impl Backend {
     pub fn new(kind: BackendKind) -> Result<Self> {
         let filename = kind.to_filename();
-        let path = if Cache::is_cached(&filename) {
-            Cache::path(&filename)?
+        let cache = Cache::default();
+        let path = if let Ok(cached_path) = cache.path(&filename) {
+            cached_path
         } else {
             #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
             {
                 match kind {
-                    BackendKind::Hacpack => Cache::store_bytes(defines::HACPACK, &filename)?,
-                    BackendKind::Hactool => Cache::store_bytes(defines::HACTOOL, &filename)?,
-                    BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
-                    BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
+                    BackendKind::Hacpack => cache.store_bytes(defines::HACPACK, &filename)?,
+                    BackendKind::Hactool => cache.store_bytes(defines::HACTOOL, &filename)?,
+                    BackendKind::Hactoolnet => cache.store_bytes(defines::HACTOOLNET, &filename)?,
+                    BackendKind::Hac2l => cache.store_bytes(defines::HAC2L, &filename)?,
                 }
             }
             #[cfg(unix)]
             {
-                let path = match kind {
-                    BackendKind::Hacpack => Cache::store_path(make_hacpack()?)?,
-                    BackendKind::Hactool => Cache::store_path(make_hactool()?)?,
+                let cached_path = match kind {
+                    BackendKind::Hacpack => cache.store_path(make_hacpack()?)?,
+                    BackendKind::Hactool => cache.store_path(make_hactool()?)?,
                     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-                    BackendKind::Hactoolnet => Cache::store_bytes(defines::HACTOOLNET, &filename)?,
+                    BackendKind::Hactoolnet => cache.store_bytes(defines::HACTOOLNET, &filename)?,
                     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-                    BackendKind::Hac2l => Cache::store_path(make_hac2l(["linux_x64_release"])?)?,
+                    BackendKind::Hac2l => cache.store_path(make_hac2l(["linux_x64_release"])?)?,
                     #[cfg(feature = "android-proot")]
-                    BackendKind::Hac2l => Cache::store_bytes(defines::HAC2L, &filename)?,
+                    BackendKind::Hac2l => cache.store_bytes(defines::HAC2L, &filename)?,
                 };
-                set_executable_bit(&path, true)?;
-                path
+                set_executable_bit(&cached_path, true)?;
+                cached_path
             }
         };
 

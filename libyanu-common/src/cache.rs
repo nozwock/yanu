@@ -8,37 +8,46 @@ use std::{
 use tracing::info;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Cache {}
+pub struct Cache<'a> {
+    pub dir: &'a Path,
+}
 
-impl Cache {
-    pub fn store_path<P: AsRef<Path>>(from: P) -> Result<PathBuf> {
-        Ok(Self::store_path_in(from.as_ref(), APP_CACHE_DIR.as_path())?)
-    }
-    pub fn store_bytes(slice: &[u8], filename: &str) -> Result<PathBuf> {
-        Ok(Self::store_bytes_as(slice, APP_CACHE_DIR.join(filename))?)
-    }
-    pub fn store_path_in<P: AsRef<Path>, Q: AsRef<Path>>(from: P, dir: Q) -> Result<PathBuf> {
-        info!(dir = ?dir.as_ref(), "Caching \"{}\"", from.as_ref().display());
-        fs::create_dir_all(dir.as_ref())?;
-        let dest = dir.as_ref().join(from.as_ref().file_name().ok_or_else(|| {
-            eyre::eyre!("Failed to get filename of \"{}\"", from.as_ref().display())
-        })?);
-        if from.as_ref() != dest {
-            move_file(from.as_ref(), &dest)?;
+impl Default for Cache<'_> {
+    fn default() -> Self {
+        Self {
+            dir: APP_CACHE_DIR.as_path(),
         }
-        Ok(dest)
     }
-    pub fn store_bytes_as<P: AsRef<Path>>(slice: &[u8], path: P) -> Result<PathBuf> {
-        info!(path = ?path.as_ref(), "Storing given bytes");
-        fs::create_dir_all(path.as_ref().parent().ok_or_else(|| {
-            eyre::eyre!("Failed to find parent of \"{}\"", path.as_ref().display())
-        })?)?;
-        let mut file = fs::File::create(path.as_ref())?;
+}
+
+impl Cache<'_> {
+    /// Moves the file pointed by the given `file_path` to the cache dir.
+    pub fn store_path<P: AsRef<Path>>(&self, file_path: P) -> Result<PathBuf> {
+        info!(dir = ?self.dir, "Caching \"{}\"", file_path.as_ref().display());
+        fs::create_dir_all(self.dir)?;
+        let dst = self.dir.join(file_path.as_ref().file_name().ok_or_else(|| {
+            eyre::eyre!(
+                "Failed to get filename of \"{}\"",
+                file_path.as_ref().display()
+            )
+        })?);
+        if file_path.as_ref() != dst {
+            move_file(file_path.as_ref(), &dst)?;
+        }
+        Ok(dst)
+    }
+    /// Stores the given `slice` in the cache dir with `filename`.
+    pub fn store_bytes(&self, slice: &[u8], filename: &str) -> Result<PathBuf> {
+        let dst = self.dir.join(filename);
+        info!(to = ?dst, "Storing given bytes");
+        fs::create_dir_all(self.dir)?;
+        let mut file = fs::File::create(dst)?;
         file.write_all(slice)?;
         Ok(file.path().into())
     }
-    pub fn path(filename: &str) -> Result<PathBuf> {
-        for entry in walkdir::WalkDir::new(APP_CACHE_DIR.as_path())
+    /// Looks for a file with `filename` in the cache dir and returns its path.
+    pub fn path(&self, filename: &str) -> Result<PathBuf> {
+        for entry in walkdir::WalkDir::new(self.dir)
             .min_depth(1)
             .max_depth(1)
             .into_iter()
@@ -49,8 +58,5 @@ impl Cache {
             }
         }
         bail!("Failed to find \"{}\" in cache", filename);
-    }
-    pub fn is_cached(filename: &str) -> bool {
-        Self::path(filename).is_ok()
     }
 }
