@@ -9,6 +9,7 @@ use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use libyanu_common::defines::{DEFAULT_PRODKEYS_PATH, EXE_DIR};
 use libyanu_common::hac::{patch::patch_nsp, rom::Nsp};
+use std::time::Instant;
 use std::{env, path::PathBuf};
 use tracing::{error, info};
 
@@ -122,6 +123,7 @@ fn run() -> Result<()> {
         .show()
     {
         info!("Started patching!");
+        let started = Instant::now();
         let patched = patch_nsp(
             &mut Nsp::new(&base_path)?,
             &mut Nsp::new(&update_path)?,
@@ -131,8 +133,9 @@ fn run() -> Result<()> {
             .set_level(rfd::MessageLevel::Info)
             .set_title("Patching successful")
             .set_description(&format!(
-                "Patched file created at:\n\"{}\"",
-                patched.path.display()
+                "Patched file created at:\n\"{}\"\nTook {:?}",
+                patched.path.display(),
+                started.elapsed()
             ))
             .show();
     }

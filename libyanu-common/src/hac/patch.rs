@@ -9,14 +9,11 @@ use crate::{
 };
 
 use super::rom::Nsp;
-// use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-// use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{
     cmp,
     collections::HashSet,
-    // time,
     ffi::OsStr,
     io,
     path::{Path, PathBuf},
@@ -24,18 +21,6 @@ use std::{
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
-
-// #[allow(unused)]
-// fn default_spinner() -> ProgressBar {
-//     let sp = ProgressBar::new_spinner();
-//     sp.enable_steady_tick(Duration::from_millis(80));
-//     sp.set_style(
-//         ProgressStyle::with_template("{spinner:.cyan} {msg}")
-//             .unwrap()
-//             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
-//     );
-//     sp
-// }
 
 const TITLEID_SZ: u8 = 16;
 
@@ -333,8 +318,6 @@ where
 }
 
 pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
-    // let started = time::Instant::now();
-
     let config = Config::load()?;
 
     #[cfg(all(
