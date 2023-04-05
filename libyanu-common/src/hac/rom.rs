@@ -1,4 +1,5 @@
 use std::{
+    collections::{HashMap, HashSet},
     ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
@@ -21,7 +22,7 @@ pub struct Nsp {
     pub title_key: Option<TitleKey>,
 }
 
-#[derive(Debug, Clone, EnumString, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq, Hash)]
 pub enum NcaType {
     Control,
     Program,
@@ -90,7 +91,7 @@ impl Nsp {
             }
         }
 
-        info!(?self.path, to = ?to.as_ref(), "Extraction done");
+        info!(?self.path, to = ?to.as_ref(), "Extraction done!");
         Ok(())
     }
     pub fn pack<K, P, Q>(
@@ -171,7 +172,7 @@ impl Nsp {
 }
 
 impl Nca {
-    pub fn new<P: AsRef<Path>>(extractor: &Backend, path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(reader: &Backend, path: P) -> Result<Self> {
         if path.as_ref().is_file()
             && path
                 .as_ref()
@@ -193,26 +194,28 @@ impl Nca {
             "Identifying TitleID and ContentType",
         );
 
-        let output = Command::new(extractor.path())
-            .args([path.as_ref()])
-            .output()?; // Capture stdout aswell :-)
+        let output = Command::new(reader.path()).args([path.as_ref()]).output()?; // Capture stdout aswell :-)
         if !output.status.success() {
             warn!(
                 nca = %path.as_ref().display(),
-                backend = ?extractor.kind(),
+                backend = ?reader.kind(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while viewing info",
             );
         } else {
-            let stderr = String::from_utf8(output.stderr)?;
+            let stderr = std::str::from_utf8(output.stderr.as_slice())?
+                .lines()
+                .filter(|line| !line.to_lowercase().contains("failed to match key"))
+                .collect::<Vec<_>>()
+                .join("\n");
             if !stderr.trim().is_empty() {
-                warn!(backend = ?extractor.kind(), %stderr);
+                warn!(backend = ?reader.kind(), %stderr);
             }
         }
 
         let stdout = String::from_utf8(output.stdout)?;
         let mut title_id: Option<String> = None;
-        let title_id_pat = match extractor.kind() {
+        let title_id_pat = match reader.kind() {
             #[cfg(all(
                 target_arch = "x86_64",
                 any(target_os = "windows", target_os = "linux")
@@ -250,7 +253,7 @@ impl Nca {
                     Err(err) => {
                         warn!(
                             nca = %path.as_ref().display(),
-                            backend = ?extractor.kind(),
+                            backend = ?reader.kind(),
                             stdout = %stdout,
                             "Dumping stdout"
                         );
@@ -443,4 +446,66 @@ impl Nca {
         info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");
         Ok(())
     }
+}
+
+/// Returns filtered NCAs in descending order of size.
+///
+/// So for eg-
+/// ```
+/// // This'll return the largest Control type NCA in ""
+/// get_filtered_ncas(
+///     Backend::new(BackendKind::Hactoolnet),
+///     "",
+///     HashSet::from([NcaType::Control]),
+/// )
+/// .get(&NcaType::Control)
+/// .unwrap()[0];
+/// ```
+pub fn get_filtered_ncas<P>(
+    reader: &Backend,
+    from: P,
+    filters: &HashSet<NcaType>,
+) -> HashMap<NcaType, Vec<Nca>>
+where
+    P: AsRef<Path>,
+{
+    let mut filtered_ncas = HashMap::new();
+
+    for entry in WalkDir::new(from.as_ref())
+        .min_depth(1)
+        // Sort by descending order of size
+        .sort_by_key(|entry| {
+            std::cmp::Reverse(entry.metadata().map_or_else(|_e| 0, |meta| meta.len()))
+        })
+        .into_iter()
+        .filter_map(|entry| match entry {
+            Ok(entry) => {
+                if entry.path().extension() == Some("nca".as_ref()) {
+                    Some(entry)
+                } else {
+                    None
+                }
+            }
+            Err(err) => {
+                warn!(%err);
+                None
+            }
+        })
+    {
+        match Nca::new(reader, entry.path()) {
+            Ok(nca) => {
+                if filters.contains(&nca.content_type) {
+                    filtered_ncas
+                        .entry(nca.content_type)
+                        .or_insert(vec![])
+                        .push(nca);
+                }
+            }
+            Err(err) => {
+                warn!(%err);
+            }
+        }
+    }
+
+    filtered_ncas
 }

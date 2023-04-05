@@ -3,7 +3,7 @@ use crate::{
     defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     hac::{
         backend::{Backend, BackendKind},
-        rom::{Nca, NcaType},
+        rom::{get_filtered_ncas, Nca, NcaType},
     },
     utils::move_file,
 };
@@ -15,10 +15,11 @@ use fs_err as fs;
 // use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{
     cmp,
+    collections::HashSet,
+    // time,
     ffi::OsStr,
     io,
     path::{Path, PathBuf},
-    // time,
 };
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
@@ -331,7 +332,6 @@ where
 }
 
 pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
-    //* It's a mess, ik and I'm not sry ;-;
     // let started = time::Instant::now();
 
     let config = Config::load()?;
@@ -340,16 +340,18 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         target_arch = "x86_64",
         any(target_os = "windows", target_os = "linux")
     ))]
-    let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
-    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
+    let extractor = vec![
+        Backend::new(BackendKind::Hactoolnet)?,
+        Backend::new(BackendKind::Hac2l)?,
+    ];
     #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hactool)?;
+    let mut extractor = vec![
+        Backend::new(BackendKind::Hactool)?,
+        Backend::new(BackendKind::Hac2l)?,
+    ];
     let packer = Backend::new(BackendKind::Hacpack)?;
 
+    // Clearing TitleKeys
     fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
     match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
         Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
@@ -363,15 +365,17 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
-    // println!("{}", style("Extracting NSP data...").yellow().bold());
+    // !Extracting pfs0
+    base.unpack(
+        extractor.first().expect("should've atleast 1 backend"),
+        base_data_dir.path(),
+    )?;
+    update.unpack(
+        extractor.first().expect("should've atleast 1 backend"),
+        update_data_dir.path(),
+    )?;
 
-    base.unpack(&extractor, base_data_dir.path())?;
-    update.unpack(&extractor, update_data_dir.path())?;
-
-    // switching to hac2l for NCAs
-    #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hac2l)?;
-
+    // !Writing TitleKeys file
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err);
     }
@@ -391,104 +395,84 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     }
     fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
 
-    let mut base_nca: Option<Nca> = None;
-    'walk: for (path, mut nca) in fetch_ncas(&extractor, base_data_dir.path()) {
-        let mut fallback: bool = false;
-        loop {
-            match nca {
-                Ok(nca) => {
-                    if nca.content_type == NcaType::Program {
-                        base_nca = Some(nca);
-                        break 'walk;
-                    }
-                }
-                Err(err) => {
-                    warn!(?err);
-                    #[cfg(all(
-                        target_arch = "x86_64",
-                        any(target_os = "windows", target_os = "linux")
-                    ))]
-                    {
-                        if !fallback {
-                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                            nca = Nca::new(&fallback_extractor, &path);
-                            fallback = true;
-                            continue;
-                        }
-                    }
+    // Removing hactool on Android
+    // Since it's not useful after extracting NSPs
+    #[cfg(feature = "android-proot")]
+    extractor.remove(0);
+
+    // !Getting Base NCA
+    let mut readers = extractor.iter();
+    let filters = HashSet::from([NcaType::Program]);
+    let base_nca = loop {
+        match readers.next() {
+            Some(reader) => {
+                info!("Using {:?} as reader", reader.kind());
+                let filtered_ncas = get_filtered_ncas(reader, base_data_dir.path(), &filters);
+                if filters
+                    .iter()
+                    .map(|kind| filtered_ncas.get(kind))
+                    .all(|ncas| ncas.is_some())
+                {
+                    break Some(filtered_ncas);
                 }
             }
-            break;
+            None => break None,
         }
     }
-    let base_nca = base_nca.ok_or_else(|| {
-        eyre!(
-            "Couldn't find a Base NCA (Program Type) in \"{}\"",
-            base.path.display()
-        )
-    })?;
+    .ok_or_else(|| eyre!("Failed to find Base NCA in \"{}\"", base.path.display()))?
+    .remove(&NcaType::Program)
+    .expect("Should be Some due the all() check")
+    .remove(0);
     debug!(?base_nca);
 
-    let mut control_nca: Option<Nca> = None;
-    let mut update_nca: Option<Nca> = None;
-    for (path, mut nca) in fetch_ncas(&extractor, update_data_dir.path()) {
-        let mut fallback = false;
-        loop {
-            match nca {
-                Ok(nca) => match nca.content_type {
-                    NcaType::Program => {
-                        if update_nca.is_none() {
-                            update_nca = Some(nca);
-                        }
-                    }
-                    NcaType::Control => {
-                        if control_nca.is_none() {
-                            control_nca = Some(nca);
-                        }
-                    }
-                    _ => {}
-                },
-                Err(err) => {
-                    warn!(?err);
-                    #[cfg(all(
-                        target_arch = "x86_64",
-                        any(target_os = "windows", target_os = "linux")
-                    ))]
-                    {
-                        if !fallback {
-                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                            nca = Nca::new(&fallback_extractor, &path);
-                            fallback = true;
-                            continue;
-                        }
-                    }
+    // !Getting Update and Control NCA
+    let mut readers = extractor.iter();
+    let filters = HashSet::from([NcaType::Program, NcaType::Control]);
+    let mut filtered_ncas = loop {
+        match readers.next() {
+            Some(reader) => {
+                info!("Using {:?} as reader", reader.kind());
+                let filtered_ncas = get_filtered_ncas(reader, base_data_dir.path(), &filters);
+                if filters
+                    .iter()
+                    .map(|kind| filtered_ncas.get(kind))
+                    .all(|ncas| ncas.is_some())
+                {
+                    break Some(filtered_ncas);
                 }
             }
-            break;
+            None => break None,
         }
     }
-    let update_nca = update_nca.ok_or_else(|| {
+    .ok_or_else(|| {
         eyre!(
-            "Couldn't find a Update NCA (Program Type) in \"{}\"",
+            "Failed to find Update and/or Control NCA in \"{}\"",
             update.path.display()
         )
     })?;
+    let update_nca = filtered_ncas
+        .remove(&NcaType::Program)
+        .expect("Should be Some due the all() check")
+        .remove(0);
+    let mut control_nca = filtered_ncas
+        .remove(&NcaType::Control)
+        .expect("Should be Some due the all() check")
+        .remove(0);
     debug!(?update_nca);
-    let mut control_nca = control_nca.ok_or_else(|| {
-        eyre!(
-            "Couldn't find a Control NCA (Control Type) in \"{}\"",
-            update.path.display()
-        )
-    })?;
     debug!(?control_nca);
-
-    // println!("{}", style("Unpacking NCAs...").yellow().bold());
 
     let patch_dir = tempdir_in(config.temp_dir.as_path())?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
-    _ = base_nca.unpack(&extractor, &update_nca, &romfs_dir, &exefs_dir);
+    // !Unpacking fs files from NCAs
+    _ = base_nca.unpack(
+        &extractor.first().unwrap(),
+        &update_nca,
+        &romfs_dir,
+        &exefs_dir,
+    );
 
+    // !Moving Control NCA
     let nca_dir = patch_dir.path().join("nca");
     fs::create_dir_all(&nca_dir)?;
     let control_nca_filename = control_nca
@@ -498,23 +482,6 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     fs::rename(&control_nca.path, nca_dir.join(control_nca_filename))?;
     control_nca.path = nca_dir.join(control_nca_filename);
 
-    // println!(
-    //     "{} {}",
-    //     style("Unpacked NCAs").green().bold(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim()
-    // );
-
-    // let sp = default_spinner().with_message(format!(
-    //     "{}",
-    //     style("Cleaning up extracted NSPs data...").yellow().bold()
-    // ));
-
-    // println!(
-    //     "{}",
-    //     style("Cleaning up extracted NSPs data...").yellow().bold()
-    // );
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
     if let Err(err) = base_data_dir.close() {
@@ -524,18 +491,6 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     if let Err(err) = update_data_dir.close() {
         warn!(?err);
     }
-
-    // sp.println(format!(
-    //     "{} {}",
-    //     style("Cleaned up extracted NSPs data").green().bold(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim(),
-    // ));
-    // sp.set_message(format!(
-    //     "{}",
-    //     style("Packing romfs/exefs to NCA...").yellow().bold()
-    // ));
 
     let mut title_id = base_nca
         .title_id
@@ -548,9 +503,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
 
-    // println!("{}", style("Packing romfs/exefs to NCA...").yellow().bold());
+    // !Packing fs files to NCA
     let patched_nca = Nca::pack(
-        &extractor,
+        &extractor.first().unwrap(),
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -559,19 +514,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &nca_dir,
     )?;
 
-    // sp.println(format!(
-    //     "{} {}",
-    //     style("Packed romfs/exefs to NCA").green().bold(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim(),
-    // ));
-    // sp.set_message(format!(
-    //     "{}",
-    //     style("Generating Meta NCA...").yellow().bold()
-    // ));
-
-    // println!("{}", style("Generating Meta NCA...").yellow().bold());
+    // !Generating Meta NCA
     Nca::create_meta(
         &packer,
         &title_id,
@@ -581,19 +524,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &nca_dir,
     )?;
 
-    // sp.println(format!(
-    //     "{} {}",
-    //     style("Generated Meta NCA").green().bold(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim(),
-    // ));
-    // sp.set_message(format!(
-    //     "{}",
-    //     style("Packing NCAs to NSP...").yellow().bold()
-    // ));
-
-    // println!("{}", style("Packing NCAs to NSP...").yellow().bold());
+    // !Packing NCAs to NSP
     let mut patched_nsp = Nsp::pack(
         &packer,
         &title_id,
@@ -607,27 +538,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .join(format!("{}[yanu-patched].nsp", title_id));
     info!(from = ?patched_nsp.path,to = ?dest,"Moving");
     move_file(&patched_nsp.path, &dest)?;
-
-    // sp.finish_and_clear();
-    // println!(
-    //     "{} {}",
-    //     style("Packed NCAs to NSP").green().bold(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim(),
-    // );
-    // println!(
-    //     "{} \"{}\" {}",
-    //     style("Patched NSP created at").green().bold(),
-    //     dest.display(),
-    //     style(format!("({})", HumanDuration(started.elapsed())))
-    //         .bold()
-    //         .dim(),
-    // );
-
     patched_nsp.path = dest;
 
-    // println!("{}", style("Cleaning up...").yellow().bold());
     if let Err(err) = patch_dir.close() {
         warn!(?err);
     }
