@@ -433,7 +433,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         match readers.next() {
             Some(reader) => {
                 info!("Using {:?} as reader", reader.kind());
-                let filtered_ncas = get_filtered_ncas(reader, base_data_dir.path(), &filters);
+                let filtered_ncas = get_filtered_ncas(reader, update_data_dir.path(), &filters);
                 if filters
                     .iter()
                     .map(|kind| filtered_ncas.get(kind))
