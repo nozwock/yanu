@@ -42,8 +42,8 @@ done
 
 # Setup deps
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
-pkg update || err "Failed to sync package repos"
-pkg upgrade -y || err "Failed to update packages"
+yes Y | pkg update || err "Failed to sync package repos"
+yes Y | pkg upgrade || err "Failed to update packages"
 pkg in proot-distro || err "Failed to install 'proot-distro'"
 proot-distro install ubuntu || true # ignore err
 proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
