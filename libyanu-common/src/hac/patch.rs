@@ -136,8 +136,7 @@ where
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
-    let patched = Nca::pack(
-        &extractor,
+    let patched_path = Nca::pack(
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -145,6 +144,8 @@ where
         exefs_dir.as_ref(),
         temp_dir.path(),
     )?;
+    // TODO: Fix this later
+    let patched = Nca::new(&extractor, &patched_path)?;
 
     Nca::create_meta(
         &packer,
@@ -466,11 +467,11 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let exefs_dir = patch_dir.path().join("exefs");
     // !Unpacking fs files from NCAs
     _ = base_nca.unpack(
-        &extractor.first().unwrap(),
+        &extractor.first().expect("should've atleast 1 backend"),
         &update_nca,
         &romfs_dir,
         &exefs_dir,
-    );
+    ); // Ignoring err
 
     // !Moving Control NCA
     let nca_dir = patch_dir.path().join("nca");
@@ -504,8 +505,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     title_id.truncate(TITLEID_SZ as _);
 
     // !Packing fs files to NCA
-    let patched_nca = Nca::pack(
-        &extractor.first().unwrap(),
+    let patched_nca_path = Nca::pack(
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -513,6 +513,18 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &exefs_dir,
         &nca_dir,
     )?;
+    let mut readers = extractor.iter();
+    let patched_nca = loop {
+        match readers.next() {
+            Some(reader) => {
+                if let Ok(nca) = Nca::new(reader, &patched_nca_path) {
+                    break Some(nca);
+                }
+            }
+            None => break None,
+        }
+    }
+    .ok_or_else(|| eyre!("Invalid Patched NCA"))?;
 
     // !Generating Meta NCA
     Nca::create_meta(

@@ -320,14 +320,13 @@ impl Nca {
         Ok(())
     }
     pub fn pack<P, Q, R, K>(
-        extractor: &Backend,
         packer: &Backend,
         title_id: &str,
         keyfile: K,
         romfs_dir: P,
         exefs_dir: Q,
         outdir: R,
-    ) -> Result<Nca>
+    ) -> Result<PathBuf>
     where
         P: AsRef<Path>,
         Q: AsRef<Path>,
@@ -362,7 +361,6 @@ impl Nca {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
-                extractor = ?extractor.kind(),
                 packer = ?packer.kind(),
                 exit_code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
@@ -373,7 +371,6 @@ impl Nca {
             let stderr = String::from_utf8(output.stderr)?;
             if !stderr.trim().is_empty() {
                 warn!(
-                    extractor = ?extractor.kind(),
                     packer = ?packer.kind(),
                     %stderr
                 );
@@ -386,10 +383,10 @@ impl Nca {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            if let Some("nca") = entry.path().extension().and_then(OsStr::to_str) {
-                info!(outdir = ?outdir.as_ref(), "Packing done");
-                // do this sep if in need of fallbacks
-                return Nca::new(extractor, entry.path());
+            if entry.path().extension() == Some("nca".as_ref()) {
+                info!(outdir = %outdir.as_ref().display(), "Packing done");
+                info!(nca = %entry.path().display(), "Should be the Patched NCA");
+                return Ok(entry.into_path());
             }
         }
         bail!("Failed to pack romfs/exefs to NCA");
