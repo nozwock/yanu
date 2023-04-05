@@ -1,7 +1,9 @@
 [package]
 name = "yanu-cli"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 version.workspace = true
-edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,22 +12,22 @@ edition = "2021"
 android-proot = ["libyanu-common/android-proot"]
 
 [dependencies]
-eyre = { workspace = true }
-color-eyre = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-tempfile = { workspace = true }
-console = "0.15"
-indicatif = "0.17"
-ctrlc = { version = "3.2", features = ["termination"] }
-libyanu-common = { path = "../libyanu-common" }
 clap = { version = "4.1", features = ["derive"] }
-serde = { workspace = true }
-inquire = "0.6"
-walkdir = { workspace = true }
+color-eyre = { workspace = true }
+console = "0.15"
+ctrlc = { version = "3.2", features = ["termination"] }
+eyre = { workspace = true }
 fs-err = { workspace = true }
+indicatif = "0.17"
+inquire = "0.6"
+libyanu-common = { path = "../libyanu-common" }
 owo-colors = "3.5"
+serde = { workspace = true }
+tempfile = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
+walkdir = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }

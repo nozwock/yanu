@@ -1,8 +1,9 @@
 [package]
-build = "src/build.rs"
 name = "yanu"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 version.workspace = true
-edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,38 +11,44 @@ edition = "2021"
 members = ["libyanu-common", "yanu-cli"]
 
 [workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/nozwock/yanu"
 version = "0.6.1"
 
 [workspace.dependencies]
 color-eyre = "0.6.2"
 eyre = "0.6"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-tracing-appender = "0.2"
-tempfile = "3.4"
 fs-err = "2.9.0"
 serde = { version = "1.0", features = ["derive"] }
-walkdir = "2.3"
+tempfile = "3.4"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = "0.3"
 tilde-expand = "0.1.1"
+walkdir = "2.3"
 
 [dependencies]
-eyre = { workspace = true }
 color-eyre = { workspace = true }
 dirs = "5.0"
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-tempfile = { workspace = true }
+eyre = { workspace = true }
 fs-err = { workspace = true }
-walkdir = { workspace = true }
+libyanu-common = { path = "libyanu-common" }
 #* Switch to main branch once zenity is merged
 rfd = { git = "https://github.com/PolyMeilex/rfd.git", rev = "52d1010b09a957d3f1e40931f154805e5e1e57a6", default_features = false, features = [
     "xdg-portal",
 ] }
-libyanu-common = { path = "libyanu-common" }
+tempfile = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
+walkdir = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }
+
+[profile.dev]
+opt-level = 1 # Make debug builds run faster
 
 [profile.release]
 strip = true
