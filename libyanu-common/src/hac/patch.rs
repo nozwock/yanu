@@ -8,45 +8,29 @@ use crate::{
     utils::move_file,
 };
 
-use super::rom::Nsp;
-use eyre::{bail, eyre, Result};
+use super::{rom::Nsp, ticket::TitleKey};
+use eyre::{eyre, Result};
 use fs_err as fs;
-use std::{
-    cmp,
-    collections::HashSet,
-    ffi::OsStr,
-    io,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, path::Path};
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
-use walkdir::WalkDir;
 
 const TITLEID_SZ: u8 = 16;
 
-fn fetch_ncas<P: AsRef<Path>>(extractor: &Backend, from: P) -> Vec<(PathBuf, Result<Nca>)> {
-    let mut ncas = vec![];
-    for entry in WalkDir::new(from.as_ref())
-        .min_depth(1)
-        // Sort by descending order of sizes
-        .sort_by_key(|entry| {
-            cmp::Reverse(
-                entry
-                    .metadata()
-                    .unwrap_or_else(|_| {
-                        panic!("Failed to read metadata of \"{}\"", entry.path().display())
-                    })
-                    .len(),
-            )
-        })
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        if let Some("nca") = entry.path().extension().and_then(OsStr::to_str) {
-            ncas.push((entry.path().to_owned(), Nca::new(extractor, entry.path())));
-        }
-    }
-    ncas
+fn store_titlekeys<'a, I>(keys: I) -> Result<()>
+where
+    I: Iterator<Item = &'a TitleKey>,
+{
+    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
+    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
+    fs::write(
+        DEFAULT_TITLEKEYS_PATH.as_path(),
+        keys.map(|key| key.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n",
+    )
+    .map_err(|err| eyre!(err))
 }
 
 pub fn repack_to_nsp<N, E, R, O>(
@@ -65,63 +49,48 @@ where
         target_arch = "x86_64",
         any(target_os = "windows", target_os = "linux")
     ))]
-    let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
-    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
+    let readers = vec![
+        Backend::new(BackendKind::Hactoolnet)?,
+        Backend::new(BackendKind::Hac2l)?,
+    ];
     #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hac2l)?;
+    let mut readers = vec![Backend::new(BackendKind::Hac2l)?];
     let packer = Backend::new(BackendKind::Hacpack)?;
 
-    let control = match Nca::new(&extractor, control_path.as_ref()) {
-        Ok(control) => match control.content_type {
-            NcaType::Control => Some(control),
-            _ => None,
-        },
-        Err(err) => {
-            warn!("{}", err);
-            #[cfg(all(
-                target_arch = "x86_64",
-                any(target_os = "windows", target_os = "linux")
-            ))]
-            {
-                info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                match Nca::new(&fallback_extractor, control_path.as_ref()) {
-                    Ok(control) => match control.content_type {
-                        NcaType::Control => Some(control),
-                        _ => None,
-                    },
-                    Err(err) => {
-                        warn!("{}", err);
-                        None
-                    }
-                }
-            }
-            #[cfg(feature = "android-proot")]
-            {
-                None
-            }
+    // Validating NCA as Control Type
+    let mut _readers = readers.iter();
+    let control_nca = loop {
+        match _readers.next() {
+            Some(reader) => match Nca::new(reader, control_path.as_ref()) {
+                Ok(nca) if nca.content_type == NcaType::Control => break Some(nca),
+                _ => {}
+            },
+            None => break None,
         }
-    };
-    let control = control.ok_or_else(|| {
+    }
+    .ok_or_else(|| {
         eyre!(
             "\"{}\" is not a Control Type NCA",
             control_path.as_ref().display()
         )
     })?;
 
-    let mut title_id = control
+    let mut title_id = control_nca
         .title_id
         .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in \"{}\"", control.path.display()))?
+        .ok_or_else(|| {
+            eyre!(
+                "Failed to find TitleID in \"{}\"",
+                control_nca.path.display()
+            )
+        })?
         .to_lowercase();
     title_id.truncate(TITLEID_SZ as _);
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
-    let patched_path = Nca::pack(
+    // !Packing fs files to NCA
+    let patched_nca_path = Nca::pack(
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -129,22 +98,38 @@ where
         exefs_dir.as_ref(),
         temp_dir.path(),
     )?;
-    // TODO: Fix this later
-    let patched = Nca::new(&extractor, &patched_path)?;
+    let mut _readers = readers.iter();
+    let patched_nca = loop {
+        match _readers.next() {
+            Some(reader) => {
+                if let Ok(nca) = Nca::new(reader, &patched_nca_path) {
+                    break Some(nca);
+                }
+            }
+            None => break None,
+        }
+    }
+    .ok_or_else(|| eyre!("Invalid Patched NCA"))?;
 
+    // !Generating Meta NCA
     Nca::create_meta(
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
-        &patched,
-        &control,
+        &patched_nca,
+        &control_nca,
         temp_dir.path(),
     )?;
 
-    let control_filename = control.path.file_name().expect("File should've a filename");
-    fs::copy(&control.path, temp_dir.path().join(control_filename))?;
+    // !Copying Control NCA
+    let control_filename = control_nca
+        .path
+        .file_name()
+        .expect("File should've a filename");
+    fs::copy(&control_nca.path, temp_dir.path().join(control_filename))?;
 
-    let mut packed = Nsp::pack(
+    // !Packing NCAs to NSP
+    let mut packed_nsp = Nsp::pack(
         &packer,
         &title_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -155,11 +140,11 @@ where
     let dest = outdir
         .as_ref()
         .join(format!("{}[yanu-repacked].nsp", title_id));
-    info!(from = ?packed.path,to = ?dest,"Moving");
-    move_file(&packed.path, &dest)?;
-    packed.path = dest;
+    info!(from = ?packed_nsp.path,to = ?dest,"Moving");
+    move_file(&packed_nsp.path, &dest)?;
+    packed_nsp.path = dest;
 
-    Ok(packed)
+    Ok(packed_nsp)
 }
 
 pub fn unpack_to_fs<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Result<()>
@@ -170,135 +155,110 @@ where
         target_arch = "x86_64",
         any(target_os = "windows", target_os = "linux")
     ))]
-    let extractor = Backend::new(BackendKind::Hactoolnet)?;
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
-    let fallback_extractor = Backend::new(BackendKind::Hac2l)?;
+    let extractor = vec![
+        Backend::new(BackendKind::Hactoolnet)?,
+        Backend::new(BackendKind::Hac2l)?,
+    ];
     #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hactool)?;
-
-    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
-    match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
-        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
-            bail!("{}", err);
-        }
-        _ => {}
-    }
+    let mut extractor = vec![
+        Backend::new(BackendKind::Hactool)?,
+        Backend::new(BackendKind::Hac2l)?,
+    ];
 
     let base_data_dir = outdir.as_ref().join("basedata");
     let patch_data_dir = outdir.as_ref().join("patchdata");
 
-    base.unpack(&extractor, &base_data_dir)?;
+    // !Extracting pfs0
+    base.unpack(
+        extractor.first().expect("should've atleast 1 backend"),
+        &base_data_dir,
+    )?;
+    // Setting TitleKeys
     if let Err(err) = base.derive_title_key(&base_data_dir) {
         warn!(?err);
     }
 
     if let Some(patch) = patch.as_mut() {
-        patch.unpack(&extractor, &patch_data_dir)?;
+        // If patch is also to be extracted
+        patch.unpack(
+            extractor.first().expect("should've atleast 1 backend"),
+            &patch_data_dir,
+        )?;
+        // Setting TitleKeys
         if let Err(err) = patch.derive_title_key(&patch_data_dir) {
             warn!(?err);
         }
     }
 
-    // switching to hac2l for NCAs
-    #[cfg(feature = "android-proot")]
-    let extractor = Backend::new(BackendKind::Hac2l)?;
-
-    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
-    let mut contents = String::new();
-    if let Some(key) = &base.title_key {
-        contents.push_str(&key.to_string());
-        contents.push('\n');
-    }
+    // !Storing TitleKeys file
+    store_titlekeys([&base.title_key].iter().filter_map(|key| key.as_ref()))?;
     if let Some(patch) = patch.as_ref() {
-        if let Some(key) = &patch.title_key {
-            contents.push_str(&key.to_string());
-            contents.push('\n');
-        }
+        store_titlekeys(
+            [&base.title_key, &patch.title_key]
+                .iter()
+                .filter_map(|key| key.as_ref()),
+        )?;
     }
-    fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
 
-    let mut base_nca: Option<Nca> = None;
-    'walk: for (path, mut nca) in fetch_ncas(&extractor, &base_data_dir) {
-        let mut fallback: bool = false;
-        loop {
-            match nca {
-                Ok(nca) => {
-                    if nca.content_type == NcaType::Program {
-                        base_nca = Some(nca);
-                        break 'walk;
-                    }
-                }
-                Err(err) => {
-                    warn!("{}", err);
-                    #[cfg(all(
-                        target_arch = "x86_64",
-                        any(target_os = "windows", target_os = "linux")
-                    ))]
-                    {
-                        if !fallback {
-                            info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                            nca = Nca::new(&fallback_extractor, &path);
-                            fallback = true;
-                            continue;
-                        }
-                    }
+    // Removing hactool on Android
+    // Since it's not useful after extracting NSPs
+    #[cfg(feature = "android-proot")]
+    extractor.remove(0);
+
+    // !Getting Base NCA
+    let mut readers = extractor.iter();
+    let filters = HashSet::from([NcaType::Program]);
+    let base_nca = loop {
+        match readers.next() {
+            Some(reader) => {
+                info!("Using {:?} as reader", reader.kind());
+                let filtered_ncas = get_filtered_ncas(reader, &base_data_dir, &filters);
+                if filters
+                    .iter()
+                    .map(|kind| filtered_ncas.get(kind))
+                    .all(|ncas| ncas.is_some())
+                {
+                    break Some(filtered_ncas);
                 }
             }
-            break;
+            None => break None,
         }
     }
-    let base_nca = base_nca.ok_or_else(|| {
-        eyre!(
-            "Couldn't find a Base NCA (Program Type) in \"{}\"",
-            base_data_dir.display()
-        )
-    })?;
+    .ok_or_else(|| eyre!("Failed to find Base NCA in \"{}\"", base.path.display()))?
+    .remove(&NcaType::Program)
+    .expect("Should be Some due the all() check")
+    .remove(0);
     debug!(?base_nca);
 
-    let mut patch_nca: Option<Nca> = None;
-    if patch.is_some() {
-        'walk: for (path, mut nca) in fetch_ncas(&extractor, &patch_data_dir) {
-            let mut fallback: bool = false;
-            loop {
-                match nca {
-                    Ok(nca) => {
-                        if nca.content_type == NcaType::Program {
-                            patch_nca = Some(nca);
-                            break 'walk;
-                        }
-                    }
-                    Err(err) => {
-                        warn!("{}", err);
-                        #[cfg(all(
-                            target_arch = "x86_64",
-                            any(target_os = "windows", target_os = "linux")
-                        ))]
-                        {
-                            if !fallback {
-                                info!("Using fallback extractor {:?}", fallback_extractor.kind());
-                                nca = Nca::new(&fallback_extractor, &path);
-                                fallback = true;
-                                continue;
-                            }
-                        }
+    if let Some(patch) = &patch {
+        // !Getting Patch NCA
+        let mut readers = extractor.iter();
+        let filters = HashSet::from([NcaType::Program]);
+        let patch_nca = loop {
+            match readers.next() {
+                Some(reader) => {
+                    info!("Using {:?} as reader", reader.kind());
+                    let filtered_ncas = get_filtered_ncas(reader, &patch_data_dir, &filters);
+                    if filters
+                        .iter()
+                        .map(|kind| filtered_ncas.get(kind))
+                        .all(|ncas| ncas.is_some())
+                    {
+                        break Some(filtered_ncas);
                     }
                 }
-                break;
+                None => break None,
             }
         }
-        let patch_nca = patch_nca.ok_or_else(|| {
-            eyre!(
-                "Couldn't find a Base NCA (Program Type) in \"{}\"",
-                base_data_dir.display()
-            )
-        })?;
+        .ok_or_else(|| eyre!("Failed to find Patch NCA in \"{}\"", patch.path.display()))?
+        .remove(&NcaType::Program)
+        .expect("msg")
+        .remove(0);
         debug!(?patch_nca);
 
+        // !Unpacking fs files from NCAs
         _ = base_nca.unpack(
-            &extractor,
+            &extractor.first().expect("should've atleast 1 backend"),
             &patch_nca,
             outdir.as_ref().join("romfs"),
             outdir.as_ref().join("exefs"),
@@ -306,8 +266,9 @@ where
     }
 
     if patch.is_none() {
+        // !Unpacking fs files from NCAs
         _ = base_nca.unpack(
-            &extractor,
+            &extractor.first().expect("should've atleast 1 backend"),
             &base_nca,
             outdir.as_ref().join("romfs"),
             outdir.as_ref().join("exefs"),
@@ -335,15 +296,6 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     ];
     let packer = Backend::new(BackendKind::Hacpack)?;
 
-    // Clearing TitleKeys
-    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
-    match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
-        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
-            bail!("{}", err);
-        }
-        _ => {}
-    }
-
     let base_data_dir = tempdir_in(config.temp_dir.as_path())?;
     let update_data_dir = tempdir_in(config.temp_dir.as_path())?;
     fs::create_dir_all(base_data_dir.path())?;
@@ -359,7 +311,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         update_data_dir.path(),
     )?;
 
-    // !Writing TitleKeys file
+    // Setting TitleKeys
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
         warn!(?err);
     }
@@ -367,17 +319,12 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         warn!(?err);
     }
 
-    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
-    let mut contents = String::new();
-    if let Some(key) = &base.title_key {
-        contents.push_str(&key.to_string());
-        contents.push('\n');
-    }
-    if let Some(key) = &update.title_key {
-        contents.push_str(&key.to_string());
-        contents.push('\n');
-    }
-    fs::write(DEFAULT_TITLEKEYS_PATH.as_path(), contents)?;
+    // !Storing TitleKeys file
+    store_titlekeys(
+        [&base.title_key, &update.title_key]
+            .iter()
+            .filter_map(|key| key.as_ref()),
+    )?;
 
     // Removing hactool on Android
     // Since it's not useful after extracting NSPs
