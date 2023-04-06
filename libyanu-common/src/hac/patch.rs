@@ -54,7 +54,7 @@ where
         Backend::new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let mut readers = vec![Backend::new(BackendKind::Hac2l)?];
+    let readers = vec![Backend::new(BackendKind::Hac2l)?];
     let packer = Backend::new(BackendKind::Hacpack)?;
 
     // Validating NCA as Control Type

@@ -43,6 +43,8 @@ pub struct Nca {
     pub content_type: NcaType,
 }
 
+// TODO: instead of this, add the stdout to logs at the end
+
 impl Nsp {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         if path
@@ -84,11 +86,6 @@ impl Nsp {
                 "Encountered an error while unpacking NSP"
             );
             bail!("Failed to extract \"{}\"", self.path.display());
-        } else {
-            let stderr = String::from_utf8(output.stderr)?;
-            if !stderr.trim().is_empty() {
-                warn!(backend = ?extractor.kind(), %stderr);
-            }
         }
 
         info!(?self.path, to = ?to.as_ref(), "Extraction done!");
@@ -130,11 +127,6 @@ impl Nsp {
                 "Encountered an error while packing NCAs to NSP"
             );
             bail!("Encountered an error while packing NCAs to NSP");
-        } else {
-            let stderr = String::from_utf8(output.stderr)?;
-            if !stderr.trim().is_empty() {
-                warn!(backend = ?packer.kind(), %stderr);
-            }
         }
 
         info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
@@ -304,11 +296,6 @@ impl Nca {
                 "Encountered an error while unpacking NCAs"
             );
             bail!("Encountered an error while unpacking NCAs");
-        } else {
-            let stderr = String::from_utf8(output.stderr)?;
-            if !stderr.trim().is_empty() {
-                warn!(backend = ?extractor.kind(), %stderr);
-            }
         }
 
         info!(
@@ -361,20 +348,12 @@ impl Nca {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
-                packer = ?packer.kind(),
+                backend = ?packer.kind(),
                 exit_code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while packing FS files to NCA"
             );
             bail!("Encountered an error while packing FS files to NCA");
-        } else {
-            let stderr = String::from_utf8(output.stderr)?;
-            if !stderr.trim().is_empty() {
-                warn!(
-                    packer = ?packer.kind(),
-                    %stderr
-                );
-            }
         }
 
         for entry in WalkDir::new(outdir.as_ref())
@@ -433,11 +412,6 @@ impl Nca {
                 "Encountered an error while generating Meta NCA"
             );
             bail!("Encountered an error while generating Meta NCA");
-        } else {
-            let stderr = String::from_utf8(output.stderr)?;
-            if !stderr.trim().is_empty() {
-                warn!(backend = ?packer.kind(), %stderr);
-            }
         }
 
         info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");

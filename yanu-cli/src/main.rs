@@ -64,6 +64,8 @@ fn run() -> Result<()> {
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
 
+    // TODO: Add success messages
+
     if let Some(keyfile) = opts.import_keyfile {
         if keyfile
             .extension()
@@ -156,8 +158,10 @@ fn run() -> Result<()> {
                 }
             }
 
-            // check for unicode
             if let Some(temp_dir) = opts.temp_dir {
+                if !temp_dir.as_os_str().is_ascii() {
+                    bail!("Temp dir path must be ASCII only due to the limitations of backend tools in use")
+                }
                 if temp_dir.is_dir() {
                     config.temp_dir = fs::canonicalize(temp_dir)?;
                 } else {
