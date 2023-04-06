@@ -64,8 +64,6 @@ fn run() -> Result<()> {
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
 
-    // TODO: Add success messages
-
     if let Some(keyfile) = opts.import_keyfile {
         if keyfile
             .extension()
@@ -83,11 +81,16 @@ fn run() -> Result<()> {
                 .parent()
                 .ok_or_else(|| eyre!("Failed to find parent"))?,
         )?;
-        fs::copy(keyfile, default_path)?;
+        fs::copy(&keyfile, default_path)?;
         info!("Copied keys successfully to the C2 ^-^");
+        eprintln!(
+            "{} '{}'",
+            "Copied keys successfully from".green().bold(),
+            keyfile.display()
+        )
     }
 
-    let mut started: Option<Instant> = None;
+    let mut timer: Option<Instant> = None;
     match opts.command {
         Some(opts::Commands::Update(opts)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
@@ -95,7 +98,7 @@ fn run() -> Result<()> {
             }
 
             info!("Started patching!");
-            started = Some(Instant::now());
+            timer = Some(Instant::now());
             eprintln!(
                 "{} \"{}\"",
                 "Patched NSP created at".green().bold(),
@@ -119,8 +122,14 @@ fn run() -> Result<()> {
                 default_outdir()?
             };
 
-            started = Some(Instant::now());
-            repack_to_nsp(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?;
+            timer = Some(Instant::now());
+            eprintln!(
+                "{} '{}'",
+                "Repacked NSP created at".green().bold(),
+                repack_to_nsp(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?
+                    .path
+                    .display()
+            );
         }
         Some(opts::Commands::Unpack(opts)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
@@ -142,12 +151,13 @@ fn run() -> Result<()> {
                     .into_path()
             };
 
-            started = Some(Instant::now());
+            timer = Some(Instant::now());
             unpack_to_fs(
                 Nsp::new(opts.base)?,
                 opts.update.map(|f| Nsp::new(f).ok()).flatten(),
-                outdir,
+                &outdir,
             )?;
+            eprintln!("{} '{}'", "Unpacked to".green().bold(), outdir.display());
         }
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
@@ -171,6 +181,7 @@ fn run() -> Result<()> {
 
             info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
             Config::store(config)?;
+            eprintln!("{}", "Successfully modified config".green().bold());
         }
         Some(opts::Commands::UpdateTui) => {
             use walkdir::WalkDir;
@@ -292,7 +303,7 @@ fn run() -> Result<()> {
                 .prompt()?
             {
                 info!("Started patching!");
-                started = Some(Instant::now());
+                timer = Some(Instant::now());
                 eprintln!(
                     "{} \"{}\"",
                     "Patched NSP created at".green().bold(),
@@ -317,11 +328,11 @@ fn run() -> Result<()> {
         None => unreachable!(),
     }
 
-    if let Some(started) = started {
+    if let Some(timer) = timer {
         eprintln!(
             "{} {}",
             "Process completed".green().bold(),
-            format!("({})", HumanDuration(started.elapsed()))
+            format!("({})", HumanDuration(timer.elapsed()))
                 .bold()
                 .dimmed()
         );
