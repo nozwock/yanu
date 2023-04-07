@@ -54,7 +54,7 @@ impl Nsp {
             != "nsp"
         {
             bail!(
-                "\"{}\" is not a nsp file",
+                "'{}' is not a nsp file",
                 path.as_ref()
                     .file_name()
                     .map(|ostr| ostr.to_string_lossy())
@@ -85,7 +85,7 @@ impl Nsp {
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while unpacking NSP"
             );
-            bail!("Failed to extract \"{}\"", self.path.display());
+            bail!("Failed to extract '{}'", self.path.display());
         }
 
         info!(?self.path, to = ?to.as_ref(), "Extraction done!");
@@ -150,7 +150,7 @@ impl Nsp {
             }
             if self.title_key.is_none() {
                 bail!(
-                    "Couldn't derive TitleKey, \"{}\" doesn't have a .tik file",
+                    "Couldn't derive TitleKey, '{}' doesn't have a .tik file",
                     self.path.display()
                 );
             }
@@ -173,7 +173,7 @@ impl Nca {
                 != "nca"
         {
             bail!(
-                "\"{}\" is not a nca file",
+                "'{}' is not a nca file",
                 path.as_ref()
                     .file_name()
                     .map(|ostr| ostr.to_string_lossy())
@@ -206,7 +206,6 @@ impl Nca {
         }
 
         let stdout = String::from_utf8(output.stdout)?;
-        let mut title_id: Option<String> = None;
         let title_id_pat = match reader.kind() {
             #[cfg(all(
                 target_arch = "x86_64",
@@ -218,54 +217,48 @@ impl Nca {
             BackendKind::Hac2l => "Program Id:",
             _ => unreachable!(),
         };
-        for line in stdout.lines() {
-            if line.contains(title_id_pat) {
-                title_id = Some(
-                    line.trim()
-                        .split(' ')
-                        .last()
-                        .ok_or_else(|| eyre!("TitleID line should've an item"))?
-                        .into(),
-                );
-                debug!(?title_id);
-                break;
-            }
-        }
+        let title_id = stdout
+            .lines()
+            .find(|line| line.contains(title_id_pat))
+            .map(|line| line.trim().split(' ').last())
+            .flatten()
+            .map(|id| id.into());
+        debug!(?title_id);
 
-        let mut content_type: Option<NcaType> = None;
-        for line in stdout.lines() {
-            if line.contains("Content Type:") {
-                content_type = match NcaType::from_str(
-                    line.trim()
-                        .split(' ')
-                        .last()
-                        .ok_or_else(|| eyre!("ContentType line should've an item"))?,
-                ) {
-                    Ok(content_type) => Some(content_type),
-                    Err(err) => {
-                        warn!(
-                            nca = %path.as_ref().display(),
-                            backend = ?reader.kind(),
-                            stdout = %stdout,
-                            "Dumping stdout"
-                        );
-                        bail!(err);
-                    }
-                };
-                debug!(?content_type);
-                break;
+        let content_type = match stdout
+            .lines()
+            .find(|line| line.contains("Content Type:"))
+            .map(|line| {
+                line.trim()
+                    .split(' ')
+                    .last()
+                    .and_then(|kind| Some(NcaType::from_str(kind)))
+            })
+            .flatten()
+            .transpose()
+        {
+            Ok(kind) => kind.ok_or_else(|| {
+                eyre!(
+                    "Failed to identify ContentType of '{}'",
+                    path.as_ref().display()
+                )
+            })?,
+            Err(err) => {
+                warn!(
+                    nca = %path.as_ref().display(),
+                    backend = ?reader.kind(),
+                    stdout = %stdout,
+                    "Dumping stdout"
+                );
+                bail!(err);
             }
-        }
+        };
+        debug!(?content_type);
 
         Ok(Self {
             path: path.as_ref().to_owned(),
             title_id,
-            content_type: content_type.ok_or_else(|| {
-                eyre!(
-                    "Failed to identify ContentType of \"{}\"",
-                    path.as_ref().display()
-                )
-            })?,
+            content_type,
         })
     }
     pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(

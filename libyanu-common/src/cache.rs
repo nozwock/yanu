@@ -23,11 +23,11 @@ impl Default for Cache<'_> {
 impl Cache<'_> {
     /// Moves the file pointed by the given `file_path` to the cache dir.
     pub fn store_path<P: AsRef<Path>>(&self, file_path: P) -> Result<PathBuf> {
-        info!(dir = ?self.dir, "Caching \"{}\"", file_path.as_ref().display());
+        info!(dir = ?self.dir, "Caching '{}'", file_path.as_ref().display());
         fs::create_dir_all(self.dir)?;
         let dst = self.dir.join(file_path.as_ref().file_name().ok_or_else(|| {
             eyre::eyre!(
-                "Failed to get filename of \"{}\"",
+                "Failed to get filename of '{}'",
                 file_path.as_ref().display()
             )
         })?);
@@ -57,6 +57,6 @@ impl Cache<'_> {
                 return Ok(entry.path().into());
             }
         }
-        bail!("Failed to find \"{}\" in cache", filename);
+        bail!("Failed to find '{}' in cache", filename);
     }
 }

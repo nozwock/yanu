@@ -70,7 +70,7 @@ where
     }
     .ok_or_else(|| {
         eyre!(
-            "\"{}\" is not a Control Type NCA",
+            "'{}' is not a Control Type NCA",
             control_path.as_ref().display()
         )
     })?;
@@ -78,12 +78,7 @@ where
     let mut title_id = control_nca
         .title_id
         .as_ref()
-        .ok_or_else(|| {
-            eyre!(
-                "Failed to find TitleID in \"{}\"",
-                control_nca.path.display()
-            )
-        })?
+        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
         .to_lowercase();
     title_id.truncate(TITLEID_SZ as _);
 
@@ -224,7 +219,7 @@ where
             None => break None,
         }
     }
-    .ok_or_else(|| eyre!("Failed to find Base NCA in \"{}\"", base.path.display()))?
+    .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
     .remove(&NcaType::Program)
     .expect("Should be Some due the all() check")
     .remove(0);
@@ -250,7 +245,7 @@ where
                 None => break None,
             }
         }
-        .ok_or_else(|| eyre!("Failed to find Patch NCA in \"{}\"", patch.path.display()))?
+        .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
         .remove(&NcaType::Program)
         .expect("msg")
         .remove(0);
@@ -350,7 +345,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
             None => break None,
         }
     }
-    .ok_or_else(|| eyre!("Failed to find Base NCA in \"{}\"", base.path.display()))?
+    .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
     .remove(&NcaType::Program)
     .expect("Should be Some due the all() check")
     .remove(0);
@@ -377,7 +372,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     }
     .ok_or_else(|| {
         eyre!(
-            "Failed to find Update and/or Control NCA in \"{}\"",
+            "Failed to find Update and/or Control NCA in '{}'",
             update.path.display()
         )
     })?;
@@ -427,7 +422,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         .title_id
         .ok_or_else(|| {
             eyre!(
-                "Base NCA (\"{}\") should've a TitleID",
+                "Base NCA ('{}') should've a TitleID",
                 base_nca.path.display()
             )
         })?

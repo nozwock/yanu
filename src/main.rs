@@ -68,7 +68,7 @@ fn run() -> Result<()> {
         // Dialog allows picking dir, atleast on GTK (prob a bug)
         //* ^^^^ doesn't seems to have this issue with the xdg portal backend
         if !keyfile_path.is_file() {
-            bail!("\"{}\" is not a file", keyfile_path.display());
+            bail!("'{}' is not a file", keyfile_path.display());
         }
 
         //? maybe validate if it's indeed prod.keys
@@ -89,7 +89,7 @@ fn run() -> Result<()> {
         .show();
     let base_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
     if !base_path.is_file() {
-        bail!("\"{}\" is not a file", base_path.display());
+        bail!("'{}' is not a file", base_path.display());
     }
 
     rfd::MessageDialog::new()
@@ -99,7 +99,7 @@ fn run() -> Result<()> {
         .show();
     let update_path = pick_nsp_file().ok_or_else(|| eyre!("No file was selected"))?;
     if !update_path.is_file() {
-        bail!("\"{}\" is not a file", update_path.display());
+        bail!("'{}' is not a file", update_path.display());
     }
 
     let base_name = base_path
@@ -115,8 +115,8 @@ fn run() -> Result<()> {
         .set_level(rfd::MessageLevel::Info)
         .set_title("Is this correct?")
         .set_description(&format!(
-            "Selected BASE package: \n\"{}\"\n\
-                        Selected UPDATE package: \n\"{}\"",
+            "Selected BASE package: \n'{}'\n\
+                        Selected UPDATE package: \n'{}'",
             base_name, update_name
         ))
         .set_buttons(rfd::MessageButtons::YesNo)
@@ -133,7 +133,7 @@ fn run() -> Result<()> {
             .set_level(rfd::MessageLevel::Info)
             .set_title("Patching successful")
             .set_description(&format!(
-                "Patched file created at:\n\"{}\"\nTook {:?}",
+                "Patched file created at:\n'{}'\nTook {:?}",
                 patched.path.display(),
                 started.elapsed()
             ))
@@ -154,7 +154,7 @@ fn default_outdir() -> Result<PathBuf> {
     };
 
     if !outdir.is_dir() {
-        bail!("Failed to set \"{}\" as outdir", outdir.display());
+        bail!("Failed to set '{}' as outdir", outdir.display());
     }
 
     Ok(outdir)

@@ -65,16 +65,11 @@ fn run() -> Result<()> {
     let mut config = Config::load()?;
 
     if let Some(keyfile) = opts.import_keyfile {
-        if keyfile
-            .extension()
-            .and_then(OsStr::to_str)
-            .ok_or_else(|| eyre!("File should've an extension"))?
-            != "keys"
-        {
+        if keyfile.extension() != Some("keys".as_ref()) {
             bail!("Invalid keyfile");
         }
-
         info!(?keyfile, "Selected keyfile");
+
         let default_path = DEFAULT_PRODKEYS_PATH.as_path();
         fs::create_dir_all(
             default_path
@@ -218,28 +213,27 @@ fn run() -> Result<()> {
 
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 // Looking for `prod.keys` in roms_dir
-                let mut keyfile_path: Option<PathBuf> = None;
-                for entry in WalkDir::new(&roms_dir)
+                let keyfile_path = match WalkDir::new(&roms_dir)
                     .min_depth(1)
                     .into_iter()
                     .filter_map(|e| e.ok())
+                    .find(|entry| entry.file_name() == "prod.keys")
+                    .map(|entry| entry.into_path())
                 {
-                    if entry.file_name() == "prod.keys" {
-                        keyfile_path = Some(entry.path().into());
-                        break;
+                    Some(path) => path,
+                    None => {
+                        eprintln!("{}", "Failed to find keyfile!".red().bold());
+                        PathBuf::from(
+                            inquire::Text::new("Enter the path to `prod.keys` keyfile:")
+                                .prompt()?,
+                        )
                     }
-                }
-
-                if keyfile_path.is_none() {
-                    eprintln!("{}", "Failed to find keyfile!".red().bold());
-                    keyfile_path = Some(PathBuf::from(
-                        inquire::Text::new("Enter the path to `prod.keys` keyfile:").prompt()?,
-                    ));
-                }
-
-                let keyfile_path =
-                    keyfile_path.expect("Should've been Some() as it's handeled above");
+                };
                 info!(?keyfile_path, "Selected keyfile");
+
+                if keyfile_path.extension() != Some("keys".as_ref()) {
+                    bail!("Invalid keyfile");
+                }
 
                 let default_path = DEFAULT_PRODKEYS_PATH.as_path();
                 fs::create_dir_all(
@@ -247,10 +241,6 @@ fn run() -> Result<()> {
                         .parent()
                         .ok_or_else(|| eyre!("Failed to find parent"))?,
                 )?;
-                match keyfile_path.extension() {
-                    Some(ext) if ext == "keys" => {}
-                    _ => bail!("No keyfile was selected"),
-                }
                 fs::copy(keyfile_path, default_path)?;
                 info!("Copied keys successfully to the C2 ^-^");
             }
