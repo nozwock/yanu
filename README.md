@@ -103,7 +103,7 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 
 > **Note**
 > - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and with proper path to the executable).
-> - Control NCA is usually the NCA around ~1MiB or less in size.
+> - Control NCA is usually the NCA around ~1MiB in size.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
 ## Directories Used

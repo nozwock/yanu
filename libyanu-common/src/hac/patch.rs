@@ -360,8 +360,9 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         warn!(?err);
     }
 
-    let mut title_id = base_nca
+    let mut title_id = control_nca
         .title_id
+        .as_ref()
         .ok_or_else(|| {
             eyre!(
                 "Base NCA ('{}') should've a TitleID",
@@ -370,6 +371,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         })?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
+    debug!(?title_id);
 
     // !Packing fs files to NCA
     let patched_nca_path = Nca::pack(
