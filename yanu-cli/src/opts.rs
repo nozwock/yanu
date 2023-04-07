@@ -14,7 +14,7 @@ pub struct YanuCli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Update NSPs
+    /// Update NSP
     #[command()]
     Update(Update),
     /// Repack to NSP
@@ -26,9 +26,9 @@ pub enum Commands {
     /// Manage yanu's config
     #[command(visible_alias = "cfg")]
     Config(Config),
-    /// Update NSPs in TUI mode
+    /// Update NSP using prompt
     #[command()]
-    UpdateTui,
+    UpdatePrompt,
     #[cfg(unix)]
     /// Build backend utilities
     #[command()]
@@ -77,7 +77,7 @@ pub struct Unpack {
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
-    /// Set roms directory path, used in TUI to look for ROMS
+    /// Set roms directory path, used in prompt to look for ROMS
     #[arg(long, value_name = "DIR")]
     pub roms_dir: Option<PathBuf>,
     /// Temp files will be stored here while patching,

@@ -1,6 +1,6 @@
 mod opts;
 
-use std::{ffi::OsStr, path::PathBuf, time::Instant};
+use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 use eyre::{bail, eyre, Result};
@@ -178,7 +178,7 @@ fn run() -> Result<()> {
             Config::store(config)?;
             eprintln!("{}", "Successfully modified config".green().bold());
         }
-        Some(opts::Commands::UpdateTui) => {
+        Some(opts::Commands::UpdatePrompt) => {
             use walkdir::WalkDir;
 
             if config.roms_dir.is_none() {
