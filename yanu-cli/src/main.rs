@@ -327,11 +327,9 @@ fn run() -> Result<()> {
                 );
             }
         }
+        #[cfg(unix)]
         Some(opts::Commands::BuildBackend) => {
-            #[cfg(all(
-                target_arch = "x86_64",
-                any(target_os = "windows", target_os = "linux")
-            ))]
+            #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
             Backend::new(BackendKind::Hactoolnet)?;
             #[cfg(feature = "android-proot")]
             Backend::new(BackendKind::Hactool)?;
