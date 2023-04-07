@@ -129,6 +129,8 @@ where
     move_file(&packed_nsp.path, &dest)?;
     packed_nsp.path = dest;
 
+    _ = fs::remove_dir_all("hacpack_backup");
+
     Ok(packed_nsp)
 }
 
@@ -419,6 +421,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     if let Err(err) = patch_dir.close() {
         warn!(?err);
     }
+
+    _ = fs::remove_dir_all("hacpack_backup");
 
     Ok(patched_nsp)
 }
