@@ -38,6 +38,9 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
   bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/resources/scripts/yanu-bootstrap-termux.sh)
   ```
 
+  <!-- ! Will need to modify the script too for the new release -->
+  <!-- ? Probably having two entry scripts 'yanu' and 'yanu-cli' -->
+
 Relevant resources:
 - MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)
 - MiXplorer GDrive [download link](https://drive.google.com/drive/folders/1BfeK39boriHy-9q76eXLLqbCwfV17-Gv)
@@ -81,6 +84,8 @@ Set a new `Roms Directory` (Used in `tui`) with:
 yanu config --roms-dir "/new/path/here"
 ```
 
+<!-- ! Fix these usages once new release hits -->
+
 For unpacking ROMs:
 ```sh
 yanu unpack --base "/path/to/base" --patch "/path/to/patch"
@@ -97,8 +102,8 @@ yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir 
 ```
 
 > **Note**
-> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and having absolute name of the executable).
-> - Control NCA is usually the largest NCA under 1MiB.
+> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and with proper path to the executable).
+> - Control NCA is usually the NCA around ~1MiB or less in size.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
 ## Directories Used
