@@ -3,6 +3,7 @@ mod opts;
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
+use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use indicatif::HumanDuration;
@@ -16,7 +17,6 @@ use libyanu_common::{
     },
 };
 use opts::YanuCli;
-use owo_colors::OwoColorize;
 use tracing::{error, info};
 
 fn main() -> Result<()> {
@@ -80,7 +80,7 @@ fn run() -> Result<()> {
         info!("Copied keys successfully to the C2 ^-^");
         eprintln!(
             "{} '{}'",
-            "Copied keys successfully from".green().bold(),
+            style("Copied keys successfully from").green().bold(),
             keyfile.display()
         )
     }
@@ -96,7 +96,7 @@ fn run() -> Result<()> {
             timer = Some(Instant::now());
             eprintln!(
                 "{} '{}'",
-                "Patched NSP created at".green().bold(),
+                style("Patched NSP created at").green().bold(),
                 patch_nsp(
                     &mut Nsp::new(opts.base)?,
                     &mut Nsp::new(opts.update)?,
@@ -120,7 +120,7 @@ fn run() -> Result<()> {
             timer = Some(Instant::now());
             eprintln!(
                 "{} '{}'",
-                "Repacked NSP created at".green().bold(),
+                style("Repacked NSP created at").green().bold(),
                 repack_to_nsp(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?
                     .path
                     .display()
@@ -152,7 +152,11 @@ fn run() -> Result<()> {
                 opts.update.map(|f| Nsp::new(f).ok()).flatten(),
                 &outdir,
             )?;
-            eprintln!("{} '{}'", "Unpacked to".green().bold(), outdir.display());
+            eprintln!(
+                "{} '{}'",
+                style("Unpacked to").green().bold(),
+                outdir.display()
+            );
         }
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
@@ -176,7 +180,7 @@ fn run() -> Result<()> {
 
             info!("Updating config at '{}'", APP_CONFIG_PATH.display());
             Config::store(config)?;
-            eprintln!("{}", "Successfully modified config".green().bold());
+            eprintln!("{}", style("Successfully modified config").green().bold());
         }
         Some(opts::Commands::UpdatePrompt) => {
             use walkdir::WalkDir;
@@ -222,7 +226,7 @@ fn run() -> Result<()> {
                 {
                     Some(path) => path,
                     None => {
-                        eprintln!("{}", "Failed to find keyfile!".red().bold());
+                        eprintln!("{}", style("Failed to find keyfile!").red().bold());
                         PathBuf::from(
                             inquire::Text::new("Enter the path to `prod.keys` keyfile:")
                                 .prompt()?,
@@ -303,7 +307,7 @@ fn run() -> Result<()> {
                 timer = Some(Instant::now());
                 eprintln!(
                     "{} '{}'",
-                    "Patched NSP created at".green().bold(),
+                    style("Patched NSP created at").green().bold(),
                     patch_nsp(&mut base, &mut update, default_outdir()?)?
                         .path
                         .display()
@@ -320,7 +324,7 @@ fn run() -> Result<()> {
             Backend::new(BackendKind::Hactool)?;
             Backend::new(BackendKind::Hac2l)?;
             Backend::new(BackendKind::Hacpack)?;
-            eprintln!("{}", "Done building backend utilities".cyan().bold());
+            eprintln!("{}", style("Done building backend utilities").cyan().bold());
         }
         None => unreachable!(),
     }
@@ -328,10 +332,10 @@ fn run() -> Result<()> {
     if let Some(timer) = timer {
         eprintln!(
             "{} {}",
-            "Process completed".green().bold(),
-            format!("({})", HumanDuration(timer.elapsed()))
+            style("Process completed").green().bold(),
+            style(format!("({})", HumanDuration(timer.elapsed())))
                 .bold()
-                .dimmed()
+                .dim()
         );
     }
 
