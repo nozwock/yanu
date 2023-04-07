@@ -20,7 +20,7 @@ pub enum Commands {
     /// Repack to NSP
     #[command()]
     Repack(Repack),
-    /// Unpack NSPs
+    /// Unpack NSP
     #[command()]
     Unpack(Unpack),
     /// Manage yanu's config
@@ -74,14 +74,29 @@ pub struct Unpack {
     pub outdir: Option<PathBuf>,
 }
 
+#[cfg(not(feature = "android-proot"))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
+pub enum NcaExtractor {
+    #[default]
+    Hactoolnet,
+    Hac2l,
+}
+
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
     /// Set roms directory path, used in prompt to look for ROMS
     #[arg(long, value_name = "DIR")]
     pub roms_dir: Option<PathBuf>,
-    /// Temp files will be stored here while patching,
-    /// PATH must not contain Unicode characters due to a limitation of Backend tools
-    #[arg(long, value_name = "DIR")]
+    /// Temp files will be stored here while patching
+    #[arg(
+        long,
+        value_name = "DIR",
+        long_help = "Temp files will be stored here while patching\n\
+        PATH must not contain Unicode characters due to the limitations of backend tools"
+    )]
     pub temp_dir: Option<PathBuf>,
+    #[cfg(not(feature = "android-proot"))]
+    #[arg(long, value_enum)]
+    pub nca_extractor: Option<NcaExtractor>,
 }

@@ -25,6 +25,17 @@ pub enum BackendKind {
     Hac2l,
 }
 
+#[cfg(not(feature = "android-proot"))]
+impl From<crate::config::NcaExtractor> for BackendKind {
+    fn from(value: crate::config::NcaExtractor) -> Self {
+        use crate::config::NcaExtractor;
+        match value {
+            NcaExtractor::Hactoolnet => Self::Hactoolnet,
+            NcaExtractor::Hac2l => Self::Hac2l,
+        }
+    }
+}
+
 impl BackendKind {
     fn to_filename(&self) -> String {
         #[cfg(unix)]

@@ -58,22 +58,17 @@ where
     let packer = Backend::new(BackendKind::Hacpack)?;
 
     // Validating NCA as Control Type
-    let mut _readers = readers.iter();
-    let control_nca = loop {
-        match _readers.next() {
-            Some(reader) => match Nca::new(reader, control_path.as_ref()) {
-                Ok(nca) if nca.content_type == NcaType::Control => break Some(nca),
-                _ => {}
-            },
-            None => break None,
-        }
-    }
-    .ok_or_else(|| {
-        eyre!(
-            "'{}' is not a Control Type NCA",
-            control_path.as_ref().display()
-        )
-    })?;
+    let control_nca = readers
+        .iter()
+        .map(|reader| Nca::new(reader, control_path.as_ref()).ok())
+        .find(|nca| matches!(nca, Some(nca) if nca.content_type == NcaType::Control))
+        .flatten()
+        .ok_or_else(|| {
+            eyre!(
+                "'{}' is not a Control Type NCA",
+                control_path.as_ref().display()
+            )
+        })?;
 
     let mut title_id = control_nca
         .title_id
@@ -93,18 +88,13 @@ where
         exefs_dir.as_ref(),
         temp_dir.path(),
     )?;
-    let mut _readers = readers.iter();
-    let patched_nca = loop {
-        match _readers.next() {
-            Some(reader) => {
-                if let Ok(nca) = Nca::new(reader, &patched_nca_path) {
-                    break Some(nca);
-                }
-            }
-            None => break None,
-        }
-    }
-    .ok_or_else(|| eyre!("Invalid Patched NCA"))?;
+    let patched_nca = readers
+        .iter()
+        // Could inspect and log the error if need be
+        .map(|reader| Nca::new(reader, &patched_nca_path).ok())
+        .find(|nca| nca.is_some())
+        .flatten()
+        .ok_or_else(|| eyre!("Failed to find Patched NCA"))?;
 
     // !Generating Meta NCA
     Nca::create_meta(
@@ -146,28 +136,30 @@ pub fn unpack_to_fs<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Resu
 where
     O: AsRef<Path>,
 {
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
-    let extractor = vec![
+    #[cfg(not(feature = "android-proot"))]
+    let config = Config::load()?;
+
+    #[cfg(not(feature = "android-proot"))]
+    let readers = vec![
         Backend::new(BackendKind::Hactoolnet)?,
         Backend::new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let mut extractor = vec![
-        Backend::new(BackendKind::Hactool)?,
-        Backend::new(BackendKind::Hac2l)?,
-    ];
+    let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    #[cfg(not(feature = "android-proot"))]
+    let nsp_extractor = Backend::new(BackendKind::Hactoolnet)?;
+    #[cfg(feature = "android-proot")]
+    let nsp_extractor = Backend::new(BackendKind::Hactool)?;
+    #[cfg(not(feature = "android-proot"))]
+    let nca_extractor = Backend::new(BackendKind::from(config.nca_extractor))?;
+    #[cfg(feature = "android-proot")]
+    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
 
     let base_data_dir = outdir.as_ref().join("basedata");
     let patch_data_dir = outdir.as_ref().join("patchdata");
 
     // !Extracting pfs0
-    base.unpack(
-        extractor.first().expect("should've atleast 1 backend"),
-        &base_data_dir,
-    )?;
+    base.unpack(&nsp_extractor, &base_data_dir)?;
     // Setting TitleKeys
     if let Err(err) = base.derive_title_key(&base_data_dir) {
         warn!(?err);
@@ -175,10 +167,7 @@ where
 
     if let Some(patch) = patch.as_mut() {
         // If patch is also to be extracted
-        patch.unpack(
-            extractor.first().expect("should've atleast 1 backend"),
-            &patch_data_dir,
-        )?;
+        patch.unpack(&nsp_extractor, &patch_data_dir)?;
         // Setting TitleKeys
         if let Err(err) = patch.derive_title_key(&patch_data_dir) {
             warn!(?err);
@@ -195,65 +184,46 @@ where
         )?;
     }
 
-    // Removing hactool on Android
-    // Since it's not useful after extracting NSPs
-    #[cfg(feature = "android-proot")]
-    extractor.remove(0);
-
     // !Getting Base NCA
-    let mut readers = extractor.iter();
     let filters = HashSet::from([NcaType::Program]);
-    let base_nca = loop {
-        match readers.next() {
-            Some(reader) => {
-                info!("Using {:?} as reader", reader.kind());
-                let filtered_ncas = get_filtered_ncas(reader, &base_data_dir, &filters);
-                if filters
-                    .iter()
-                    .map(|kind| filtered_ncas.get(kind))
-                    .all(|ncas| ncas.is_some())
-                {
-                    break Some(filtered_ncas);
-                }
-            }
-            None => break None,
-        }
-    }
-    .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
-    .remove(&NcaType::Program)
-    .expect("Should be Some due the all() check")
-    .remove(0);
+    let base_nca = readers
+        .iter()
+        .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
+        .map(|reader| get_filtered_ncas(reader, &base_data_dir, &filters))
+        .find(|filtered| {
+            filters
+                .iter()
+                .map(|kind| filtered.get(kind))
+                .all(|ncas| ncas.is_some())
+        })
+        .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
+        .remove(&NcaType::Program)
+        .expect("Should be Some due the all() check")
+        .remove(0);
     debug!(?base_nca);
 
     if let Some(patch) = &patch {
         // !Getting Patch NCA
-        let mut readers = extractor.iter();
         let filters = HashSet::from([NcaType::Program]);
-        let patch_nca = loop {
-            match readers.next() {
-                Some(reader) => {
-                    info!("Using {:?} as reader", reader.kind());
-                    let filtered_ncas = get_filtered_ncas(reader, &patch_data_dir, &filters);
-                    if filters
-                        .iter()
-                        .map(|kind| filtered_ncas.get(kind))
-                        .all(|ncas| ncas.is_some())
-                    {
-                        break Some(filtered_ncas);
-                    }
-                }
-                None => break None,
-            }
-        }
-        .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
-        .remove(&NcaType::Program)
-        .expect("msg")
-        .remove(0);
+        let patch_nca = readers
+            .iter()
+            .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
+            .map(|reader| get_filtered_ncas(reader, &patch_data_dir, &filters))
+            .find(|filtered| {
+                filters
+                    .iter()
+                    .map(|kind| filtered.get(kind))
+                    .all(|ncas| ncas.is_some())
+            })
+            .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
+            .remove(&NcaType::Program)
+            .expect("msg")
+            .remove(0);
         debug!(?patch_nca);
 
         // !Unpacking fs files from NCAs
         _ = base_nca.unpack(
-            &extractor.first().expect("should've atleast 1 backend"),
+            &nca_extractor,
             &patch_nca,
             outdir.as_ref().join("romfs"),
             outdir.as_ref().join("exefs"),
@@ -263,7 +233,7 @@ where
     if patch.is_none() {
         // !Unpacking fs files from NCAs
         _ = base_nca.unpack(
-            &extractor.first().expect("should've atleast 1 backend"),
+            &nca_extractor,
             &base_nca,
             outdir.as_ref().join("romfs"),
             outdir.as_ref().join("exefs"),
@@ -276,19 +246,21 @@ where
 pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     let config = Config::load()?;
 
-    #[cfg(all(
-        target_arch = "x86_64",
-        any(target_os = "windows", target_os = "linux")
-    ))]
-    let extractor = vec![
+    #[cfg(not(feature = "android-proot"))]
+    let readers = vec![
         Backend::new(BackendKind::Hactoolnet)?,
         Backend::new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let mut extractor = vec![
-        Backend::new(BackendKind::Hactool)?,
-        Backend::new(BackendKind::Hac2l)?,
-    ];
+    let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    #[cfg(not(feature = "android-proot"))]
+    let nsp_extractor = Backend::new(BackendKind::Hactoolnet)?;
+    #[cfg(feature = "android-proot")]
+    let nsp_extractor = Backend::new(BackendKind::Hactool)?;
+    #[cfg(not(feature = "android-proot"))]
+    let nca_extractor = Backend::new(BackendKind::from(config.nca_extractor))?;
+    #[cfg(feature = "android-proot")]
+    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
     let packer = Backend::new(BackendKind::Hacpack)?;
 
     let base_data_dir = tempdir_in(config.temp_dir.as_path())?;
@@ -297,14 +269,8 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     fs::create_dir_all(update_data_dir.path())?;
 
     // !Extracting pfs0
-    base.unpack(
-        extractor.first().expect("should've atleast 1 backend"),
-        base_data_dir.path(),
-    )?;
-    update.unpack(
-        extractor.first().expect("should've atleast 1 backend"),
-        update_data_dir.path(),
-    )?;
+    base.unpack(&nsp_extractor, base_data_dir.path())?;
+    update.unpack(&nsp_extractor, update_data_dir.path())?;
 
     // Setting TitleKeys
     if let Err(err) = base.derive_title_key(base_data_dir.path()) {
@@ -321,61 +287,42 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
             .filter_map(|key| key.as_ref()),
     )?;
 
-    // Removing hactool on Android
-    // Since it's not useful after extracting NSPs
-    #[cfg(feature = "android-proot")]
-    extractor.remove(0);
-
     // !Getting Base NCA
-    let mut readers = extractor.iter();
     let filters = HashSet::from([NcaType::Program]);
-    let base_nca = loop {
-        match readers.next() {
-            Some(reader) => {
-                info!("Using {:?} as reader", reader.kind());
-                let filtered_ncas = get_filtered_ncas(reader, base_data_dir.path(), &filters);
-                if filters
-                    .iter()
-                    .map(|kind| filtered_ncas.get(kind))
-                    .all(|ncas| ncas.is_some())
-                {
-                    break Some(filtered_ncas);
-                }
-            }
-            None => break None,
-        }
-    }
-    .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
-    .remove(&NcaType::Program)
-    .expect("Should be Some due the all() check")
-    .remove(0);
+    let base_nca = readers
+        .iter()
+        .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
+        .map(|reader| get_filtered_ncas(reader, base_data_dir.path(), &filters))
+        .find(|filtered| {
+            filters
+                .iter()
+                .map(|kind| filtered.get(kind))
+                .all(|ncas| ncas.is_some())
+        })
+        .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
+        .remove(&NcaType::Program)
+        .expect("Should be Some due the all() check")
+        .remove(0);
     debug!(?base_nca);
 
     // !Getting Update and Control NCA
-    let mut readers = extractor.iter();
     let filters = HashSet::from([NcaType::Program, NcaType::Control]);
-    let mut filtered_ncas = loop {
-        match readers.next() {
-            Some(reader) => {
-                info!("Using {:?} as reader", reader.kind());
-                let filtered_ncas = get_filtered_ncas(reader, update_data_dir.path(), &filters);
-                if filters
-                    .iter()
-                    .map(|kind| filtered_ncas.get(kind))
-                    .all(|ncas| ncas.is_some())
-                {
-                    break Some(filtered_ncas);
-                }
-            }
-            None => break None,
-        }
-    }
-    .ok_or_else(|| {
-        eyre!(
-            "Failed to find Update and/or Control NCA in '{}'",
-            update.path.display()
-        )
-    })?;
+    let mut filtered_ncas = readers
+        .iter()
+        .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
+        .map(|reader| get_filtered_ncas(reader, update_data_dir.path(), &filters))
+        .find(|filtered| {
+            filters
+                .iter()
+                .map(|kind| filtered.get(kind))
+                .all(|ncas| ncas.is_some())
+        })
+        .ok_or_else(|| {
+            eyre!(
+                "Failed to find Update and/or Control NCA in '{}'",
+                update.path.display()
+            )
+        })?;
     let update_nca = filtered_ncas
         .remove(&NcaType::Program)
         .expect("Should be Some due the all() check")
@@ -391,12 +338,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
     // !Unpacking fs files from NCAs
-    _ = base_nca.unpack(
-        &extractor.first().expect("should've atleast 1 backend"),
-        &update_nca,
-        &romfs_dir,
-        &exefs_dir,
-    ); // Ignoring err
+    _ = base_nca.unpack(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
     // !Moving Control NCA
     let nca_dir = patch_dir.path().join("nca");
@@ -438,18 +380,13 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
         &exefs_dir,
         &nca_dir,
     )?;
-    let mut readers = extractor.iter();
-    let patched_nca = loop {
-        match readers.next() {
-            Some(reader) => {
-                if let Ok(nca) = Nca::new(reader, &patched_nca_path) {
-                    break Some(nca);
-                }
-            }
-            None => break None,
-        }
-    }
-    .ok_or_else(|| eyre!("Invalid Patched NCA"))?;
+    let patched_nca = readers
+        .iter()
+        // Could inspect and log the error if need be
+        .map(|reader| Nca::new(reader, &patched_nca_path).ok())
+        .find(|nca| nca.is_some())
+        .flatten()
+        .ok_or_else(|| eyre!("Failed to find Patched NCA"))?;
 
     // !Generating Meta NCA
     Nca::create_meta(

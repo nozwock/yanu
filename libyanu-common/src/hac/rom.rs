@@ -244,6 +244,7 @@ impl Nca {
                 )
             })?,
             Err(err) => {
+                // Unknown ContentType
                 warn!(
                     nca = %path.as_ref().display(),
                     backend = ?reader.kind(),
@@ -355,7 +356,7 @@ impl Nca {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            if entry.path().extension() == Some("nca".as_ref()) {
+            if entry.path().is_file() && entry.path().extension() == Some("nca".as_ref()) {
                 info!(outdir = %outdir.as_ref().display(), "Packing done");
                 info!(nca = %entry.path().display(), "Should be the Patched NCA");
                 return Ok(entry.into_path());

@@ -6,8 +6,18 @@ use tracing::warn;
 
 use crate::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
 
+#[cfg(not(feature = "android-proot"))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum NcaExtractor {
+    #[default]
+    Hactoolnet,
+    Hac2l,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
+    #[cfg(not(feature = "android-proot"))]
+    pub nca_extractor: NcaExtractor,
     pub roms_dir: Option<PathBuf>,
     pub temp_dir: PathBuf,
     #[cfg(unix)]
@@ -23,6 +33,10 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            #[cfg(not(feature = "android-proot"))]
+            nca_extractor: Default::default(),
+            roms_dir: Default::default(),
+            temp_dir: TEMP_DIR_IN.to_owned(),
             #[cfg(unix)]
             hacpack_rev: "7845e7be8d03a263c33430f9e8c2512f7c280c88".into(),
             #[cfg(unix)]
@@ -31,8 +45,6 @@ impl Default for Config {
             hac2l_rev: "7fc1b3a32c6a870c47d7459b23fd7c7b63014186".into(),
             #[cfg(unix)]
             atmosphere_rev: "1afb184c143f4319e5d6d4ea27260e61830c42a0".into(),
-            roms_dir: Default::default(),
-            temp_dir: TEMP_DIR_IN.to_owned(),
         }
     }
 }

@@ -7,6 +7,8 @@ use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use indicatif::HumanDuration;
+#[cfg(not(feature = "android-proot"))]
+use libyanu_common::config::NcaExtractor;
 use libyanu_common::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
@@ -169,13 +171,24 @@ fn run() -> Result<()> {
 
             if let Some(temp_dir) = opts.temp_dir {
                 if !temp_dir.as_os_str().is_ascii() {
-                    bail!("Temp dir path must be ASCII only due to the limitations of backend tools in use")
+                    bail!(
+                        "Temp dir path must not contain Unicode characters due to the limitations of backend tools"
+                    )
                 }
                 if temp_dir.is_dir() {
                     config.temp_dir = fs::canonicalize(temp_dir)?;
                 } else {
                     bail!("'{}' is not a valid directory", temp_dir.display());
                 }
+            }
+
+            #[cfg(not(feature = "android-proot"))]
+            if let Some(extractor) = opts.nca_extractor {
+                // ? How to do this better? and also not have dup enums
+                config.nca_extractor = match extractor {
+                    opts::NcaExtractor::Hactoolnet => NcaExtractor::Hactoolnet,
+                    opts::NcaExtractor::Hac2l => NcaExtractor::Hac2l,
+                };
             }
 
             info!("Updating config at '{}'", APP_CONFIG_PATH.display());
