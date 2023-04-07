@@ -257,7 +257,6 @@ fn run() -> Result<()> {
 
             let roms_path = WalkDir::new(&roms_dir)
                 .min_depth(1)
-                .max_depth(1)
                 .into_iter()
                 .filter_map(|e| e.ok())
                 .filter(|entry| {
@@ -291,7 +290,6 @@ fn run() -> Result<()> {
                     choice, roms_path
                 ));
 
-            // let mut update: Option<Nsp> = None;
             let options = options
                 .into_iter()
                 .filter(|filename| filename != &choice)
