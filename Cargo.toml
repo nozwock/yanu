@@ -53,7 +53,7 @@ opt-level = 1 # Make debug builds run faster
 [profile.release]
 strip = true
 opt-level = "s"
-lto = true
+lto = "thin"
 
 [build-dependencies]
 embed-resource = "2.1"
