@@ -100,7 +100,7 @@ fn run() -> Result<()> {
             info!("Started patching!");
             timer = Some(Instant::now());
             eprintln!(
-                "{} \"{}\"",
+                "{} '{}'",
                 "Patched NSP created at".green().bold(),
                 patch_nsp(
                     &mut Nsp::new(opts.base)?,
@@ -164,7 +164,7 @@ fn run() -> Result<()> {
                 if roms_dir.is_dir() {
                     config.roms_dir = Some(fs::canonicalize(roms_dir)?);
                 } else {
-                    bail!("\"{}\" is not a valid directory", roms_dir.display());
+                    bail!("'{}' is not a valid directory", roms_dir.display());
                 }
             }
 
@@ -175,11 +175,11 @@ fn run() -> Result<()> {
                 if temp_dir.is_dir() {
                     config.temp_dir = fs::canonicalize(temp_dir)?;
                 } else {
-                    bail!("\"{}\" is not a valid directory", temp_dir.display());
+                    bail!("'{}' is not a valid directory", temp_dir.display());
                 }
             }
 
-            info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
+            info!("Updating config at '{}'", APP_CONFIG_PATH.display());
             Config::store(config)?;
             eprintln!("{}", "Successfully modified config".green().bold());
         }
@@ -204,17 +204,17 @@ fn run() -> Result<()> {
                 info!(?roms_dir);
 
                 if !roms_dir.is_dir() {
-                    bail!("\"{}\" is not a valid directory", roms_dir.display());
+                    bail!("'{}' is not a valid directory", roms_dir.display());
                 }
                 config.roms_dir = Some(fs::canonicalize(roms_dir)?);
-                info!("Updating config at \"{}\"", APP_CONFIG_PATH.display());
+                info!("Updating config at '{}'", APP_CONFIG_PATH.display());
                 Config::store(config.clone())?;
             }
 
             let roms_dir = config
                 .roms_dir
                 .as_ref()
-                .expect("roms_dir should've been Some()");
+                .expect("Should've been Some() as it's handeled above");
 
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 // Looking for `prod.keys` in roms_dir
@@ -237,7 +237,8 @@ fn run() -> Result<()> {
                     ));
                 }
 
-                let keyfile_path = keyfile_path.expect("Keyfile path should've been Some()");
+                let keyfile_path =
+                    keyfile_path.expect("Should've been Some() as it's handeled above");
                 info!(?keyfile_path, "Selected keyfile");
 
                 let default_path = DEFAULT_PRODKEYS_PATH.as_path();
@@ -246,8 +247,8 @@ fn run() -> Result<()> {
                         .parent()
                         .ok_or_else(|| eyre!("Failed to find parent"))?,
                 )?;
-                match keyfile_path.extension().and_then(OsStr::to_str) {
-                    Some("keys") => {}
+                match keyfile_path.extension() {
+                    Some(ext) if ext == "keys" => {}
                     _ => bail!("No keyfile was selected"),
                 }
                 fs::copy(keyfile_path, default_path)?;
@@ -264,39 +265,47 @@ fn run() -> Result<()> {
                         && entry
                             .path()
                             .extension()
-                            .and_then(|s| Some(s.to_ascii_lowercase()))
-                            == Some("nsp".into())
+                            .and_then(|ext| Some(ext.to_ascii_lowercase()))
+                            .as_deref()
+                            == Some("nsp".as_ref())
                 })
                 .collect::<Vec<_>>();
 
-            let mut base: Option<Nsp> = None;
-            let mut options = roms_path
+            let options = roms_path
                 .iter()
-                .map(|entry| entry.file_name().to_string_lossy())
+                .map(|entry| {
+                    entry.file_name().to_str().expect(&format!(
+                        "'{}' should've valid Unicode",
+                        entry.path().display()
+                    ))
+                })
                 .collect::<Vec<_>>();
             let choice = inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
-            for entry in &roms_path {
-                if entry.file_name() == choice.as_ref() {
-                    base = Some(Nsp::new(entry.path())?);
-                }
-            }
-            let mut base = base.expect(&format!(
-                "Selected package \"{}\" should be in {:#?}",
-                choice, roms_path
-            ));
+            let mut base = roms_path
+                .iter()
+                .find(|entry| entry.file_name() == choice)
+                .map(|entry| Nsp::new(entry.path()))
+                .transpose()?
+                .expect(&format!(
+                    "Selected package '{}' should be in {:#?}",
+                    choice, roms_path
+                ));
 
-            let mut update: Option<Nsp> = None;
-            options = options.into_iter().filter(|s| s != &choice).collect();
+            // let mut update: Option<Nsp> = None;
+            let options = options
+                .into_iter()
+                .filter(|filename| filename != &choice)
+                .collect();
             let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
-            for entry in &roms_path {
-                if entry.file_name().to_string_lossy() == choice {
-                    update = Some(Nsp::new(entry.path())?);
-                }
-            }
-            let mut update = update.expect(&format!(
-                "Selected package \"{}\" should be in {:#?}",
-                choice, roms_path
-            ));
+            let mut update = roms_path
+                .iter()
+                .find(|entry| entry.file_name() == choice)
+                .map(|entry| Nsp::new(entry.path()))
+                .transpose()?
+                .expect(&format!(
+                    "Selected package '{}' should be in {:#?}",
+                    choice, roms_path
+                ));
 
             if inquire::Confirm::new("Are you sure?")
                 .with_default(false)
@@ -305,7 +314,7 @@ fn run() -> Result<()> {
                 info!("Started patching!");
                 timer = Some(Instant::now());
                 eprintln!(
-                    "{} \"{}\"",
+                    "{} '{}'",
                     "Patched NSP created at".green().bold(),
                     patch_nsp(&mut base, &mut update, default_outdir()?)?
                         .path
@@ -352,7 +361,7 @@ fn default_outdir() -> Result<PathBuf> {
     };
 
     if !outdir.is_dir() {
-        bail!("Failed to set \"{}\" as outdir", outdir.display());
+        bail!("Failed to set '{}' as outdir", outdir.display());
     }
 
     Ok(outdir)
