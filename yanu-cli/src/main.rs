@@ -66,7 +66,7 @@ fn run() -> Result<()> {
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
 
-    if let Some(keyfile) = opts.import_keyfile {
+    if let Some(keyfile) = opts.keyfile {
         if keyfile.extension() != Some("keys".as_ref()) {
             bail!("Invalid keyfile");
         }

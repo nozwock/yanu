@@ -35,7 +35,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
 2. Copy-paste the following in `Termux` and hit enter:
   ```console
-  bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/resources/scripts/yanu-bootstrap-termux.sh)
+  bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/scripts/yanu-bootstrap-termux.sh)
   ```
 
   <!-- ! Will need to modify the script too for the new release -->

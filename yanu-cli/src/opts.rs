@@ -9,7 +9,7 @@ pub struct YanuCli {
     pub command: Option<Commands>,
     /// Import `prod.keys` keyfile
     #[arg(short = 'k', long, value_name = "FILE")]
-    pub import_keyfile: Option<PathBuf>,
+    pub keyfile: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]
