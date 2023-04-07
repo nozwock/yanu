@@ -38,9 +38,6 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
   bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/scripts/yanu-bootstrap-termux.sh)
   ```
 
-  <!-- ! Will need to modify the script too for the new release -->
-  <!-- ? Probably having two entry scripts 'yanu' and 'yanu-cli' -->
-
 Relevant resources:
 - MiXplorer [XDA Forum](https://forum.xda-developers.com/t/app-2-2-mixplorer-v6-x-released-fully-featured-file-manager.1523691/)
 - MiXplorer GDrive [download link](https://drive.google.com/drive/folders/1BfeK39boriHy-9q76eXLLqbCwfV17-Gv)
@@ -76,29 +73,27 @@ yanu --help
 
 For updating a ROM:
 ```sh
-yanu update --keyfile "/path/to/keyfile" --base "/path/to/base" --patch "/path/to/patch"
+yanu --keyfile '/path/to/keyfile' update --base '/path/to/base' --update '/path/to/update'
 ```
 
-Set a new `Roms Directory` (Used in `tui`) with:
+Set a new `Roms Directory` (Used in `update-prompt`) with:
 ```sh
-yanu config --roms-dir "/new/path/here"
+yanu config --roms-dir '/new/path/here'
 ```
-
-<!-- ! Fix these usages once new release hits -->
 
 For unpacking ROMs:
 ```sh
-yanu unpack --base "/path/to/base" --patch "/path/to/patch"
+yanu unpack --base '/path/to/base' --update '/path/to/update'
 ```
 
 OR, for only unpacking a single ROM:
 ```sh
-yanu unpack --base "/path/to/base"
+yanu unpack --base '/path/to/base'
 ```
 
 For repacking unpacked ROM data:
 ```sh
-yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir "./base+update.lielaws/romfs" --exefsdir "./base+update.bilies/exefs"
+yanu repack --controlnca './base+update.bylies/patchdata/123456.nca' --romfsdir './base+update.bylies/romfs' --exefsdir './base+update.bylies/exefs'
 ```
 
 > **Note**
