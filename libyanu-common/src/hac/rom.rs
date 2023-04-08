@@ -43,7 +43,7 @@ pub struct Nca {
     pub content_type: NcaType,
 }
 
-// TODO: instead of this, add the stdout to logs at the end
+// TODO: add the stdout to the logs in case an error is catches in main
 
 impl Nsp {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {

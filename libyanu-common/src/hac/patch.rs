@@ -365,12 +365,7 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let mut title_id = control_nca
         .title_id
         .as_ref()
-        .ok_or_else(|| {
-            eyre!(
-                "Base NCA ('{}') should've a TitleID",
-                base_nca.path.display()
-            )
-        })?
+        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", base_nca.path.display()))?
         .to_lowercase(); //* Important
     title_id.truncate(TITLEID_SZ as _);
     debug!(?title_id);

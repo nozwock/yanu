@@ -9,11 +9,12 @@ use fs_err as fs;
 use indicatif::HumanDuration;
 #[cfg(not(feature = "android-proot"))]
 use libyanu_common::config::NcaExtractor;
+#[cfg(unix)]
+use libyanu_common::hac::backend::{Backend, BackendKind};
 use libyanu_common::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
     hac::{
-        backend::{Backend, BackendKind},
         patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
         rom::Nsp,
     },
