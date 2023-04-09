@@ -417,10 +417,10 @@ impl Nca {
 ///
 /// For eg-
 /// ```
-/// // This'll return the largest Control type NCA in ""
+/// // This'll return the largest Control type NCA in "."
 /// get_filtered_ncas(
 ///     Backend::new(BackendKind::Hactoolnet),
-///     "",
+///     ".",
 ///     HashSet::from([NcaType::Control]),
 /// )
 /// .get(&NcaType::Control)

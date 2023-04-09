@@ -33,6 +33,6 @@ pub static DEFAULT_TITLEKEYS_PATH: Lazy<PathBuf> =
 pub static EXE_DIR: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_exe().unwrap().parent().unwrap().into());
 #[cfg(not(feature = "android-proot"))]
-pub static TEMP_DIR_IN: Lazy<PathBuf> = Lazy::new(|| "".into());
+pub static TEMP_DIR_IN: Lazy<PathBuf> = Lazy::new(|| ".".into());
 #[cfg(feature = "android-proot")]
 pub static TEMP_DIR_IN: Lazy<PathBuf> = Lazy::new(|| dirs::home_dir().unwrap());

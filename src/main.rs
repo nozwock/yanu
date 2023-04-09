@@ -7,11 +7,12 @@ mod utils;
 use crate::utils::pick_nsp_file;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use libyanu_common::defines::{DEFAULT_PRODKEYS_PATH, EXE_DIR};
+use libyanu_common::config::Config;
+use libyanu_common::defines::DEFAULT_PRODKEYS_PATH;
 use libyanu_common::hac::{patch::update_nsp, rom::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 fn main() -> Result<()> {
     // Colorful errors
@@ -20,7 +21,7 @@ fn main() -> Result<()> {
         .install()?;
 
     // Tracing
-    let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
+    let file_appender = tracing_appender::rolling::hourly(".", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
@@ -53,6 +54,9 @@ fn main() -> Result<()> {
 }
 
 fn run() -> Result<()> {
+    let config = Config::load()?;
+    debug!(?config);
+
     if !DEFAULT_PRODKEYS_PATH.is_file() {
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Warning)
@@ -111,6 +115,25 @@ fn run() -> Result<()> {
         .expect("File should've a filename")
         .to_string_lossy();
 
+    // Warning for Unicode paths
+    let temp_dir = config.temp_dir.canonicalize()?;
+    let mut unicode_warn_msg = vec![];
+    [&temp_dir, &base_path, &update_path]
+        .into_iter()
+        .filter(|path| !path.as_os_str().is_ascii())
+        .for_each(|path| unicode_warn_msg.push(format!("'{}'", path.display())));
+    if !unicode_warn_msg.is_empty() {
+        rfd::MessageDialog::new()
+            .set_level(rfd::MessageLevel::Warning)
+            .set_title("Warning")
+            .set_description(&format!(
+                "Following path(s) have Non-ASCII characters-\n{}\n\
+                This may cause issues while patching (for eg. with HacPack, hactool, etc.)",
+                unicode_warn_msg.join("\n")
+            ))
+            .show();
+    }
+
     if rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Info)
         .set_title("Is this correct?")
@@ -127,7 +150,7 @@ fn run() -> Result<()> {
         let patched = update_nsp(
             &mut Nsp::new(&base_path)?,
             &mut Nsp::new(&update_path)?,
-            default_outdir()?,
+            default_pack_outdir()?,
         )?;
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Info)
@@ -143,13 +166,13 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn default_outdir() -> Result<PathBuf> {
+fn default_pack_outdir() -> Result<PathBuf> {
     let outdir: PathBuf = {
         if cfg!(feature = "android-proot") {
             PathBuf::from("/storage/emulated/0")
         } else {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
-            EXE_DIR.to_owned()
+            std::env::current_dir()?
         }
     };
 

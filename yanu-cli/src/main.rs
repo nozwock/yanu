@@ -13,14 +13,14 @@ use libyanu_common::config::NcaExtractor;
 use libyanu_common::hac::backend::{Backend, BackendKind};
 use libyanu_common::{
     config::Config,
-    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
+    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     hac::{
         patch::{repack_fs_data, unpack_nsp, update_nsp},
         rom::Nsp,
     },
 };
 use opts::YanuCli;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 fn main() -> Result<()> {
     // Colorful errors
@@ -29,7 +29,7 @@ fn main() -> Result<()> {
         .install()?;
 
     // Tracing
-    let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
+    let file_appender = tracing_appender::rolling::hourly(".", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
@@ -66,6 +66,7 @@ fn run() -> Result<()> {
     info!("Parsing args, will exit on error");
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
+    debug!(?config);
 
     if let Some(keyfile) = opts.keyfile {
         if keyfile.extension() != Some("keys".as_ref()) {
@@ -164,7 +165,7 @@ fn run() -> Result<()> {
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {
-                    config.roms_dir = Some(fs::canonicalize(roms_dir)?);
+                    config.roms_dir = Some(roms_dir.canonicalize()?);
                 } else {
                     bail!("'{}' is not a valid directory", roms_dir.display());
                 }
@@ -177,7 +178,7 @@ fn run() -> Result<()> {
                     )
                 }
                 if temp_dir.is_dir() {
-                    config.temp_dir = fs::canonicalize(temp_dir)?;
+                    config.temp_dir = temp_dir.canonicalize()?;
                 } else {
                     bail!("'{}' is not a valid directory", temp_dir.display());
                 }
@@ -219,7 +220,7 @@ fn run() -> Result<()> {
                 if !roms_dir.is_dir() {
                     bail!("'{}' is not a valid directory", roms_dir.display());
                 }
-                config.roms_dir = Some(fs::canonicalize(roms_dir)?);
+                config.roms_dir = Some(roms_dir.canonicalize()?);
                 info!("Updating config at '{}'", APP_CONFIG_PATH.display());
                 Config::store(config.clone())?;
             }
@@ -360,7 +361,7 @@ fn default_outdir() -> Result<PathBuf> {
             PathBuf::from("/storage/emulated/0")
         } else {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
-            EXE_DIR.to_owned()
+            std::env::current_dir()?
         }
     };
 
