@@ -54,8 +54,6 @@ pub struct Backend {
     path: PathBuf,
 }
 
-// TODO: maybe a method to get a Command instance?
-
 impl Backend {
     pub fn new(kind: BackendKind) -> Result<Self> {
         let filename = kind.to_filename();
