@@ -12,7 +12,7 @@ use libyanu_common::config::NcaExtractor;
 #[cfg(unix)]
 use libyanu_common::hac::backend::{Backend, BackendKind};
 use libyanu_common::{
-    config::Config,
+    config::{Config, NspExtractor},
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     hac::{
         patch::{repack_fs_data, unpack_nsp, update_nsp},
@@ -185,8 +185,16 @@ fn run() -> Result<()> {
             }
 
             #[cfg(not(feature = "android-proot"))]
-            if let Some(extractor) = opts.nca_extractor {
+            if let Some(extractor) = opts.nsp_extractor {
                 // ? How to do this better? and also not have dup enums
+                config.nsp_extractor = match extractor {
+                    opts::NspExtractor::Hactoolnet => NspExtractor::Hactoolnet,
+                    opts::NspExtractor::Hactool => NspExtractor::Hactool,
+                };
+            }
+
+            #[cfg(not(feature = "android-proot"))]
+            if let Some(extractor) = opts.nca_extractor {
                 config.nca_extractor = match extractor {
                     opts::NcaExtractor::Hactoolnet => NcaExtractor::Hactoolnet,
                     opts::NcaExtractor::Hac2l => NcaExtractor::Hac2l,
@@ -333,11 +341,10 @@ fn run() -> Result<()> {
         Some(opts::Commands::BuildBackend) => {
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
             Backend::new(BackendKind::Hactoolnet)?;
-            #[cfg(feature = "android-proot")]
             Backend::new(BackendKind::Hactool)?;
             Backend::new(BackendKind::Hac2l)?;
             Backend::new(BackendKind::Hacpack)?;
-            eprintln!("{}", style("Done building backend utilities").cyan().bold());
+            eprintln!("{}", style("Successfully built backend").green().bold());
         }
         None => unreachable!(),
     }

@@ -8,6 +8,14 @@ use crate::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
 
 #[cfg(not(feature = "android-proot"))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NspExtractor {
+    #[default]
+    Hactoolnet,
+    Hactool,
+}
+
+#[cfg(not(feature = "android-proot"))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NcaExtractor {
     #[default]
     Hactoolnet,
@@ -16,6 +24,8 @@ pub enum NcaExtractor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    #[cfg(not(feature = "android-proot"))]
+    pub nsp_extractor: NspExtractor,
     #[cfg(not(feature = "android-proot"))]
     pub nca_extractor: NcaExtractor,
     pub roms_dir: Option<PathBuf>,
@@ -33,6 +43,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            #[cfg(not(feature = "android-proot"))]
+            nsp_extractor: Default::default(),
             #[cfg(not(feature = "android-proot"))]
             nca_extractor: Default::default(),
             roms_dir: Default::default(),

@@ -152,7 +152,7 @@ where
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nsp_extractor = Backend::new(BackendKind::Hactoolnet)?;
+    let nsp_extractor = Backend::new(BackendKind::from(config.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
     let nsp_extractor = Backend::new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
@@ -260,7 +260,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nsp_extractor = Backend::new(BackendKind::Hactoolnet)?;
+    let nsp_extractor = Backend::new(BackendKind::from(config.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
     let nsp_extractor = Backend::new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]

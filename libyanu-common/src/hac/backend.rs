@@ -26,6 +26,17 @@ pub enum BackendKind {
 }
 
 #[cfg(not(feature = "android-proot"))]
+impl From<crate::config::NspExtractor> for BackendKind {
+    fn from(value: crate::config::NspExtractor) -> Self {
+        use crate::config::NspExtractor;
+        match value {
+            NspExtractor::Hactoolnet => Self::Hactoolnet,
+            NspExtractor::Hactool => Self::Hactool,
+        }
+    }
+}
+
+#[cfg(not(feature = "android-proot"))]
 impl From<crate::config::NcaExtractor> for BackendKind {
     fn from(value: crate::config::NcaExtractor) -> Self {
         use crate::config::NcaExtractor;

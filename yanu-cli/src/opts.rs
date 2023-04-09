@@ -76,6 +76,14 @@ pub struct Unpack {
 
 #[cfg(not(feature = "android-proot"))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
+pub enum NspExtractor {
+    #[default]
+    Hactoolnet,
+    Hactool,
+}
+
+#[cfg(not(feature = "android-proot"))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
 pub enum NcaExtractor {
     #[default]
     Hactoolnet,
@@ -96,6 +104,9 @@ pub struct Config {
         PATH must not contain Unicode characters due to the limitations of backend tools"
     )]
     pub temp_dir: Option<PathBuf>,
+    #[cfg(not(feature = "android-proot"))]
+    #[arg(long, value_enum)]
+    pub nsp_extractor: Option<NspExtractor>,
     #[cfg(not(feature = "android-proot"))]
     #[arg(long, value_enum)]
     pub nca_extractor: Option<NcaExtractor>,
