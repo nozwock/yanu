@@ -165,7 +165,7 @@ fn run() -> Result<()> {
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {
-                    config.roms_dir = Some(roms_dir.canonicalize()?);
+                    config.roms_dir = Some(dbg!(&roms_dir).canonicalize()?);
                 } else {
                     bail!("'{}' is not a valid directory", roms_dir.display());
                 }
@@ -178,24 +178,24 @@ fn run() -> Result<()> {
                     )
                 }
                 if temp_dir.is_dir() {
-                    config.temp_dir = temp_dir.canonicalize()?;
+                    config.temp_dir = dbg!(&temp_dir).canonicalize()?;
                 } else {
                     bail!("'{}' is not a valid directory", temp_dir.display());
                 }
             }
 
             #[cfg(not(feature = "android-proot"))]
-            if let Some(extractor) = opts.nsp_extractor {
+            if let Some(nsp_extractor) = opts.nsp_extractor {
                 // ? How to do this better? and also not have dup enums
-                config.nsp_extractor = match extractor {
+                config.nsp_extractor = match dbg!(nsp_extractor) {
                     opts::NspExtractor::Hactoolnet => NspExtractor::Hactoolnet,
                     opts::NspExtractor::Hactool => NspExtractor::Hactool,
                 };
             }
 
             #[cfg(not(feature = "android-proot"))]
-            if let Some(extractor) = opts.nca_extractor {
-                config.nca_extractor = match extractor {
+            if let Some(nsp_extractor) = opts.nca_extractor {
+                config.nca_extractor = match dbg!(nsp_extractor) {
                     opts::NcaExtractor::Hactoolnet => NcaExtractor::Hactoolnet,
                     opts::NcaExtractor::Hac2l => NcaExtractor::Hac2l,
                 };
