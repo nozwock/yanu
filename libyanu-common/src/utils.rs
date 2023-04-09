@@ -24,7 +24,7 @@ where
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(unix)]
 pub fn set_executable_bit<P: AsRef<Path>>(path: P, on: bool) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     let mode = fs::File::open(path.as_ref())?

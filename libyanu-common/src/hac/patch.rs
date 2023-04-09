@@ -4,6 +4,7 @@ use crate::{
     hac::{
         backend::{Backend, BackendKind},
         rom::{get_filtered_ncas, Nca, NcaType},
+        ticket::TITLEID_SIZE,
     },
     utils::move_file,
 };
@@ -15,8 +16,7 @@ use std::{collections::HashSet, path::Path};
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
 
-const TITLEID_SZ: u8 = 16;
-
+/// Store TitleKeys to `DEFAULT_TITLEKEYS_PATH`.
 fn store_titlekeys<'a, I>(keys: I) -> Result<()>
 where
     I: Iterator<Item = &'a TitleKey>,
@@ -33,7 +33,8 @@ where
     .map_err(|err| eyre!(err))
 }
 
-pub fn repack_to_nsp<N, E, R, O>(
+/// Repack romfs/exefs back to NSP.
+pub fn repack_fs_data<N, E, R, O>(
     control_path: N,
     romfs_dir: R,
     exefs_dir: E,
@@ -75,7 +76,8 @@ where
         .as_ref()
         .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
         .to_lowercase();
-    title_id.truncate(TITLEID_SZ as _);
+    title_id.truncate(TITLEID_SIZE as _);
+    debug!(?title_id, "Selected TitleID for packing");
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
@@ -134,7 +136,8 @@ where
     Ok(packed_nsp)
 }
 
-pub fn unpack_to_fs<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Result<()>
+/// Unpack NSP(s) to romfs/exefs.
+pub fn unpack_nsp<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Result<()>
 where
     O: AsRef<Path>,
 {
@@ -245,7 +248,8 @@ where
     Ok(())
 }
 
-pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
+/// Apply update NSP to the base NSP.
+pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     let config = Config::load()?;
 
     #[cfg(not(feature = "android-proot"))]
@@ -365,10 +369,10 @@ pub fn patch_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) ->
     let mut title_id = control_nca
         .title_id
         .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", base_nca.path.display()))?
+        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
         .to_lowercase(); //* Important
-    title_id.truncate(TITLEID_SZ as _);
-    debug!(?title_id);
+    title_id.truncate(TITLEID_SIZE as _);
+    debug!(?title_id, "Selected TitleID for packing");
 
     // !Packing fs files to NCA
     let patched_nca_path = Nca::pack(

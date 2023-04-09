@@ -9,15 +9,18 @@ use std::{
 };
 use tracing::{debug, info};
 
+pub const TITLEID_SIZE: u8 = 16;
+const TITLEKEY_SIZE: u8 = 16;
+
 enum TicketData {
-    TitleId = 0x2a0,
+    TitleId = 0x2a0, // Starts at this position
     TitleKey = 0x180,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct TitleKey {
-    title_id: [u8; 16],
-    key: [u8; 16],
+    title_id: [u8; TITLEID_SIZE as _],
+    key: [u8; TITLEKEY_SIZE as _],
 }
 
 impl fmt::Display for TitleKey {
@@ -35,7 +38,7 @@ pub fn get_title_key<P: AsRef<Path>>(tik_path: P) -> Result<TitleKey> {
     let mut title_key = TitleKey::default();
     let mut ticket = fs::File::open(tik_path.as_ref())?;
 
-    info!(tik = ?tik_path.as_ref(), "Reading ticket");
+    info!(tik = %tik_path.as_ref().display(), "Reading ticket");
 
     ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
     ticket.read_exact(&mut title_key.title_id)?;

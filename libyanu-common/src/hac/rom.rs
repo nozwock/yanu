@@ -413,9 +413,9 @@ impl Nca {
     }
 }
 
-/// Returns filtered NCAs in descending order of size.
+/// Returns filtered NCA(s) in descending order of size.
 ///
-/// So for eg-
+/// For eg-
 /// ```
 /// // This'll return the largest Control type NCA in ""
 /// get_filtered_ncas(

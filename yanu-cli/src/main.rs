@@ -15,7 +15,7 @@ use libyanu_common::{
     config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH, EXE_DIR},
     hac::{
-        patch::{patch_nsp, repack_to_nsp, unpack_to_fs},
+        patch::{repack_fs_data, unpack_nsp, update_nsp},
         rom::Nsp,
     },
 };
@@ -100,7 +100,7 @@ fn run() -> Result<()> {
             eprintln!(
                 "{} '{}'",
                 style("Patched NSP created at").green().bold(),
-                patch_nsp(
+                update_nsp(
                     &mut Nsp::new(opts.base)?,
                     &mut Nsp::new(opts.update)?,
                     default_outdir()?,
@@ -124,7 +124,7 @@ fn run() -> Result<()> {
             eprintln!(
                 "{} '{}'",
                 style("Repacked NSP created at").green().bold(),
-                repack_to_nsp(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?
+                repack_fs_data(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?
                     .path
                     .display()
             );
@@ -150,7 +150,7 @@ fn run() -> Result<()> {
             };
 
             timer = Some(Instant::now());
-            unpack_to_fs(
+            unpack_nsp(
                 Nsp::new(opts.base)?,
                 opts.update.map(|f| Nsp::new(f).ok()).flatten(),
                 &outdir,
@@ -322,7 +322,7 @@ fn run() -> Result<()> {
                 eprintln!(
                     "{} '{}'",
                     style("Patched NSP created at").green().bold(),
-                    patch_nsp(&mut base, &mut update, default_outdir()?)?
+                    update_nsp(&mut base, &mut update, default_outdir()?)?
                         .path
                         .display()
                 );

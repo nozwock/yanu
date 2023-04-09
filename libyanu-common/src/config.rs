@@ -7,14 +7,14 @@ use tracing::warn;
 use crate::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
 
 #[cfg(not(feature = "android-proot"))]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NcaExtractor {
     #[default]
     Hactoolnet,
     Hac2l,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[cfg(not(feature = "android-proot"))]
     pub nca_extractor: NcaExtractor,
