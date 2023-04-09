@@ -8,11 +8,11 @@ use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use indicatif::HumanDuration;
 #[cfg(not(feature = "android-proot"))]
-use libyanu_common::config::NcaExtractor;
+use libyanu_common::config::{NcaExtractor, NspExtractor};
 #[cfg(unix)]
 use libyanu_common::hac::backend::{Backend, BackendKind};
 use libyanu_common::{
-    config::{Config, NspExtractor},
+    config::Config,
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     hac::{
         patch::{repack_fs_data, unpack_nsp, update_nsp},
