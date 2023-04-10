@@ -8,10 +8,10 @@ use tracing::{debug, info};
 
 use crate::{
     backend::{Backend, BackendKind},
-    ticket::SHORT_TITLEID_LEN,
     vfs::{
         nca::{self, Nca},
         nsp::Nsp,
+        ticket::SHORT_TITLEID_LEN,
     },
 };
 

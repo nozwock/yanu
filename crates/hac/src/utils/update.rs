@@ -9,11 +9,11 @@ use tracing::{debug, info, warn};
 
 use crate::{
     backend::{Backend, BackendKind},
-    ticket::SHORT_TITLEID_LEN,
     utils::{clear_titlekeys, store_titlekeys},
     vfs::{
         nca::{self, nca_with_filters, nca_with_kind, Nca},
         nsp::Nsp,
+        ticket::SHORT_TITLEID_LEN,
     },
 };
 

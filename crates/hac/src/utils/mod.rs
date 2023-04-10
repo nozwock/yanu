@@ -2,7 +2,7 @@ pub mod repack;
 pub mod unpack;
 pub mod update;
 
-use crate::ticket::TitleKey;
+use crate::vfs::ticket::TitleKey;
 use common::defines::DEFAULT_TITLEKEYS_PATH;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;

@@ -13,9 +13,8 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    ticket::SHORT_TITLEID_LEN,
     utils::{repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
-    vfs::nsp::Nsp,
+    vfs::{nsp::Nsp, ticket::SHORT_TITLEID_LEN},
 };
 use indicatif::HumanDuration;
 use opts::YanuCli;

@@ -1,16 +1,12 @@
+use super::ticket::TitleKey;
+use crate::{backend::Backend, vfs::ticket};
+use eyre::{bail, eyre, Result};
 use std::{
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
-
-use eyre::{bail, eyre, Result};
 use tracing::{error, info};
 use walkdir::WalkDir;
-
-use crate::{
-    backend::Backend,
-    ticket::{self, TitleKey},
-};
 
 #[derive(Debug, Default, Clone)]
 pub struct Nsp {
