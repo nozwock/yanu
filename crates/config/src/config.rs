@@ -1,10 +1,11 @@
 use confy::ConfyError;
 use eyre::{bail, Result};
+use fs_err as fs;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::path::PathBuf;
 use tracing::warn;
 
-use crate::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
+use common::defines::{APP_CONFIG_PATH, TEMP_DIR_IN};
 
 #[cfg(not(feature = "android-proot"))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

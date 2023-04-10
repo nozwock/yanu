@@ -1,3 +1,4 @@
+use common::defines;
 use eyre::Result;
 #[cfg(unix)]
 use once_cell::sync::Lazy;
@@ -9,9 +10,9 @@ use std::process::Command;
 #[cfg(unix)]
 use tempfile::tempdir;
 
+use cache::{self, Cache};
 #[cfg(target_family = "unix")]
-use crate::utils::set_executable_bit;
-use crate::{cache::Cache, defines};
+use common::utils::set_executable_bit;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendKind {
@@ -26,9 +27,9 @@ pub enum BackendKind {
 }
 
 #[cfg(not(feature = "android-proot"))]
-impl From<crate::config::NspExtractor> for BackendKind {
-    fn from(value: crate::config::NspExtractor) -> Self {
-        use crate::config::NspExtractor;
+impl From<config::NspExtractor> for BackendKind {
+    fn from(value: config::NspExtractor) -> Self {
+        use config::NspExtractor;
         match value {
             NspExtractor::Hactoolnet => Self::Hactoolnet,
             NspExtractor::Hactool => Self::Hactool,
@@ -37,9 +38,9 @@ impl From<crate::config::NspExtractor> for BackendKind {
 }
 
 #[cfg(not(feature = "android-proot"))]
-impl From<crate::config::NcaExtractor> for BackendKind {
-    fn from(value: crate::config::NcaExtractor) -> Self {
-        use crate::config::NcaExtractor;
+impl From<config::NcaExtractor> for BackendKind {
+    fn from(value: config::NcaExtractor) -> Self {
+        use config::NcaExtractor;
         match value {
             NcaExtractor::Hactoolnet => Self::Hactoolnet,
             NcaExtractor::Hac2l => Self::Hac2l,
@@ -117,7 +118,8 @@ static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
 
 #[cfg(unix)]
 pub fn make_hacpack() -> Result<PathBuf> {
-    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
+    use common::{defines::APP_CACHE_DIR, utils::move_file};
+    use config::Config;
     use eyre::{bail, eyre};
     use fs_err as fs;
     use tracing::info;
@@ -175,7 +177,8 @@ pub fn make_hacpack() -> Result<PathBuf> {
 
 #[cfg(unix)]
 pub fn make_hactool() -> Result<PathBuf> {
-    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
+    use common::{defines::APP_CACHE_DIR, utils::move_file};
+    use config::Config;
     use eyre::{bail, eyre};
     use fs_err as fs;
     use tracing::info;
@@ -260,7 +263,8 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    use crate::{config::Config, defines::APP_CACHE_DIR, utils::move_file};
+    use common::{defines::APP_CACHE_DIR, utils::move_file};
+    use config::Config;
     use eyre::{bail, eyre};
     use tracing::{debug, info};
 
