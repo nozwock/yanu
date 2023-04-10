@@ -39,7 +39,6 @@ pub enum Commands {
 // value_parser=clap::value_parser!(PathBuf)
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
-#[command(arg_required_else_help = true)]
 pub struct Update {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
@@ -51,10 +50,7 @@ pub struct Update {
     pub outdir: Option<PathBuf>,
 }
 
-// TODO: remove arg_required_else_help for commands with required args
-
 #[derive(Debug, Args, Default, PartialEq, Eq)]
-#[command(arg_required_else_help = true)]
 pub struct Repack {
     #[arg(long, value_name = "FILE")]
     pub controlnca: PathBuf,
@@ -70,7 +66,6 @@ pub struct Repack {
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
-#[command(arg_required_else_help = true)]
 pub struct Unpack {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
