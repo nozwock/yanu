@@ -418,7 +418,7 @@ impl Nca {
 /// For eg-
 /// ```
 /// // This'll return the largest Control type NCA in "."
-/// get_filtered_ncas(
+/// nca_with_filters(
 ///     Backend::new(BackendKind::Hactoolnet),
 ///     ".",
 ///     HashSet::from([NcaType::Control]),
@@ -426,7 +426,7 @@ impl Nca {
 /// .get(&NcaType::Control)
 /// .unwrap()[0];
 /// ```
-pub fn get_filtered_ncas<P>(
+pub fn nca_with_filters<P>(
     reader: &Backend,
     from: P,
     filters: &HashSet<NcaType>,
@@ -473,4 +473,12 @@ where
     }
 
     filtered_ncas
+}
+
+#[allow(unused)]
+pub fn nca_with_kind<P>(reader: &Backend, from: P, kind: NcaType) -> Option<Vec<Nca>>
+where
+    P: AsRef<Path>,
+{
+    nca_with_filters(reader, from, &HashSet::from([kind])).remove(&kind)
 }

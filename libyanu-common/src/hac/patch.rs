@@ -3,18 +3,28 @@ use crate::{
     defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     hac::{
         backend::{Backend, BackendKind},
-        rom::{get_filtered_ncas, Nca, NcaType},
-        ticket::TITLEID_SIZE,
+        rom::{nca_with_filters, nca_with_kind, Nca, NcaType},
+        ticket::SHORT_TITLEID_LEN,
     },
     utils::move_file,
 };
 
 use super::{rom::Nsp, ticket::TitleKey};
-use eyre::{eyre, Result};
+use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, io::ErrorKind, path::Path};
 use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
+
+fn clear_titlekeys() -> Result<()> {
+    match fs::remove_file(DEFAULT_TITLEKEYS_PATH.as_path()) {
+        Ok(_) => Ok(()),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+        Err(err) => {
+            bail!(err)
+        }
+    }
+}
 
 /// Store TitleKeys to `DEFAULT_TITLEKEYS_PATH`.
 fn store_titlekeys<'a, I>(keys: I) -> Result<()>
@@ -36,6 +46,7 @@ where
 /// Repack romfs/exefs back to NSP.
 pub fn repack_fs_data<N, E, R, O>(
     control_path: N,
+    mut title_id: String,
     romfs_dir: R,
     exefs_dir: E,
     outdir: O,
@@ -71,12 +82,12 @@ where
             )
         })?;
 
-    let mut title_id = control_nca
-        .title_id
-        .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
-        .to_lowercase();
-    title_id.truncate(TITLEID_SIZE as _);
+    // let mut title_id = control_nca
+    //     .title_id
+    //     .as_ref()
+    //     .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
+    //     .to_lowercase();
+    title_id.truncate(SHORT_TITLEID_LEN as _);
     debug!(?title_id, "Selected TitleID for packing");
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
@@ -163,6 +174,10 @@ where
     let base_data_dir = outdir.as_ref().join("basedata");
     let patch_data_dir = outdir.as_ref().join("patchdata");
 
+    // Important to do before any sort of unpacking
+    // to avoid them being used when they were not supposed to
+    clear_titlekeys()?;
+
     // !Extracting pfs0
     base.unpack(&nsp_extractor, &base_data_dir)?;
     // Setting TitleKeys
@@ -190,39 +205,25 @@ where
     }
 
     // !Getting Base NCA
-    let filters = HashSet::from([NcaType::Program]);
     let base_nca = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-        .map(|reader| get_filtered_ncas(reader, &base_data_dir, &filters))
-        .find(|filtered| {
-            filters
-                .iter()
-                .map(|kind| filtered.get(kind))
-                .all(|ncas| ncas.is_some())
-        })
+        .map(|reader| nca_with_kind(reader, &base_data_dir, NcaType::Program))
+        .find(|filtered| filtered.is_some())
+        .flatten()
         .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
-        .remove(&NcaType::Program)
-        .expect("Should be Some due the all() check")
         .remove(0);
     debug!(?base_nca);
 
     if let Some(patch) = &patch {
         // !Getting Patch NCA
-        let filters = HashSet::from([NcaType::Program]);
         let patch_nca = readers
             .iter()
             .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-            .map(|reader| get_filtered_ncas(reader, &patch_data_dir, &filters))
-            .find(|filtered| {
-                filters
-                    .iter()
-                    .map(|kind| filtered.get(kind))
-                    .all(|ncas| ncas.is_some())
-            })
+            .map(|reader| nca_with_kind(reader, &patch_data_dir, NcaType::Program))
+            .find(|filtered| filtered.is_some())
+            .flatten()
             .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
-            .remove(&NcaType::Program)
-            .expect("msg")
             .remove(0);
         debug!(?patch_nca);
 
@@ -274,6 +275,8 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
+    clear_titlekeys()?;
+
     // !Extracting pfs0
     base.unpack(&nsp_extractor, base_data_dir.path())?;
     update.unpack(&nsp_extractor, update_data_dir.path())?;
@@ -294,20 +297,13 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     )?;
 
     // !Getting Base NCA
-    let filters = HashSet::from([NcaType::Program]);
     let base_nca = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-        .map(|reader| get_filtered_ncas(reader, base_data_dir.path(), &filters))
-        .find(|filtered| {
-            filters
-                .iter()
-                .map(|kind| filtered.get(kind))
-                .all(|ncas| ncas.is_some())
-        })
+        .map(|reader| nca_with_kind(reader, base_data_dir.path(), NcaType::Program))
+        .find(|filtered| filtered.is_some())
+        .flatten()
         .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
-        .remove(&NcaType::Program)
-        .expect("Should be Some due the all() check")
         .remove(0);
     debug!(?base_nca);
 
@@ -316,7 +312,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     let mut filtered_ncas = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-        .map(|reader| get_filtered_ncas(reader, update_data_dir.path(), &filters))
+        .map(|reader| nca_with_filters(reader, update_data_dir.path(), &filters))
         .find(|filtered| {
             filters
                 .iter()
@@ -346,6 +342,31 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     // !Unpacking fs files from NCAs
     _ = base_nca.unpack(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
+    // TODO?: support for when main and update's titleid don't match
+    // HacPack seems to pick update NCA's npdm TitleID in case of a id mismatch b/w base and update NCA
+    let mut title_id = update_nca
+        .title_id
+        .as_ref()
+        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", update_nca.path.display()))?
+        .to_lowercase(); //* Important
+    title_id.truncate(SHORT_TITLEID_LEN as _);
+    debug!(?title_id, "Selected TitleID for packing");
+
+    // let mut control_nca = if let Some(control_title_id) = control_nca.title_id.as_mut() {
+    //     control_title_id.truncate(TITLEID_SIZE as _);
+    //     let control_title_id = control_title_id.to_lowercase();
+    //     if title_id != control_title_id {
+    //         get_nca(&readers[0], base_data_dir.path(), NcaType::Control)
+    //             .ok_or_else(|| eyre!("well fk"))?
+    //             .remove(0)
+    //     } else {
+    //         control_nca
+    //     }
+    // } else {
+    //     control_nca
+    // };
+    // debug!(?control_nca, "Changed Control NCA");
+
     // !Moving Control NCA
     let nca_dir = patch_dir.path().join("nca");
     fs::create_dir_all(&nca_dir)?;
@@ -365,14 +386,6 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     if let Err(err) = update_data_dir.close() {
         warn!(?err);
     }
-
-    let mut title_id = control_nca
-        .title_id
-        .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
-        .to_lowercase(); //* Important
-    title_id.truncate(TITLEID_SIZE as _);
-    debug!(?title_id, "Selected TitleID for packing");
 
     // !Packing fs files to NCA
     let patched_nca_path = Nca::pack(

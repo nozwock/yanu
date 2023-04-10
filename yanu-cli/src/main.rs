@@ -17,6 +17,7 @@ use libyanu_common::{
     hac::{
         patch::{repack_fs_data, unpack_nsp, update_nsp},
         rom::Nsp,
+        ticket::SHORT_TITLEID_LEN,
     },
 };
 use opts::YanuCli;
@@ -121,13 +122,35 @@ fn run() -> Result<()> {
                 default_outdir()?
             };
 
+            // Path validation
+            // ?let clap do this instead
+            _ = [&opts.controlnca, &opts.romfsdir, &opts.exefsdir]
+                .into_iter()
+                .map(|path| fs::metadata(path))
+                .find(|meta| meta.is_err())
+                .transpose()?;
+
+            if opts.titleid.len() != SHORT_TITLEID_LEN as _ {
+                bail!(
+                    "len: {} '{}' is invalid TitleID, TitleID should be in hexadecimal with a size of 8 bytes, i.e. 16 hexadecimal characters",
+                    opts.titleid.len(),
+                    opts.titleid
+                )
+            }
+
             timer = Some(Instant::now());
             eprintln!(
                 "{} '{}'",
                 style("Repacked NSP created at").green().bold(),
-                repack_fs_data(opts.controlnca, opts.romfsdir, opts.exefsdir, outdir)?
-                    .path
-                    .display()
+                repack_fs_data(
+                    opts.controlnca,
+                    opts.titleid,
+                    opts.romfsdir,
+                    opts.exefsdir,
+                    outdir
+                )?
+                .path
+                .display()
             );
         }
         Some(opts::Commands::Unpack(opts)) => {

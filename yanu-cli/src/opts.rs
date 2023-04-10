@@ -35,6 +35,9 @@ pub enum Commands {
     BuildBackend,
 }
 
+// TODO: add value parsers
+// value_parser=clap::value_parser!(PathBuf)
+
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Update {
@@ -48,11 +51,16 @@ pub struct Update {
     pub outdir: Option<PathBuf>,
 }
 
+// TODO: remove arg_required_else_help for commands with required args
+
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Repack {
     #[arg(long, value_name = "FILE")]
     pub controlnca: PathBuf,
+    /// Set TitleID
+    #[arg(short, long)]
+    pub titleid: String,
     #[arg(long, value_name = "DIR")]
     pub romfsdir: PathBuf,
     #[arg(long, value_name = "DIR")]

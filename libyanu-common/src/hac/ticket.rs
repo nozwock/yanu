@@ -9,11 +9,14 @@ use std::{
 };
 use tracing::{debug, info};
 
-pub const TITLEID_SIZE: u8 = 16;
+const TITLEID_SIZE: u8 = 16;
 const TITLEKEY_SIZE: u8 = 16;
 
+// No. of hexadecimal characters
+pub const SHORT_TITLEID_LEN: u8 = 16;
+
 enum TicketData {
-    TitleId = 0x2a0, // Starts at this position
+    TitleId = 0x2a0, // offset
     TitleKey = 0x180,
 }
 
