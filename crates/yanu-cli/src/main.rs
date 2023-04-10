@@ -3,23 +3,21 @@ mod opts;
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
+use common::defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH};
+use config::Config;
+#[cfg(not(feature = "android-proot"))]
+use config::{NcaExtractor, NspExtractor};
 use console::style;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use indicatif::HumanDuration;
-#[cfg(not(feature = "android-proot"))]
-use libyanu_common::config::{NcaExtractor, NspExtractor};
 #[cfg(unix)]
-use libyanu_common::hac::backend::{Backend, BackendKind};
-use libyanu_common::{
-    config::Config,
-    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
-    hac::{
-        patch::{repack_fs_data, unpack_nsp, update_nsp},
-        rom::Nsp,
-        ticket::SHORT_TITLEID_LEN,
-    },
+use hac::backend::{Backend, BackendKind};
+use hac::{
+    patch::{repack_fs_data, unpack_nsp, update_nsp},
+    ticket::SHORT_TITLEID_LEN,
+    vfs::nsp::Nsp,
 };
+use indicatif::HumanDuration;
 use opts::YanuCli;
 use tracing::{debug, error, info};
 

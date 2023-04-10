@@ -1,15 +1,18 @@
 use crate::{
-    config::Config,
-    defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
-    hac::{
-        backend::{Backend, BackendKind},
-        rom::{nca_with_filters, nca_with_kind, Nca, NcaType},
-        ticket::SHORT_TITLEID_LEN,
+    backend::{Backend, BackendKind},
+    ticket::SHORT_TITLEID_LEN,
+    vfs::{
+        nca::{nca_with_filters, nca_with_kind, ContentType, Nca},
+        nsp::Nsp,
     },
+};
+use common::{
+    defines::{DEFAULT_PRODKEYS_PATH, DEFAULT_TITLEKEYS_PATH},
     utils::move_file,
 };
+use config::Config;
 
-use super::{rom::Nsp, ticket::TitleKey};
+use super::ticket::TitleKey;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use std::{collections::HashSet, io::ErrorKind, path::Path};
@@ -73,7 +76,7 @@ where
     let control_nca = readers
         .iter()
         .map(|reader| Nca::new(reader, control_path.as_ref()).ok())
-        .find(|nca| matches!(nca, Some(nca) if nca.content_type == NcaType::Control))
+        .find(|nca| matches!(nca, Some(nca) if nca.content_type == ContentType::Control))
         .flatten()
         .ok_or_else(|| {
             eyre!(
@@ -208,7 +211,7 @@ where
     let base_nca = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-        .map(|reader| nca_with_kind(reader, &base_data_dir, NcaType::Program))
+        .map(|reader| nca_with_kind(reader, &base_data_dir, ContentType::Program))
         .find(|filtered| filtered.is_some())
         .flatten()
         .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
@@ -220,7 +223,7 @@ where
         let patch_nca = readers
             .iter()
             .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-            .map(|reader| nca_with_kind(reader, &patch_data_dir, NcaType::Program))
+            .map(|reader| nca_with_kind(reader, &patch_data_dir, ContentType::Program))
             .find(|filtered| filtered.is_some())
             .flatten()
             .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
@@ -300,7 +303,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     let base_nca = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-        .map(|reader| nca_with_kind(reader, base_data_dir.path(), NcaType::Program))
+        .map(|reader| nca_with_kind(reader, base_data_dir.path(), ContentType::Program))
         .find(|filtered| filtered.is_some())
         .flatten()
         .ok_or_else(|| eyre!("Failed to find Base NCA in '{}'", base.path.display()))?
@@ -308,7 +311,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     debug!(?base_nca);
 
     // !Getting Update and Control NCA
-    let filters = HashSet::from([NcaType::Program, NcaType::Control]);
+    let filters = HashSet::from([ContentType::Program, ContentType::Control]);
     let mut filtered_ncas = readers
         .iter()
         .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
@@ -326,11 +329,11 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
             )
         })?;
     let update_nca = filtered_ncas
-        .remove(&NcaType::Program)
+        .remove(&ContentType::Program)
         .expect("Should be Some due the all() check")
         .remove(0);
     let mut control_nca = filtered_ncas
-        .remove(&NcaType::Control)
+        .remove(&ContentType::Control)
         .expect("Should be Some due the all() check")
         .remove(0);
     debug!(?update_nca);

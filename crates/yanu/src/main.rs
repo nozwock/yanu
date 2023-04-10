@@ -5,11 +5,11 @@ mod utils;
     any(target_os = "windows", target_os = "linux")
 ))]
 use crate::utils::pick_nsp_file;
+use common::defines::DEFAULT_PRODKEYS_PATH;
+use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use libyanu_common::config::Config;
-use libyanu_common::defines::DEFAULT_PRODKEYS_PATH;
-use libyanu_common::hac::{patch::update_nsp, rom::Nsp};
+use hac::{patch::update_nsp, vfs::nsp::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
 use tracing::{debug, error, info};
