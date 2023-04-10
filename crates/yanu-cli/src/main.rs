@@ -13,8 +13,8 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    patch::{repack_fs_data, unpack_nsp, update_nsp},
     ticket::SHORT_TITLEID_LEN,
+    utils::{repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::nsp::Nsp,
 };
 use indicatif::HumanDuration;

@@ -9,7 +9,7 @@ use common::defines::DEFAULT_PRODKEYS_PATH;
 use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use hac::{patch::update_nsp, vfs::nsp::Nsp};
+use hac::{utils::update::update_nsp, vfs::nsp::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
 use tracing::{debug, error, info};
