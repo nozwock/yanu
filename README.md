@@ -35,7 +35,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
 2. Copy-paste the following in `Termux` and hit enter:
   ```console
-  bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/resources/scripts/yanu-bootstrap-termux.sh)
+  bash <(curl -L https://raw.githubusercontent.com/nozwock/yanu/main/scripts/yanu-bootstrap-termux.sh)
   ```
 
 Relevant resources:
@@ -80,32 +80,32 @@ yanu --help
 
 For updating a ROM:
 ```sh
-yanu update --keyfile "/path/to/keyfile" --base "/path/to/base" --patch "/path/to/patch"
+yanu --keyfile '/path/to/keyfile' update --base '/path/to/base' --update '/path/to/update'
 ```
 
-Set a new `Roms Directory` (Used in `tui`) with:
+Set a new `Roms Directory` (Used in `update-prompt`) with:
 ```sh
-yanu config --roms-dir "/new/path/here"
+yanu config --roms-dir '/new/path/here'
 ```
 
 For unpacking ROMs:
 ```sh
-yanu unpack --base "/path/to/base" --patch "/path/to/patch"
+yanu unpack --base '/path/to/base' --update '/path/to/update'
 ```
 
 OR, for only unpacking a single ROM:
 ```sh
-yanu unpack --base "/path/to/base"
+yanu unpack --base '/path/to/base'
 ```
 
 For repacking unpacked ROM data:
 ```sh
-yanu repack --controlnca "./base+update.bylies/patchdata/123456.nca" --romfsdir "./base+update.lielaws/romfs" --exefsdir "./base+update.bilies/exefs"
+yanu repack --controlnca './base+update.bylies/patchdata/123456.nca' --romfsdir './base+update.bylies/romfs' --exefsdir './base+update.bylies/exefs'
 ```
 
 > **Note**
-> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and having absolute name of the executable).
-> - Control NCA is usually the largest NCA under 1MiB.
+> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and with proper path to the executable).
+> - Control NCA is usually the NCA around ~1MiB in size.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
 
 ## Directories Used
