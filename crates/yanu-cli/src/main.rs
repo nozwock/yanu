@@ -94,6 +94,13 @@ fn run() -> Result<()> {
                 bail!("Failed to find keyfile");
             }
 
+            // Path validation
+            _ = [Some(&opts.base), Some(&opts.update)]
+                .into_iter()
+                .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
+                .find(|meta| meta.is_err())
+                .transpose()?;
+
             info!("Started patching!");
             timer = Some(Instant::now());
             eprintln!(
@@ -121,11 +128,15 @@ fn run() -> Result<()> {
 
             // Path validation
             // ?let clap do this instead
-            _ = [&opts.controlnca, &opts.romfsdir, &opts.exefsdir]
-                .into_iter()
-                .map(|path| fs::metadata(path))
-                .find(|meta| meta.is_err())
-                .transpose()?;
+            _ = [
+                Some(&opts.controlnca),
+                Some(&opts.romfsdir),
+                Some(&opts.exefsdir),
+            ]
+            .into_iter()
+            .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
+            .find(|meta| meta.is_err())
+            .transpose()?;
 
             if opts.titleid.len() != SHORT_TITLEID_LEN as _ {
                 bail!(
@@ -154,6 +165,13 @@ fn run() -> Result<()> {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 bail!("Failed to find keyfile");
             }
+
+            // Path validation
+            _ = [Some(&opts.base), opts.update.as_ref()]
+                .into_iter()
+                .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
+                .find(|meta| meta.is_err())
+                .transpose()?;
 
             let prefix = if opts.update.is_some() {
                 "base+patch."
