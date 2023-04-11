@@ -203,7 +203,7 @@ fn run() -> Result<()> {
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {
-                    config.roms_dir = Some(dbg!(&roms_dir).canonicalize()?);
+                    config.yanu_dir = Some(dbg!(&roms_dir).canonicalize()?);
                 } else {
                     bail!("'{}' is not a valid directory", roms_dir.display());
                 }
@@ -246,7 +246,7 @@ fn run() -> Result<()> {
         Some(opts::Commands::UpdatePrompt) => {
             use walkdir::WalkDir;
 
-            if config.roms_dir.is_none() {
+            if config.yanu_dir.is_none() {
                 let prompt = inquire::Text::new("Enter the path to a directory:")
                     .with_help_message(
                         "Help:\n1. This directory will be used to look for ROMs (base/update)\n\
@@ -255,7 +255,7 @@ fn run() -> Result<()> {
                 #[cfg(feature = "android-proot")]
                 let prompt = prompt
                     .with_default("/storage/emulated/0/yanu")
-                    .with_placeholder("for eg- /storage/emulated/0/SwitchcwRoms");
+                    .with_placeholder("for eg- /storage/emulated/0/SwitchRoms");
                 let prompt_input = prompt.prompt()?;
                 #[cfg(unix)]
                 let prompt_input =
@@ -266,19 +266,19 @@ fn run() -> Result<()> {
                 if !roms_dir.is_dir() {
                     bail!("'{}' is not a valid directory", roms_dir.display());
                 }
-                config.roms_dir = Some(roms_dir.canonicalize()?);
+                config.yanu_dir = Some(roms_dir.canonicalize()?);
                 info!("Updating config at '{}'", APP_CONFIG_PATH.display());
-                Config::store(config.clone())?;
+                config.clone().store()?;
             }
 
-            let roms_dir = config
-                .roms_dir
+            let yanu_dir = config
+                .yanu_dir
                 .as_ref()
                 .expect("Should've been Some() as it's handeled above");
 
             if !DEFAULT_PRODKEYS_PATH.is_file() {
-                // Looking for `prod.keys` in roms_dir
-                let keyfile_path = match WalkDir::new(&roms_dir)
+                // Looking for `prod.keys` in yanu_dir
+                let keyfile_path = match WalkDir::new(&yanu_dir)
                     .min_depth(1)
                     .into_iter()
                     .filter_map(|e| e.ok())
@@ -287,7 +287,11 @@ fn run() -> Result<()> {
                 {
                     Some(path) => path,
                     None => {
-                        eprintln!("{}", style("Failed to find keyfile!").red().bold());
+                        eprintln!(
+                            "{} '{}'",
+                            style("Couldn't find keyfile in").red().bold(),
+                            yanu_dir.display()
+                        );
                         PathBuf::from(
                             inquire::Text::new("Enter the path to `prod.keys` keyfile:")
                                 .prompt()?,
@@ -310,7 +314,7 @@ fn run() -> Result<()> {
                 info!("Copied keys successfully to the C2 ^-^");
             }
 
-            let roms_path = WalkDir::new(&roms_dir)
+            let roms_path = WalkDir::new(&yanu_dir)
                 .min_depth(1)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -335,7 +339,7 @@ fn run() -> Result<()> {
                 })
                 .collect::<Vec<_>>();
             if options.is_empty() {
-                bail!("No NSPs found in '{}'", roms_dir.display());
+                bail!("No NSPs found in '{}'", yanu_dir.display());
             }
             let choice = inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
             let mut base = roms_path
@@ -353,7 +357,7 @@ fn run() -> Result<()> {
                 .filter(|filename| filename != &choice)
                 .collect::<Vec<_>>();
             if options.is_empty() {
-                bail!("No other NSPs found in '{}'", roms_dir.display());
+                bail!("No other NSPs found in '{}'", yanu_dir.display());
             }
             let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
             let mut update = roms_path

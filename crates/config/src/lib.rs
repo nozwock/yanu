@@ -32,7 +32,7 @@ pub struct Config {
     pub nsp_extractor: NspExtractor,
     #[cfg(not(feature = "android-proot"))]
     pub nca_extractor: NcaExtractor,
-    pub roms_dir: Option<PathBuf>,
+    pub yanu_dir: Option<PathBuf>,
     pub temp_dir: PathBuf,
     #[cfg(unix)]
     pub hacpack_rev: String,
@@ -52,7 +52,7 @@ impl Default for Config {
             nsp_extractor: Default::default(),
             #[cfg(not(feature = "android-proot"))]
             nca_extractor: Default::default(),
-            roms_dir: Default::default(),
+            yanu_dir: Default::default(),
             temp_dir: TEMP_DIR_IN.to_owned(),
             #[cfg(unix)]
             hacpack_rev: "7845e7be8d03a263c33430f9e8c2512f7c280c88".into(),
