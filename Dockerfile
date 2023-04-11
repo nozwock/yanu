@@ -1,4 +1,4 @@
-FROM ubuntu:lunar
+FROM ubuntu:lunar as builder
 
 WORKDIR /work
 
@@ -19,3 +19,15 @@ RUN $HOME/.cargo/bin/cargo build --release
 WORKDIR /work
 RUN mv target/release/yanu-cli /usr/bin/yanu
 RUN yanu build-backend
+
+FROM ubuntu:lunar as runtime
+
+WORKDIR /work
+COPY --from=builder /root/.cache /root/.cache
+COPY --from=builder /root/.config /root/.config
+COPY --from=builder /usr/bin/yanu /usr/bin/yanu
+
+RUN apt update && apt -y install libicu-dev && rm -rf /var/lib/apt/lists/*
+
+
+ENTRYPOINT ["yanu"]
