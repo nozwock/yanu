@@ -1,4 +1,8 @@
-//! Improper cheap implementation
+//! https://switchbrew.org/wiki/Ticket
+//!
+//! Allows easy access to ticket files, a format used to store an encrypted title keys.
+//!
+//! Cheap implementation only supporting 'common' Title key type.
 
 use eyre::Result;
 use fs_err as fs;
@@ -9,9 +13,7 @@ use std::{
 };
 use tracing::{debug, info};
 
-const TITLEID_SIZE: u8 = 16;
-const TITLEKEY_SIZE: u8 = 16;
-
+const COMMON_KEY_SIZE: u8 = 16;
 // No. of hexadecimal characters
 pub const SHORT_TITLEID_LEN: u8 = 16;
 
@@ -22,8 +24,8 @@ enum TicketData {
 
 #[derive(Debug, Default, Clone)]
 pub struct TitleKey {
-    title_id: [u8; TITLEID_SIZE as _],
-    key: [u8; TITLEKEY_SIZE as _],
+    title_id: [u8; COMMON_KEY_SIZE as _],
+    key: [u8; COMMON_KEY_SIZE as _],
 }
 
 impl fmt::Display for TitleKey {
@@ -37,24 +39,26 @@ impl fmt::Display for TitleKey {
     }
 }
 
-pub fn get_title_key<P: AsRef<Path>>(tik_path: P) -> Result<TitleKey> {
-    let mut title_key = TitleKey::default();
-    let mut ticket = fs::File::open(tik_path.as_ref())?;
+impl TitleKey {
+    pub fn new<P: AsRef<Path>>(decrypted_tik_path: P) -> Result<TitleKey> {
+        let mut title_key = TitleKey::default();
+        let mut ticket = fs::File::open(decrypted_tik_path.as_ref())?;
 
-    info!(tik = %tik_path.as_ref().display(), "Reading ticket");
+        info!(tik = %decrypted_tik_path.as_ref().display(), "Reading ticket");
 
-    ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
-    ticket.read_exact(&mut title_key.title_id)?;
+        ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
+        ticket.read_exact(&mut title_key.title_id)?;
 
-    ticket.seek(io::SeekFrom::Start(TicketData::TitleKey as _))?;
-    ticket.read_exact(&mut title_key.key)?;
-    debug!(
-        title_key = ?format!(
-            "{}={}",
-            hex::encode(title_key.title_id),
-            hex::encode(title_key.key)
-        )
-    );
+        ticket.seek(io::SeekFrom::Start(TicketData::TitleKey as _))?;
+        ticket.read_exact(&mut title_key.key)?;
+        debug!(
+            title_key = ?format!(
+                "{}={}",
+                hex::encode(title_key.title_id),
+                hex::encode(title_key.key)
+            )
+        );
 
-    Ok(title_key)
+        Ok(title_key)
+    }
 }

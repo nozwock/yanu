@@ -1,5 +1,4 @@
-use super::ticket::TitleKey;
-use crate::{backend::Backend, vfs::ticket};
+use crate::{backend::Backend, vfs::ticket::TitleKey};
 use eyre::{bail, eyre, Result};
 use std::{
     path::{Path, PathBuf},
@@ -110,7 +109,7 @@ impl Nsp {
                 .filter_map(|e| e.ok())
             {
                 if entry.path().extension() == Some("tik".as_ref()) {
-                    self.title_key = Some(ticket::get_title_key(entry.path())?);
+                    self.title_key = Some(TitleKey::new(entry.path())?);
                     break;
                 }
                 continue;
