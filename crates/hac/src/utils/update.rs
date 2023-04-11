@@ -113,11 +113,12 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     _ = base_nca.unpack(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
     // TODO?: support for when main and update's titleid don't match
-    // HacPack seems to pick update NCA's npdm TitleID in case of a id mismatch b/w base and update NCA
-    let mut title_id = update_nca
+    // maybe handle this by having a override flag for TitleID
+    // once unpack/repack combo is being used for updating
+    let mut title_id = base_nca
         .title_id
         .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", update_nca.path.display()))?
+        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", base_nca.path.display()))?
         .to_lowercase(); //* Important
     title_id.truncate(SHORT_TITLEID_LEN as _);
     debug!(?title_id, "Selected TitleID for packing");
