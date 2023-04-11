@@ -23,8 +23,11 @@ pub enum NcaExtractor {
     Hac2l,
 }
 
+const SCHEMA_VERSION: u8 = 1;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    schema_version: u8,
     #[cfg(not(feature = "android-proot"))]
     pub nsp_extractor: NspExtractor,
     #[cfg(not(feature = "android-proot"))]
@@ -44,6 +47,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            schema_version: SCHEMA_VERSION,
             #[cfg(not(feature = "android-proot"))]
             nsp_extractor: Default::default(),
             #[cfg(not(feature = "android-proot"))]
@@ -64,12 +68,20 @@ impl Default for Config {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let cfg: Self = match confy::load_path(APP_CONFIG_PATH.as_path()) {
-            Ok(cfg) => cfg,
+        let cfg = match confy::load_path::<Self>(APP_CONFIG_PATH.as_path()) {
+            Ok(cfg) => {
+                if cfg.schema_version != SCHEMA_VERSION {
+                    warn!("Schema version doesn't match! Rewriting config...");
+                    fs::remove_file(APP_CONFIG_PATH.as_path())?;
+                    confy::load_path::<Self>(APP_CONFIG_PATH.as_path())?
+                } else {
+                    cfg
+                }
+            }
             Err(ConfyError::BadRonData(err)) => {
-                warn!(?err, "BadConfig! Rewriting config...");
+                warn!(%err, "BadConfig! Rewriting config...");
                 fs::remove_file(APP_CONFIG_PATH.as_path())?;
-                confy::load_path(APP_CONFIG_PATH.as_path())?
+                confy::load_path::<Self>(APP_CONFIG_PATH.as_path())?
             }
             Err(err) => bail!(err),
         };
