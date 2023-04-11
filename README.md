@@ -66,10 +66,11 @@ Relevant resources:
 > - https://www.hybrid-analysis.com 
 
 ### Docker
-Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) and find tag of a version that you wanna use. Example usage:
+Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) and pull the container you'd like to use.
+Then it can be used as such:
    ```sh
-      cd /dir/with/nsp
-      docker run -v $(pwd)/prod.keys:/root/.switch/prod.keys -v $(pwd):/work ghcr.io/nozwock/yanu update --base Base.nsp --update Update.nsp 
+      # Expecting 'prod.keys` in pwd
+      docker run -v $(pwd)/prod.keys:/root/.switch/prod.keys -v $(pwd):/work ghcr.io/nozwock/yanu update --base '/path/to/base' --update '/path/to/update' 
    ```
 
 ## Usage (CLI only)
