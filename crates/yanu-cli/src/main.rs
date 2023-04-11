@@ -334,6 +334,9 @@ fn run() -> Result<()> {
                     ))
                 })
                 .collect::<Vec<_>>();
+            if options.is_empty() {
+                bail!("No NSPs found in '{}'", roms_dir.display());
+            }
             let choice = inquire::Select::new("Select BASE package:", options.clone()).prompt()?;
             let mut base = roms_path
                 .iter()
@@ -348,7 +351,10 @@ fn run() -> Result<()> {
             let options = options
                 .into_iter()
                 .filter(|filename| filename != &choice)
-                .collect();
+                .collect::<Vec<_>>();
+            if options.is_empty() {
+                bail!("No other NSPs found in '{}'", roms_dir.display());
+            }
             let choice = inquire::Select::new("Select UPDATE package:", options).prompt()?;
             let mut update = roms_path
                 .iter()
