@@ -18,14 +18,14 @@ const COMMON_KEY_SIZE: u8 = 16;
 pub const SHORT_TITLEID_LEN: u8 = 16;
 
 enum TicketData {
-    TitleId = 0x2a0, // offset
+    RightsId = 0x2a0, // offset
     TitleKey = 0x180,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct TitleKey {
-    title_id: [u8; COMMON_KEY_SIZE as _],
-    key: [u8; COMMON_KEY_SIZE as _],
+    rights_id: [u8; COMMON_KEY_SIZE as _],
+    title_key: [u8; COMMON_KEY_SIZE as _], // encrypted key
 }
 
 impl fmt::Display for TitleKey {
@@ -33,8 +33,8 @@ impl fmt::Display for TitleKey {
         write!(
             f,
             "{}={}",
-            hex::encode(self.title_id),
-            hex::encode(self.key)
+            hex::encode(self.rights_id),
+            hex::encode(self.title_key)
         )
     }
 }
@@ -46,16 +46,16 @@ impl TitleKey {
 
         info!(tik = %decrypted_tik_path.as_ref().display(), "Reading ticket");
 
-        ticket.seek(io::SeekFrom::Start(TicketData::TitleId as _))?;
-        ticket.read_exact(&mut title_key.title_id)?;
+        ticket.seek(io::SeekFrom::Start(TicketData::RightsId as _))?;
+        ticket.read_exact(&mut title_key.rights_id)?;
 
         ticket.seek(io::SeekFrom::Start(TicketData::TitleKey as _))?;
-        ticket.read_exact(&mut title_key.key)?;
+        ticket.read_exact(&mut title_key.title_key)?;
         debug!(
             title_key = ?format!(
                 "{}={}",
-                hex::encode(title_key.title_id),
-                hex::encode(title_key.key)
+                hex::encode(title_key.rights_id),
+                hex::encode(title_key.title_key)
             )
         );
 
