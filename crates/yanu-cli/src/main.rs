@@ -20,6 +20,16 @@ use indicatif::HumanDuration;
 use opts::YanuCli;
 use tracing::{debug, error, info};
 
+macro_rules! validate_paths {
+    ($($a:expr),*) => {
+        [$($a,)*]
+        .into_iter()
+        .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
+        .find(|meta| meta.is_err())
+        .transpose()
+    };
+}
+
 fn main() -> Result<()> {
     // Colorful errors
     color_eyre::config::HookBuilder::default()
@@ -95,11 +105,7 @@ fn run() -> Result<()> {
             }
 
             // Path validation
-            _ = [Some(&opts.base), Some(&opts.update)]
-                .into_iter()
-                .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
-                .find(|meta| meta.is_err())
-                .transpose()?;
+            validate_paths!(Some(&opts.base), Some(&opts.update))?;
 
             info!("Started patching!");
             timer = Some(Instant::now());
@@ -128,15 +134,11 @@ fn run() -> Result<()> {
 
             // Path validation
             // ?let clap do this instead
-            _ = [
+            validate_paths!(
                 Some(&opts.controlnca),
                 Some(&opts.romfsdir),
-                Some(&opts.exefsdir),
-            ]
-            .into_iter()
-            .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
-            .find(|meta| meta.is_err())
-            .transpose()?;
+                Some(&opts.exefsdir)
+            )?;
 
             if opts.titleid.len() != SHORT_TITLEID_LEN as _ {
                 bail!(
@@ -167,11 +169,7 @@ fn run() -> Result<()> {
             }
 
             // Path validation
-            _ = [Some(&opts.base), opts.update.as_ref()]
-                .into_iter()
-                .filter_map(|path| path.and_then(|path| Some(fs::metadata(path))))
-                .find(|meta| meta.is_err())
-                .transpose()?;
+            validate_paths!(Some(&opts.base), opts.update.as_ref())?;
 
             let prefix = if opts.update.is_some() {
                 "base+patch."
