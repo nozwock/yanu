@@ -65,6 +65,13 @@ Relevant resources:
 > - https://www.virustotal.com
 > - https://www.hybrid-analysis.com 
 
+### Docker
+Go [here](https://github.com/arturkasperek/yanu/pkgs/container/yanu) and find tag of a version that you wanna use. Example usage:
+   ```sh
+      cd /dir/with/nsp
+      docker run -v $(pwd)/prod.keys:/root/.switch/prod.keys -v $(pwd):/work ghcr.io/nozwock/yanu update --base Base.nsp --update Update.nsp 
+   ```
+
 ## Usage (CLI only)
 View CLI help with:
 ```sh

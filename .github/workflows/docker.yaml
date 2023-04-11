@@ -1,6 +1,8 @@
 name: Publish Docker image
 on:
   push:
+    tags:
+      - '*'
     branches:
       - main
   release:
@@ -29,7 +31,7 @@ jobs:
         run: echo "tag=$(echo ${GITHUB_REF#refs/tags/})" >>$GITHUB_OUTPUT
         id: extract_tag
       - name: Build and push - tag releaes
-        if: github.event_name == 'create' && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -37,10 +39,10 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/yanu:${{ steps.extract_tag.outputs.tag }}
       - name: Build and push - branch
-        if: github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/heads/')
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/yanu:${{ steps.extract_branch.outputs.branch }}-${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/yanu:${{ steps.extract_branch.outputs.branch }}-${{ github.sha }},ghcr.io/${{ github.repository_owner }}/yanu:latest
