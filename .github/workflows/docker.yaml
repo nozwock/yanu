@@ -3,8 +3,6 @@ on:
   push:
     tags:
       - '*'
-    branches:
-      - main
   release:
     types: [created]
 jobs:
