@@ -14,7 +14,7 @@ RUN ln -s /usr/bin/gcc-nm-12 /usr/bin/gcc-nm
 RUN curl https://sh.rustup.rs | sh -s -- -y
 
 COPY . .
-WORKDIR /work/yanu-cli
+WORKDIR /work/crates/yanu-cli
 RUN $HOME/.cargo/bin/cargo build --release
 WORKDIR /work
 RUN mv target/release/yanu-cli /usr/bin/yanu
