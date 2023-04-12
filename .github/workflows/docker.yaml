@@ -5,6 +5,7 @@ on:
       - '*'
   release:
     types: [created]
+  workflow_dispatch:
 jobs:
   push_to_registry:
     name: Push Docker image to GitHub registry
