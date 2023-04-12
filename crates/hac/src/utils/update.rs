@@ -17,11 +17,15 @@ use crate::{
     },
 };
 
+use super::hacpack_cleanup_install;
+
 // TODO: update can be reduced to a combination of unpack and repack
 
 /// Apply update NSP to the base NSP.
 pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
     let config = Config::load()?;
+    let curr_dir = std::env::current_dir()?;
+    let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
 
     #[cfg(not(feature = "android-proot"))]
     let readers = vec![
@@ -204,8 +208,6 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     if let Err(err) = patch_dir.close() {
         warn!(?err);
     }
-
-    _ = fs::remove_dir_all("hacpack_backup");
 
     Ok(patched_nsp)
 }

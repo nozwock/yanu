@@ -8,6 +8,7 @@ use tracing::{debug, info};
 
 use crate::{
     backend::{Backend, BackendKind},
+    utils::hacpack_cleanup_install,
     vfs::{
         nca::{self, Nca},
         nsp::Nsp,
@@ -29,6 +30,9 @@ where
     R: AsRef<Path>,
     O: AsRef<Path>,
 {
+    let curr_dir = std::env::current_dir()?;
+    let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
+
     #[cfg(all(
         target_arch = "x86_64",
         any(target_os = "windows", target_os = "linux")
@@ -113,8 +117,6 @@ where
     info!(from = ?packed_nsp.path,to = ?dest,"Moving");
     move_file(&packed_nsp.path, &dest)?;
     packed_nsp.path = dest;
-
-    _ = fs::remove_dir_all("hacpack_backup");
 
     Ok(packed_nsp)
 }
