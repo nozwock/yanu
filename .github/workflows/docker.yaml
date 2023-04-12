@@ -35,7 +35,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/yanu:${{ steps.extract_tag.outputs.tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/yanu:${{ steps.extract_tag.outputs.tag }},ghcr.io/${{ github.repository_owner }}/yanu:latest
       - name: Build and push - branch
         if: startsWith(github.ref, 'refs/heads/')
         uses: docker/build-push-action@v4
