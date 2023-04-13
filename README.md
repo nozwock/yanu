@@ -22,7 +22,6 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 ### Supported File Types
 - [x] NSP 
 - [ ] XCI
-- [ ] NSZ
 
 > **Note** - Support for others might be added.
 
@@ -116,6 +115,14 @@ yanu repack --controlnca './base+update.bylies/patchdata/123456.nca' --romfsdir 
 | Keys | `%USERPROFILE%\.switch` | `$HOME/.switch` |
 | Cache | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu` |
 | Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
+
+## Troubleshooting
+
+- For "Failed to sync package repos" like errors while trying to install `yanu` on Termux:
+   - Update your outdated repos using:
+      ```sh
+      termux-change-repo
+      ```
 
 ## Special Thanks
 
