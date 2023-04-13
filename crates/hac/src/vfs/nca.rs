@@ -56,18 +56,18 @@ impl Nca {
             "Identifying TitleID and ContentType",
         );
 
-        let reader_output = Command::new(reader.path())
+        let output = Command::new(reader.path())
             .args([file_path.as_ref()])
             .output()?;
-        if !reader_output.status.success() {
+        if !output.status.success() {
             warn!(
                 nca = %file_path.as_ref().display(),
                 backend = ?reader.kind(),
-                stderr = %String::from_utf8(reader_output.stderr)?,
+                stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while viewing info",
             );
         } else {
-            let stderr = std::str::from_utf8(reader_output.stderr.as_slice())?
+            let stderr = std::str::from_utf8(output.stderr.as_slice())?
                 .lines()
                 .filter(|line| !line.to_lowercase().contains("failed to match key"))
                 .collect::<Vec<_>>()
@@ -76,7 +76,7 @@ impl Nca {
                 warn!(backend = ?reader.kind(), %stderr);
             }
         }
-        let stdout = String::from_utf8(reader_output.stdout)?;
+        let stdout = String::from_utf8(output.stdout)?;
 
         let program_id_pat = match reader.kind() {
             #[cfg(all(
@@ -143,6 +143,32 @@ impl Nca {
     }
     pub fn get_program_id(&self) -> String {
         hex::encode(self.program_id)
+    }
+    pub fn extract_romfs<P: AsRef<Path>>(&self, extractor: &Backend, romfs_dir: P) -> Result<()> {
+        let output = Command::new(extractor.path())
+            .args([
+                self.path.as_path(),
+                "--romfsdir".as_ref(),
+                romfs_dir.as_ref(),
+            ])
+            .output()?;
+        if !output.status.success() {
+            warn!(
+                nca = %self.path.display(),
+                backend = ?extractor.kind(),
+                stderr = %String::from_utf8(output.stderr)?,
+                "Encountered an error while extracting romfs",
+            );
+            bail!("Encountered an error while extracting romfs");
+        }
+
+        info!(
+            ?self.path,
+            romfs = ?romfs_dir.as_ref(),
+            "Extraction done"
+        );
+
+        Ok(())
     }
     pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,

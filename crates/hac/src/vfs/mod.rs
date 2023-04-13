@@ -1,3 +1,4 @@
+pub mod nacp;
 pub mod nca;
 pub mod nsp;
 pub mod ticket;
@@ -9,3 +10,4 @@ pub mod ticket;
 
 // No. of hexadecimal characters
 pub const PROGRAMID_LEN: u8 = 16;
+const UNICODE_REPLACEMENT_CHAR: char = '\u{fffd}';
