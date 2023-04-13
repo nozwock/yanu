@@ -13,7 +13,6 @@ use crate::{
     vfs::{
         nca::{self, nca_with_filters, nca_with_kind, Nca},
         nsp::Nsp,
-        ticket::SHORT_TITLEID_LEN,
     },
 };
 
@@ -119,28 +118,8 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     // TODO?: support for when main and update's titleid don't match
     // maybe handle this by having a override flag for TitleID
     // once unpack/repack combo is being used for updating
-    let mut title_id = base_nca
-        .title_id
-        .as_ref()
-        .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", base_nca.path.display()))?
-        .to_lowercase(); //* Important
-    title_id.truncate(SHORT_TITLEID_LEN as _);
-    debug!(?title_id, "Selected TitleID for packing");
-
-    // let mut control_nca = if let Some(control_title_id) = control_nca.title_id.as_mut() {
-    //     control_title_id.truncate(TITLEID_SIZE as _);
-    //     let control_title_id = control_title_id.to_lowercase();
-    //     if title_id != control_title_id {
-    //         get_nca(&readers[0], base_data_dir.path(), NcaType::Control)
-    //             .ok_or_else(|| eyre!("well fk"))?
-    //             .remove(0)
-    //     } else {
-    //         control_nca
-    //     }
-    // } else {
-    //     control_nca
-    // };
-    // debug!(?control_nca, "Changed Control NCA");
+    let program_id = base_nca.get_program_id().to_lowercase();
+    debug!(?program_id, "Selected TitleID for packing");
 
     // !Moving Control NCA
     let nca_dir = patch_dir.path().join("nca");
@@ -165,7 +144,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     // !Packing fs files to NCA
     let patched_nca_path = Nca::pack(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         &romfs_dir,
         &exefs_dir,
@@ -174,7 +153,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     let patched_nca = readers
         .iter()
         // Could inspect and log the error if need be
-        .map(|reader| Nca::new(reader, &patched_nca_path).ok())
+        .map(|reader| Nca::try_new(reader, &patched_nca_path).ok())
         .find(|nca| nca.is_some())
         .flatten()
         .ok_or_else(|| eyre!("Failed to find Patched NCA"))?;
@@ -182,7 +161,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     // !Generating Meta NCA
     Nca::create_meta(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         &patched_nca,
         &control_nca,
@@ -192,7 +171,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     // !Packing NCAs to NSP
     let mut patched_nsp = Nsp::pack(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         &nca_dir,
         outdir.as_ref(),
@@ -200,7 +179,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
 
     let dest = outdir
         .as_ref()
-        .join(format!("{}[yanu-patched].nsp", title_id));
+        .join(format!("{}[yanu-patched].nsp", program_id));
     info!(from = ?patched_nsp.path,to = ?dest,"Moving");
     move_file(&patched_nsp.path, &dest)?;
     patched_nsp.path = dest;

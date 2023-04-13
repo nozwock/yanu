@@ -12,14 +12,14 @@ use crate::{
     vfs::{
         nca::{self, Nca},
         nsp::Nsp,
-        ticket::SHORT_TITLEID_LEN,
+        PROGRAMID_LEN,
     },
 };
 
 /// Repack romfs/exefs back to NSP.
 pub fn repack_fs_data<N, E, R, O>(
     control_path: N,
-    mut title_id: String,
+    mut program_id: String,
     romfs_dir: R,
     exefs_dir: E,
     outdir: O,
@@ -48,7 +48,7 @@ where
     // Validating NCA as Control Type
     let control_nca = readers
         .iter()
-        .map(|reader| Nca::new(reader, control_path.as_ref()).ok())
+        .map(|reader| Nca::try_new(reader, control_path.as_ref()).ok())
         .find(|nca| matches!(nca, Some(nca) if nca.content_type == nca::ContentType::Control))
         .flatten()
         .ok_or_else(|| {
@@ -58,20 +58,15 @@ where
             )
         })?;
 
-    // let mut title_id = control_nca
-    //     .title_id
-    //     .as_ref()
-    //     .ok_or_else(|| eyre!("Failed to find TitleID in '{}'", control_nca.path.display()))?
-    //     .to_lowercase();
-    title_id.truncate(SHORT_TITLEID_LEN as _);
-    debug!(?title_id, "Selected TitleID for packing");
+    program_id.truncate(PROGRAMID_LEN as _);
+    debug!(?program_id, "Selected ProgramID for packing");
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
     // !Packing fs files to NCA
     let patched_nca_path = Nca::pack(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         romfs_dir.as_ref(),
         exefs_dir.as_ref(),
@@ -80,7 +75,7 @@ where
     let patched_nca = readers
         .iter()
         // Could inspect and log the error if need be
-        .map(|reader| Nca::new(reader, &patched_nca_path).ok())
+        .map(|reader| Nca::try_new(reader, &patched_nca_path).ok())
         .find(|nca| nca.is_some())
         .flatten()
         .ok_or_else(|| eyre!("Failed to find Patched NCA"))?;
@@ -88,7 +83,7 @@ where
     // !Generating Meta NCA
     Nca::create_meta(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         &patched_nca,
         &control_nca,
@@ -105,7 +100,7 @@ where
     // !Packing NCAs to NSP
     let mut packed_nsp = Nsp::pack(
         &packer,
-        &title_id,
+        &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
         temp_dir.path(),
         outdir.as_ref(),
@@ -113,7 +108,7 @@ where
 
     let dest = outdir
         .as_ref()
-        .join(format!("{}[yanu-repacked].nsp", title_id));
+        .join(format!("{}[yanu-repacked].nsp", program_id));
     info!(from = ?packed_nsp.path,to = ?dest,"Moving");
     move_file(&packed_nsp.path, &dest)?;
     packed_nsp.path = dest;

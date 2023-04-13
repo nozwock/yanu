@@ -38,3 +38,10 @@ pub fn set_executable_bit<P: AsRef<Path>>(path: P, on: bool) -> Result<()> {
     tracing::info!(path = ?path.as_ref(), "Given executable permission");
     Ok(())
 }
+
+pub fn ext_matches<P: AsRef<Path>>(path: P, ext: &str) -> bool {
+    path.as_ref()
+        .extension()
+        .map(|_ext| _ext.to_ascii_lowercase() == ext)
+        .unwrap_or(false)
+}

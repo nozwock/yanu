@@ -14,8 +14,6 @@ use std::{
 use tracing::{debug, info};
 
 const COMMON_KEY_SIZE: u8 = 16;
-// No. of hexadecimal characters
-pub const SHORT_TITLEID_LEN: u8 = 16;
 
 enum TicketData {
     RightsId = 0x2a0, // offset

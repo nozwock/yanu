@@ -148,8 +148,8 @@ fn run() -> Result<()> {
         info!("Started patching!");
         let started = Instant::now();
         let patched = update_nsp(
-            &mut Nsp::new(&base_path)?,
-            &mut Nsp::new(&update_path)?,
+            &mut Nsp::try_new(&base_path)?,
+            &mut Nsp::try_new(&update_path)?,
             default_pack_outdir()?,
         )?;
         rfd::MessageDialog::new()

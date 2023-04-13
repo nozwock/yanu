@@ -1,4 +1,5 @@
 use crate::{backend::Backend, vfs::ticket::TitleKey};
+use common::utils::ext_matches;
 use eyre::{bail, eyre, Result};
 use std::{
     path::{Path, PathBuf},
@@ -14,20 +15,9 @@ pub struct Nsp {
 }
 
 impl Nsp {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        if path
-            .as_ref()
-            .extension()
-            .ok_or_else(|| eyre!("Failed to get file extension"))?
-            != "nsp"
-        {
-            bail!(
-                "'{}' is not a nsp file",
-                path.as_ref()
-                    .file_name()
-                    .map(|ostr| ostr.to_string_lossy())
-                    .ok_or_else(|| eyre!("Failed to get filename"))?
-            );
+    pub fn try_new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        if !path.as_ref().is_file() || !ext_matches(path.as_ref(), "nsp") {
+            bail!("'{}' is not a NSP file", path.as_ref().display());
         }
 
         Ok(Self {
@@ -61,7 +51,7 @@ impl Nsp {
     }
     pub fn pack<K, P, Q>(
         packer: &Backend,
-        title_id: &str,
+        program_id: &str,
         keyfile: K,
         nca_dir: P,
         outdir: Q,
@@ -81,7 +71,7 @@ impl Nsp {
             "--ncadir".as_ref(),
             nca_dir.as_ref(),
             "--titleid".as_ref(),
-            title_id.as_ref(),
+            program_id.as_ref(),
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
@@ -98,7 +88,7 @@ impl Nsp {
         }
 
         info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
-        Nsp::new(outdir.as_ref().join(format!("{}.nsp", title_id)))
+        Nsp::try_new(outdir.as_ref().join(format!("{}.nsp", program_id)))
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
@@ -108,7 +98,7 @@ impl Nsp {
                 .into_iter()
                 .filter_map(|e| e.ok())
             {
-                if entry.path().extension() == Some("tik".as_ref()) {
+                if ext_matches(entry.path(), "tik") {
                     self.title_key = Some(TitleKey::new(entry.path())?);
                     break;
                 }

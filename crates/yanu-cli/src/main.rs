@@ -3,7 +3,10 @@ mod opts;
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
-use common::defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH};
+use common::{
+    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
+    utils::ext_matches,
+};
 use config::Config;
 #[cfg(not(feature = "android-proot"))]
 use config::{NcaExtractor, NspExtractor};
@@ -14,7 +17,7 @@ use fs_err as fs;
 use hac::backend::{Backend, BackendKind};
 use hac::{
     utils::{repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
-    vfs::{nsp::Nsp, ticket::SHORT_TITLEID_LEN},
+    vfs::{nsp::Nsp, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
 use opts::YanuCli;
@@ -77,7 +80,7 @@ fn run() -> Result<()> {
     debug!(?config);
 
     if let Some(keyfile) = opts.keyfile {
-        if keyfile.extension() != Some("keys".as_ref()) {
+        if !ext_matches(&keyfile, "keys") {
             bail!("Invalid keyfile");
         }
         info!(?keyfile, "Selected keyfile");
@@ -113,8 +116,8 @@ fn run() -> Result<()> {
                 "{} '{}'",
                 style("Patched NSP created at").green().bold(),
                 update_nsp(
-                    &mut Nsp::new(opts.base)?,
-                    &mut Nsp::new(opts.update)?,
+                    &mut Nsp::try_new(opts.base)?,
+                    &mut Nsp::try_new(opts.update)?,
                     default_outdir()?,
                 )?
                 .path
@@ -140,7 +143,7 @@ fn run() -> Result<()> {
                 Some(&opts.exefsdir)
             )?;
 
-            if opts.titleid.len() != SHORT_TITLEID_LEN as _ {
+            if opts.titleid.len() != PROGRAMID_LEN as _ {
                 bail!(
                     "len: {} '{}' is invalid TitleID, TitleID should be in hexadecimal with a size of 8 bytes, i.e. 16 hexadecimal characters",
                     opts.titleid.len(),
@@ -188,8 +191,8 @@ fn run() -> Result<()> {
 
             timer = Some(Instant::now());
             unpack_nsp(
-                Nsp::new(opts.base)?,
-                opts.update.map(|f| Nsp::new(f).ok()).flatten(),
+                Nsp::try_new(opts.base)?,
+                opts.update.map(|f| Nsp::try_new(f).ok()).flatten(),
                 &outdir,
             )?;
             eprintln!(
@@ -298,7 +301,7 @@ fn run() -> Result<()> {
                 };
                 info!(?keyfile_path, "Selected keyfile");
 
-                if keyfile_path.extension() != Some("keys".as_ref()) {
+                if !ext_matches(&keyfile_path, "keys") {
                     bail!("Invalid keyfile");
                 }
 
@@ -316,15 +319,7 @@ fn run() -> Result<()> {
                 .min_depth(1)
                 .into_iter()
                 .filter_map(|e| e.ok())
-                .filter(|entry| {
-                    entry.file_type().is_file()
-                        && entry
-                            .path()
-                            .extension()
-                            .and_then(|ext| Some(ext.to_ascii_lowercase()))
-                            .as_deref()
-                            == Some("nsp".as_ref())
-                })
+                .filter(|entry| entry.file_type().is_file() && ext_matches(entry.path(), "nsp"))
                 .collect::<Vec<_>>();
 
             let options = roms_path
@@ -343,7 +338,7 @@ fn run() -> Result<()> {
             let mut base = roms_path
                 .iter()
                 .find(|entry| entry.file_name() == choice)
-                .map(|entry| Nsp::new(entry.path()))
+                .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
                 .expect(&format!(
                     "Selected package '{}' should be in {:#?}",
@@ -361,7 +356,7 @@ fn run() -> Result<()> {
             let mut update = roms_path
                 .iter()
                 .find(|entry| entry.file_name() == choice)
-                .map(|entry| Nsp::new(entry.path()))
+                .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
                 .expect(&format!(
                     "Selected package '{}' should be in {:#?}",

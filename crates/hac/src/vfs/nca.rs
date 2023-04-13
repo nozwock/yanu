@@ -6,6 +6,7 @@ use std::{
     str::FromStr,
 };
 
+use common::utils::ext_matches;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
 use tracing::{debug, error, info, warn};
@@ -15,12 +16,12 @@ use crate::backend::{Backend, BackendKind};
 
 #[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq, Hash)]
 pub enum ContentType {
-    Program,
-    Meta,
-    Control,
-    Manual,
-    Data,
-    PublicData,
+    Program = 0x00,
+    Meta = 0x01,
+    Control = 0x02,
+    Manual = 0x03,
+    Data = 0x04,
+    PublicData = 0x05,
 }
 
 impl fmt::Display for ContentType {
@@ -32,45 +33,33 @@ impl fmt::Display for ContentType {
 #[derive(Debug, Clone)]
 pub struct Nca {
     pub path: PathBuf,
-    pub title_id: Option<String>, //? does every NCA have TittleID?
+    pub program_id: [u8; 8],
     pub content_type: ContentType,
 }
 
-// TODO: add the stdout to the logs in case an error is catches in main
+// TODO?: add the stdout to the logs in case an error is catches in main
 
 impl Nca {
-    pub fn new<P: AsRef<Path>>(reader: &Backend, path: P) -> Result<Self> {
-        if path.as_ref().is_file()
-            && path
-                .as_ref()
-                .extension()
-                .ok_or_else(|| eyre!("Failed to get file extension"))?
-                != "nca"
-        {
-            bail!(
-                "'{}' is not a nca file",
-                path.as_ref()
-                    .file_name()
-                    .map(|ostr| ostr.to_string_lossy())
-                    .ok_or_else(|| eyre!("Failed to get filename"))?
-            );
-        }
+    pub fn try_new<P: AsRef<Path>>(reader: &Backend, file_path: P) -> Result<Self> {
+        Nca::is_nca(file_path.as_ref())?;
 
         info!(
-            nca = %path.as_ref().display(),
+            nca = %file_path.as_ref().display(),
             "Identifying TitleID and ContentType",
         );
 
-        let output = Command::new(reader.path()).args([path.as_ref()]).output()?; // Capture stdout aswell :-)
-        if !output.status.success() {
+        let reader_output = Command::new(reader.path())
+            .args([file_path.as_ref()])
+            .output()?;
+        if !reader_output.status.success() {
             warn!(
-                nca = %path.as_ref().display(),
+                nca = %file_path.as_ref().display(),
                 backend = ?reader.kind(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8(reader_output.stderr)?,
                 "Encountered an error while viewing info",
             );
         } else {
-            let stderr = std::str::from_utf8(output.stderr.as_slice())?
+            let stderr = std::str::from_utf8(reader_output.stderr.as_slice())?
                 .lines()
                 .filter(|line| !line.to_lowercase().contains("failed to match key"))
                 .collect::<Vec<_>>()
@@ -79,9 +68,9 @@ impl Nca {
                 warn!(backend = ?reader.kind(), %stderr);
             }
         }
+        let stdout = String::from_utf8(reader_output.stdout)?;
 
-        let stdout = String::from_utf8(output.stdout)?;
-        let title_id_pat = match reader.kind() {
+        let program_id_pat = match reader.kind() {
             #[cfg(all(
                 target_arch = "x86_64",
                 any(target_os = "windows", target_os = "linux")
@@ -90,15 +79,22 @@ impl Nca {
             // On all supported platforms
             BackendKind::Hactool => "Title ID:",
             BackendKind::Hac2l => "Program Id:",
-            _ => unreachable!(),
+            _ => unimplemented!(),
         };
-        let title_id = stdout
+        let mut program_id = [0u8; 8];
+        stdout
             .lines()
-            .find(|line| line.contains(title_id_pat))
+            .find(|line| line.contains(program_id_pat))
             .map(|line| line.trim().split(' ').last())
             .flatten()
-            .map(|id| id.into());
-        debug!(?title_id);
+            .map(|id_str| hex::decode_to_slice(id_str, program_id.as_mut()))
+            .ok_or_else(|| {
+                eyre!(
+                    "Failed to process ProgramID of '{}'",
+                    file_path.as_ref().display()
+                )
+            })??;
+        debug!(?program_id);
 
         let content_type = match stdout
             .lines()
@@ -112,16 +108,16 @@ impl Nca {
             .flatten()
             .transpose()
         {
-            Ok(kind) => kind.ok_or_else(|| {
+            Ok(content_type) => content_type.ok_or_else(|| {
                 eyre!(
-                    "Failed to identify ContentType of '{}'",
-                    path.as_ref().display()
+                    "Failed to process ContentType of '{}'",
+                    file_path.as_ref().display()
                 )
             })?,
             Err(err) => {
                 // Unknown ContentType
                 warn!(
-                    nca = %path.as_ref().display(),
+                    nca = %file_path.as_ref().display(),
                     backend = ?reader.kind(),
                     stdout = %stdout,
                     "Dumping stdout"
@@ -132,10 +128,22 @@ impl Nca {
         debug!(?content_type);
 
         Ok(Self {
-            path: path.as_ref().to_owned(),
-            title_id,
+            path: file_path.as_ref().to_owned(),
+            program_id,
             content_type,
         })
+    }
+    fn is_nca<P: AsRef<Path>>(file_path: P) -> Result<()> {
+        // Can't rely on Backend tools because they're garbage cli tools (don't even have non zero exit status on failure)
+        // excluding Hactoolnet
+        if file_path.as_ref().is_file() && ext_matches(file_path.as_ref(), "nca") {
+            Ok(())
+        } else {
+            bail!("'{}' is not a NCA file", file_path.as_ref().display())
+        }
+    }
+    pub fn get_program_id(&self) -> String {
+        hex::encode(self.program_id)
     }
     pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
@@ -177,7 +185,7 @@ impl Nca {
     }
     pub fn pack<P, Q, R, K>(
         packer: &Backend,
-        title_id: &str,
+        program_id: &str,
         keyfile: K,
         romfs_dir: P,
         exefs_dir: Q,
@@ -209,7 +217,7 @@ impl Nca {
             "--romfsdir".as_ref(),
             romfs_dir.as_ref(),
             "--titleid".as_ref(),
-            title_id.as_ref(),
+            program_id.as_ref(),
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
@@ -231,7 +239,7 @@ impl Nca {
             .into_iter()
             .filter_map(|e| e.ok())
         {
-            if entry.path().is_file() && entry.path().extension() == Some("nca".as_ref()) {
+            if entry.path().is_file() && ext_matches(entry.path(), "nca") {
                 info!(outdir = %outdir.as_ref().display(), "Packing done");
                 info!(nca = %entry.path().display(), "Should be the Patched NCA");
                 return Ok(entry.into_path());
@@ -241,7 +249,7 @@ impl Nca {
     }
     pub fn create_meta<K, O>(
         packer: &Backend,
-        title_id: &str,
+        program_id: &str,
         keyfile: K,
         program: &Nca,
         control: &Nca,
@@ -267,7 +275,7 @@ impl Nca {
             "--controlnca".as_ref(),
             control.path.as_path(),
             "--titleid".as_ref(),
-            title_id.as_ref(),
+            program_id.as_ref(),
             "--outdir".as_ref(),
             outdir.as_ref(),
         ]);
@@ -320,7 +328,7 @@ where
         .into_iter()
         .filter_map(|entry| match entry {
             Ok(entry) => {
-                if entry.path().extension() == Some("nca".as_ref()) {
+                if ext_matches(entry.path(), "nca") {
                     Some(entry)
                 } else {
                     None
@@ -332,7 +340,7 @@ where
             }
         })
     {
-        match Nca::new(reader, entry.path()) {
+        match Nca::try_new(reader, entry.path()) {
             Ok(nca) => {
                 if filters.contains(&nca.content_type) {
                     filtered_ncas
