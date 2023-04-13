@@ -44,9 +44,9 @@ Relevant resources:
 
 ### Linux
 
-1. Make sure dependencies required to build hactool/hacPack are installed on your system.
+1. Make sure dependencies required to build hactool/hacPack are installed on your system, for eg-
    ```console
-   git gcc make binutils
+   sudo apt -y install gcc-12 g++-12 make git libjpeg-dev binutils-dev libicu-dev
    ```
 2. Download & give executable permission to `yanu`:
    ```console
