@@ -30,6 +30,9 @@ impl fmt::Display for ContentType {
     }
 }
 
+/// https://switchbrew.org/wiki/NCA
+///
+/// Provides some methods relating to Nca, an encrypted content archive.
 #[derive(Debug, Clone)]
 pub struct Nca {
     pub path: PathBuf,
@@ -41,7 +44,12 @@ pub struct Nca {
 
 impl Nca {
     pub fn try_new<P: AsRef<Path>>(reader: &Backend, file_path: P) -> Result<Self> {
-        Nca::is_nca(file_path.as_ref())?;
+        // Can't rely on Backend tools to check for Nca file because they're
+        // garbage cli tools (don't even have non zero exit status on failure)
+        // excluding Hactoolnet
+        if !file_path.as_ref().is_file() || !ext_matches(file_path.as_ref(), "nca") {
+            bail!("'{}' is not a NCA file", file_path.as_ref().display())
+        }
 
         info!(
             nca = %file_path.as_ref().display(),
@@ -132,15 +140,6 @@ impl Nca {
             program_id,
             content_type,
         })
-    }
-    fn is_nca<P: AsRef<Path>>(file_path: P) -> Result<()> {
-        // Can't rely on Backend tools because they're garbage cli tools (don't even have non zero exit status on failure)
-        // excluding Hactoolnet
-        if file_path.as_ref().is_file() && ext_matches(file_path.as_ref(), "nca") {
-            Ok(())
-        } else {
-            bail!("'{}' is not a NCA file", file_path.as_ref().display())
-        }
     }
     pub fn get_program_id(&self) -> String {
         hex::encode(self.program_id)

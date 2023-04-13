@@ -67,7 +67,7 @@ pub struct Backend {
 }
 
 impl Backend {
-    pub fn new(kind: BackendKind) -> Result<Self> {
+    pub fn try_new(kind: BackendKind) -> Result<Self> {
         let filename = kind.to_filename();
         let cache = Cache::default();
         let path = if let Ok(cached_path) = cache.path(&filename) {

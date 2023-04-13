@@ -21,17 +21,17 @@ where
 
     #[cfg(not(feature = "android-proot"))]
     let readers = vec![
-        Backend::new(BackendKind::Hactoolnet)?,
-        Backend::new(BackendKind::Hac2l)?,
+        Backend::try_new(BackendKind::Hactoolnet)?,
+        Backend::try_new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nsp_extractor = Backend::new(BackendKind::from(config.nsp_extractor))?;
+    let nsp_extractor = Backend::try_new(BackendKind::from(config.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
     let nsp_extractor = Backend::new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
-    let nca_extractor = Backend::new(BackendKind::from(config.nca_extractor))?;
+    let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
     #[cfg(feature = "android-proot")]
     let nca_extractor = Backend::new(BackendKind::Hac2l)?;
 

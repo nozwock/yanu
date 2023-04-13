@@ -1,6 +1,6 @@
 use crate::{backend::Backend, vfs::ticket::TitleKey};
 use common::utils::ext_matches;
-use eyre::{bail, eyre, Result};
+use eyre::{bail, Result};
 use std::{
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -8,6 +8,9 @@ use std::{
 use tracing::{error, info};
 use walkdir::WalkDir;
 
+/// https://switchbrew.org/wiki/NCA#PFS0
+///
+/// Provides some methods relating to Pfs0, a file system.
 #[derive(Debug, Default, Clone)]
 pub struct Nsp {
     pub path: PathBuf,
@@ -99,7 +102,7 @@ impl Nsp {
                 .filter_map(|e| e.ok())
             {
                 if ext_matches(entry.path(), "tik") {
-                    self.title_key = Some(TitleKey::new(entry.path())?);
+                    self.title_key = Some(TitleKey::try_new(entry.path())?);
                     break;
                 }
                 continue;

@@ -38,12 +38,12 @@ where
         any(target_os = "windows", target_os = "linux")
     ))]
     let readers = vec![
-        Backend::new(BackendKind::Hactoolnet)?,
-        Backend::new(BackendKind::Hac2l)?,
+        Backend::try_new(BackendKind::Hactoolnet)?,
+        Backend::try_new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::new(BackendKind::Hac2l)?];
-    let packer = Backend::new(BackendKind::Hacpack)?;
+    let packer = Backend::try_new(BackendKind::Hacpack)?;
 
     // Validating NCA as Control Type
     let control_nca = readers

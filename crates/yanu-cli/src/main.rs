@@ -381,10 +381,10 @@ fn run() -> Result<()> {
         #[cfg(unix)]
         Some(opts::Commands::BuildBackend) => {
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-            Backend::new(BackendKind::Hactoolnet)?;
-            Backend::new(BackendKind::Hactool)?;
-            Backend::new(BackendKind::Hac2l)?;
-            Backend::new(BackendKind::Hacpack)?;
+            Backend::try_new(BackendKind::Hactoolnet)?;
+            Backend::try_new(BackendKind::Hactool)?;
+            Backend::try_new(BackendKind::Hac2l)?;
+            Backend::try_new(BackendKind::Hacpack)?;
             eprintln!("{}", style("Successfully built backend").green().bold());
         }
         None => unreachable!(),

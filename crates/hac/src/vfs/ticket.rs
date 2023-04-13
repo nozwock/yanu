@@ -1,6 +1,6 @@
 //! https://switchbrew.org/wiki/Ticket
 //!
-//! Allows easy access to ticket files, a format used to store an encrypted title keys.
+//! Contains method for extracting TitleKey from Tickets, a format used to store an encrypted title key.
 //!
 //! Cheap implementation only supporting 'common' Title key type.
 
@@ -38,7 +38,7 @@ impl fmt::Display for TitleKey {
 }
 
 impl TitleKey {
-    pub fn new<P: AsRef<Path>>(decrypted_tik_path: P) -> Result<TitleKey> {
+    pub fn try_new<P: AsRef<Path>>(decrypted_tik_path: P) -> Result<TitleKey> {
         let mut title_key = TitleKey::default();
         let mut ticket = fs::File::open(decrypted_tik_path.as_ref())?;
 
