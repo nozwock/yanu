@@ -2,8 +2,8 @@ pub mod repack;
 pub mod unpack;
 pub mod update;
 
-use crate::vfs::ticket::TitleKey;
-use common::defines::DEFAULT_TITLEKEYS_PATH;
+use crate::vfs::{nacp::NacpData, ticket::TitleKey};
+use common::{defines::DEFAULT_TITLEKEYS_PATH, utils::move_file};
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use std::{io::ErrorKind, path::PathBuf};
@@ -88,3 +88,26 @@ macro_rules! hacpack_cleanup_install {
 }
 
 pub(super) use hacpack_cleanup_install;
+
+pub fn custom_nsp_rename(
+    nsp_path: &mut PathBuf,
+    nacp_data: &NacpData,
+    program_id: &str,
+    suffix: &str,
+) -> Result<()> {
+    let dest = nsp_path
+        .parent()
+        .ok_or_else(|| eyre!("Failed to get parent"))?
+        .join(format!(
+            "{} [{}][v{}]{suffix}.nsp",
+            dbg!(nacp_data.get_application_name()),
+            program_id,
+            dbg!(nacp_data.get_application_version())
+        ));
+
+    info!(from = %nsp_path.display(), to = %dest.display(), "Moving");
+    move_file(&nsp_path, &dest)?;
+    *nsp_path = dest;
+
+    Ok(())
+}

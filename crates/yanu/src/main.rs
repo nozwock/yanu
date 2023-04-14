@@ -9,6 +9,7 @@ use common::defines::DEFAULT_PRODKEYS_PATH;
 use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
+use hac::utils::custom_nsp_rename;
 use hac::{utils::update::update_nsp, vfs::nsp::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
@@ -147,10 +148,16 @@ fn run() -> Result<()> {
     {
         info!("Started patching!");
         let started = Instant::now();
-        let patched = update_nsp(
+        let (mut patched, nacp_data, program_id) = update_nsp(
             &mut Nsp::try_new(&base_path)?,
             &mut Nsp::try_new(&update_path)?,
             default_pack_outdir()?,
+        )?;
+        custom_nsp_rename(
+            &mut patched.path,
+            &nacp_data,
+            &program_id,
+            concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
         )?;
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Info)

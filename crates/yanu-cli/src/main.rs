@@ -16,7 +16,7 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    utils::{repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
+    utils::{custom_nsp_rename, repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
@@ -112,16 +112,21 @@ fn run() -> Result<()> {
 
             info!("Started patching!");
             timer = Some(Instant::now());
+            let (mut patched, nacp_data, program_id) = update_nsp(
+                &mut Nsp::try_new(opts.base)?,
+                &mut Nsp::try_new(opts.update)?,
+                default_outdir()?,
+            )?;
+            custom_nsp_rename(
+                &mut patched.path,
+                &nacp_data,
+                &program_id,
+                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
+            )?;
             eprintln!(
                 "{} '{}'",
                 style("Patched NSP created at").green().bold(),
-                update_nsp(
-                    &mut Nsp::try_new(opts.base)?,
-                    &mut Nsp::try_new(opts.update)?,
-                    default_outdir()?,
-                )?
-                .path
-                .display()
+                patched.path.display()
             );
         }
         Some(opts::Commands::Repack(opts)) => {
@@ -152,18 +157,23 @@ fn run() -> Result<()> {
             }
 
             timer = Some(Instant::now());
+            let (mut patched, nacp_data, program_id) = repack_fs_data(
+                opts.controlnca,
+                opts.titleid,
+                opts.romfsdir,
+                opts.exefsdir,
+                outdir,
+            )?;
+            custom_nsp_rename(
+                &mut patched.path,
+                &nacp_data,
+                &program_id,
+                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-repacked]"),
+            )?;
             eprintln!(
                 "{} '{}'",
                 style("Repacked NSP created at").green().bold(),
-                repack_fs_data(
-                    opts.controlnca,
-                    opts.titleid,
-                    opts.romfsdir,
-                    opts.exefsdir,
-                    outdir
-                )?
-                .path
-                .display()
+                patched.path.display()
             );
         }
         Some(opts::Commands::Unpack(opts)) => {
@@ -369,12 +379,18 @@ fn run() -> Result<()> {
             {
                 info!("Started patching!");
                 timer = Some(Instant::now());
+                let (mut patched, nacp_data, program_id) =
+                    update_nsp(&mut base, &mut update, default_outdir()?)?;
+                custom_nsp_rename(
+                    &mut patched.path,
+                    &nacp_data,
+                    &program_id,
+                    concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
+                )?;
                 eprintln!(
                     "{} '{}'",
                     style("Patched NSP created at").green().bold(),
-                    update_nsp(&mut base, &mut update, default_outdir()?)?
-                        .path
-                        .display()
+                    patched.path.display()
                 );
             }
         }

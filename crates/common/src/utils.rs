@@ -14,14 +14,11 @@ where
     P: AsRef<Path>,
     Q: AsRef<Path>,
 {
-    match fs::rename(&from, &to) {
-        Ok(_) => Ok(()),
-        Err(_) => {
-            fs::copy(&from, &to)?;
-            fs::remove_file(&from)?;
-            Ok(())
-        }
-    }
+    if fs::rename(&from, &to).is_err() {
+        fs::copy(&from, &to)?;
+        fs::remove_file(&from)?;
+    };
+    Ok(())
 }
 
 #[cfg(unix)]

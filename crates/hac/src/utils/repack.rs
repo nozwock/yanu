@@ -1,15 +1,16 @@
-use common::{defines::DEFAULT_PRODKEYS_PATH, utils::move_file};
+use common::defines::DEFAULT_PRODKEYS_PATH;
 use config::Config;
 use eyre::{eyre, Result};
 use fs_err as fs;
 use std::path::Path;
 use tempfile::tempdir_in;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     backend::{Backend, BackendKind},
     utils::hacpack_cleanup_install,
     vfs::{
+        nacp::{get_nacp_file, NacpData},
         nca::{self, Nca},
         nsp::Nsp,
         PROGRAMID_LEN,
@@ -23,13 +24,14 @@ pub fn repack_fs_data<N, E, R, O>(
     romfs_dir: R,
     exefs_dir: E,
     outdir: O,
-) -> Result<Nsp>
+) -> Result<(Nsp, NacpData, String)>
 where
     N: AsRef<Path>,
     E: AsRef<Path>,
     R: AsRef<Path>,
     O: AsRef<Path>,
 {
+    let config = Config::load()?;
     let curr_dir = std::env::current_dir()?;
     let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
 
@@ -43,6 +45,10 @@ where
     ];
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    #[cfg(not(feature = "android-proot"))]
+    let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
+    #[cfg(feature = "android-proot")]
+    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
     let packer = Backend::try_new(BackendKind::Hacpack)?;
 
     // Validating NCA as Control Type
@@ -60,6 +66,14 @@ where
 
     program_id.truncate(PROGRAMID_LEN as _);
     debug!(?program_id, "Selected ProgramID for packing");
+
+    // Getting Nacp data
+    let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
+    control_nca.extract_romfs(&nca_extractor, control_romfs_dir.path())?;
+    let nacp_data = NacpData::try_new(
+        get_nacp_file(control_romfs_dir.path())
+            .ok_or_else(|| eyre!("Couldn't find NACP file, maybe extraction was improper"))?,
+    )?;
 
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
@@ -98,7 +112,7 @@ where
     fs::copy(&control_nca.path, temp_dir.path().join(control_filename))?;
 
     // !Packing NCAs to NSP
-    let mut packed_nsp = Nsp::pack(
+    let packed_nsp = Nsp::pack(
         &packer,
         &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -106,12 +120,5 @@ where
         outdir.as_ref(),
     )?;
 
-    let dest = outdir
-        .as_ref()
-        .join(format!("{}[yanu-repacked].nsp", program_id));
-    info!(from = ?packed_nsp.path,to = ?dest,"Moving");
-    move_file(&packed_nsp.path, &dest)?;
-    packed_nsp.path = dest;
-
-    Ok(packed_nsp)
+    Ok((packed_nsp, nacp_data, program_id))
 }

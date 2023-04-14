@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::Path};
 
-use common::{defines::DEFAULT_PRODKEYS_PATH, utils::move_file};
+use common::defines::DEFAULT_PRODKEYS_PATH;
 use config::Config;
 use eyre::{eyre, Result};
 use fs_err as fs;
@@ -11,6 +11,7 @@ use crate::{
     backend::{Backend, BackendKind},
     utils::{clear_titlekeys, store_titlekeys},
     vfs::{
+        nacp::{get_nacp_file, NacpData},
         nca::{self, nca_with_filters, nca_with_kind, Nca},
         nsp::Nsp,
     },
@@ -21,7 +22,11 @@ use super::hacpack_cleanup_install;
 // TODO: update can be reduced to a combination of unpack and repack
 
 /// Apply update NSP to the base NSP.
-pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<Nsp> {
+pub fn update_nsp<O: AsRef<Path>>(
+    base: &mut Nsp,
+    update: &mut Nsp,
+    outdir: O,
+) -> Result<(Nsp, NacpData, String)> {
     let config = Config::load()?;
     let curr_dir = std::env::current_dir()?;
     let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
@@ -109,6 +114,17 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     debug!(?update_nca);
     debug!(?control_nca);
 
+    // Getting Nacp data
+    let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
+    control_nca.extract_romfs(&nca_extractor, control_romfs_dir.path())?;
+    let nacp_data = NacpData::try_new(
+        get_nacp_file(control_romfs_dir.path())
+            .ok_or_else(|| eyre!("Couldn't find NACP file, maybe extraction was improper"))?,
+    )?;
+    if let Err(err) = control_romfs_dir.close() {
+        warn!(%err);
+    }
+
     let patch_dir = tempdir_in(config.temp_dir.as_path())?;
     let romfs_dir = patch_dir.path().join("romfs");
     let exefs_dir = patch_dir.path().join("exefs");
@@ -169,7 +185,7 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
     )?;
 
     // !Packing NCAs to NSP
-    let mut patched_nsp = Nsp::pack(
+    let patched_nsp = Nsp::pack(
         &packer,
         &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -177,16 +193,9 @@ pub fn update_nsp<O: AsRef<Path>>(base: &mut Nsp, update: &mut Nsp, outdir: O) -
         outdir.as_ref(),
     )?;
 
-    let dest = outdir
-        .as_ref()
-        .join(format!("{}[yanu-patched].nsp", program_id));
-    info!(from = ?patched_nsp.path,to = ?dest,"Moving");
-    move_file(&patched_nsp.path, &dest)?;
-    patched_nsp.path = dest;
-
     if let Err(err) = patch_dir.close() {
         warn!(?err);
     }
 
-    Ok(patched_nsp)
+    Ok((patched_nsp, nacp_data, program_id))
 }
