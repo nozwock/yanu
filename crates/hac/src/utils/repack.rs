@@ -44,11 +44,11 @@ where
         Backend::try_new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
     let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
     #[cfg(feature = "android-proot")]
-    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
+    let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
     let packer = Backend::try_new(BackendKind::Hacpack)?;
 
     // Validating NCA as Control Type

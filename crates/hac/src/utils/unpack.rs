@@ -25,15 +25,15 @@ where
         Backend::try_new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
     let nsp_extractor = Backend::try_new(BackendKind::from(config.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
-    let nsp_extractor = Backend::new(BackendKind::Hactool)?;
+    let nsp_extractor = Backend::try_new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
     let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
     #[cfg(feature = "android-proot")]
-    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
+    let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
 
     let base_data_dir = outdir.as_ref().join("basedata");
     let patch_data_dir = outdir.as_ref().join("patchdata");

@@ -37,15 +37,15 @@ pub fn update_nsp<O: AsRef<Path>>(
         Backend::try_new(BackendKind::Hac2l)?,
     ];
     #[cfg(feature = "android-proot")]
-    let readers = vec![Backend::new(BackendKind::Hac2l)?];
+    let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
     let nsp_extractor = Backend::try_new(BackendKind::from(config.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
-    let nsp_extractor = Backend::new(BackendKind::Hactool)?;
+    let nsp_extractor = Backend::try_new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
     let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
     #[cfg(feature = "android-proot")]
-    let nca_extractor = Backend::new(BackendKind::Hac2l)?;
+    let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
     let packer = Backend::try_new(BackendKind::Hacpack)?;
 
     let base_data_dir = tempdir_in(config.temp_dir.as_path())?;
