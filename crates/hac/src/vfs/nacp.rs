@@ -1,13 +1,12 @@
+use common::filename::{self, UNICODE_REPLACEMENT_CHAR};
 use eyre::{bail, Result};
 use fs_err as fs;
 use std::{
     io::{self, Read, Seek},
     path::{Path, PathBuf},
 };
-use tracing::{debug, info};
+use tracing::info;
 use walkdir::WalkDir;
-
-use super::UNICODE_REPLACEMENT_CHAR;
 
 const NACP_FILENAME: &'static str = "control.nacp";
 
@@ -59,7 +58,8 @@ impl NacpData {
             NacpData::APPLICATION_VERSION_OFFSET as _,
         ))?;
         nacp.read_exact(nacp_data.application_version.as_mut())?;
-        debug!(?nacp_data);
+
+        info!("Successfully read NACP data");
 
         Ok(nacp_data)
     }
@@ -75,8 +75,9 @@ impl NacpData {
         NacpData::sanitize(&String::from_utf8_lossy(&self.application_version))
     }
     fn sanitize(s: &str) -> String {
-        s.trim_matches(|c: char| c == '\0' || c.is_whitespace())
-            .replace(UNICODE_REPLACEMENT_CHAR, "_")
+        s.chars()
+            .filter(|ch| ch != &UNICODE_REPLACEMENT_CHAR && !filename::is_forbidden(*ch))
+            .collect()
     }
 }
 

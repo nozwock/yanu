@@ -9,6 +9,7 @@
 compile_error!("This traget configuration is not supported");
 
 pub mod defines;
+pub mod filename;
 pub mod utils;
 
 #[cfg(target_os = "android")]
