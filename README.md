@@ -98,15 +98,16 @@ OR, for only unpacking a single ROM:
 yanu unpack --base '/path/to/base'
 ```
 
-For repacking unpacked ROM data:
+For repacking unpacked ROM data (with base+update):
 ```sh
-yanu repack --controlnca './base+update.bylies/patchdata/123456.nca' --romfsdir './base+update.bylies/romfs' --exefsdir './base+update.bylies/exefs'
+yanu repack --controlnca './base+update.bylies/patchdata/nca_around_1mb.nca' --titleid 'BaseGameTitleID' --romfsdir './base+update.bylies/romfs' --exefsdir './base+update.bylies/exefs'
 ```
 
 > **Note**
 > - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and with proper path to the executable).
 > - Control NCA is usually the NCA around ~1MiB in size.
 > - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
+> - Look at the logs if you're using a wrong TitleID, it'll mention which TitleID to use instead.
 
 ## Directories Used
 
