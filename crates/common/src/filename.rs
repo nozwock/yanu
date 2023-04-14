@@ -11,15 +11,15 @@ pub static FORBIDDEN_CHARS: Lazy<Vec<char>> = Lazy::new(|| {
     chars
 });
 
-#[cfg(unix)]
+#[cfg(all(unix, not(feature = "android-proot")))]
 pub fn is_forbidden(ch: char) -> bool {
     matches!(ch, '/' | '\0')
 }
-#[cfg(windows)]
+#[cfg(any(windows, feature = "android-proot"))]
 pub fn is_forbidden(ch: char) -> bool {
     matches!(
         ch,
-        '\0'..='\x1f' | '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+        '\0'..='\x1f' | '\x7f' | '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
     )
 }
 

@@ -1,6 +1,7 @@
 use eyre::Result;
 use fs_err as fs;
 use std::path::Path;
+use tracing::warn;
 
 pub fn str_truncate(s: &str, new_len: usize) -> &str {
     match s.char_indices().nth(new_len) {
@@ -14,7 +15,8 @@ where
     P: AsRef<Path>,
     Q: AsRef<Path>,
 {
-    if fs::rename(&from, &to).is_err() {
+    if let Err(err) = fs::rename(from.as_ref(), to.as_ref()) {
+        warn!(from = %from.as_ref().display(), to = %to.as_ref().display(), %err, "Renaming failed, falling back to copy");
         fs::copy(&from, &to)?;
         fs::remove_file(&from)?;
     };
