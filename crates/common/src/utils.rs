@@ -47,5 +47,5 @@ pub fn ext_matches<P: AsRef<Path>>(path: P, ext: &str) -> bool {
 }
 
 pub fn get_size<P: AsRef<Path>>(path: P) -> Result<String> {
-    Ok(ByteSize::b(path.as_ref().metadata()?.len()).to_string_as(true))
+    Ok(ByteSize::b(path.as_ref().metadata()?.len()).to_string_as(false))
 }
