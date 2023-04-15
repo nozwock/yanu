@@ -6,7 +6,10 @@ use crate::vfs::{nacp::NacpData, ticket::TitleKey};
 use common::{defines::DEFAULT_TITLEKEYS_PATH, utils::move_file};
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use std::{io::ErrorKind, path::PathBuf};
+use std::{
+    io::{self, ErrorKind},
+    path::PathBuf,
+};
 use tracing::{info, warn};
 
 pub fn clear_titlekeys() -> Result<()> {
@@ -53,6 +56,7 @@ impl CleanupDirsOnDrop {
         for dir in &self.dirs {
             match fs::remove_dir_all(dir) {
                 Ok(_) => {}
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
                 Err(err) => {
                     warn!(%err);
                     outerr.get_or_insert(err);
