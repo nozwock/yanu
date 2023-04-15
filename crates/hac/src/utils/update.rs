@@ -156,7 +156,7 @@ pub fn update_nsp<O: AsRef<Path>>(
     }
 
     // !Packing fs files to NCA
-    let patched_nca = Nca::pack(
+    let patched_nca = Nca::pack_program(
         readers.iter(),
         &packer,
         &program_id,

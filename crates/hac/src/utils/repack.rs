@@ -78,7 +78,7 @@ where
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
     // !Packing fs files to NCA
-    let patched_nca = Nca::pack(
+    let patched_nca = Nca::pack_program(
         readers.iter(),
         &packer,
         &program_id,

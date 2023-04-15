@@ -217,7 +217,7 @@ impl Nca {
         );
         Ok(())
     }
-    pub fn pack<'a, P, Q, R, K, I>(
+    pub fn pack_program<'a, P, Q, R, K, I>(
         readers: I,
         packer: &Backend,
         program_id: &str,
@@ -277,8 +277,11 @@ impl Nca {
             .flatten()
             .ok_or_else(|| eyre!("Failed to find Patched NCA"))?
             .remove(0);
-        info!(outdir = %outdir.as_ref().display(), "Packing done!");
-        info!(nca = %patched_nca.path.display(), "Should be the Patched NCA!");
+        info!(
+            nca = %patched_nca.path.display(),
+            outdir = %outdir.as_ref().display(),
+            "Packing done! Should be Program Type NCA"
+        );
         Ok(patched_nca)
     }
     pub fn create_meta<K, O>(
