@@ -69,7 +69,7 @@ where
 
     // Getting Nacp data
     let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
-    control_nca.extract_romfs(&nca_extractor, control_romfs_dir.path())?;
+    control_nca.unpack_romfs(&nca_extractor, control_romfs_dir.path())?;
     let nacp_data = NacpData::try_new(
         get_nacp_file(control_romfs_dir.path())
             .ok_or_else(|| eyre!("Couldn't find NACP file, maybe extraction was improper"))?,

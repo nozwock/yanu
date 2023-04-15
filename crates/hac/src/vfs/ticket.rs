@@ -48,7 +48,7 @@ impl TitleKey {
         ticket.seek(io::SeekFrom::Start(TitleKey::TITLE_KEY_OFFSET as _))?;
         ticket.read_exact(&mut title_key.title_key)?;
         debug!(
-            title_key = %format!(
+            title_key = ?format!(
                 "{}={}",
                 hex::encode(title_key.rights_id),
                 hex::encode(title_key.title_key)

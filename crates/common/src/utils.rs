@@ -1,3 +1,4 @@
+use bytesize::ByteSize;
 use eyre::Result;
 use fs_err as fs;
 use std::path::Path;
@@ -43,4 +44,8 @@ pub fn ext_matches<P: AsRef<Path>>(path: P, ext: &str) -> bool {
         .extension()
         .map(|_ext| _ext.to_ascii_lowercase() == ext)
         .unwrap_or(false)
+}
+
+pub fn get_size<P: AsRef<Path>>(path: P) -> Result<String> {
+    Ok(ByteSize::b(path.as_ref().metadata()?.len()).to_string_as(true))
 }

@@ -92,7 +92,7 @@ where
         debug!(?patch_nca);
 
         // !Unpacking fs files from NCAs
-        _ = base_nca.unpack(
+        _ = base_nca.unpack_all(
             &nca_extractor,
             &patch_nca,
             outdir.as_ref().join("romfs"),
@@ -102,7 +102,7 @@ where
 
     if patch.is_none() {
         // !Unpacking fs files from NCAs
-        _ = base_nca.unpack(
+        _ = base_nca.unpack_all(
             &nca_extractor,
             &base_nca,
             outdir.as_ref().join("romfs"),

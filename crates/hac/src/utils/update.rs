@@ -116,7 +116,7 @@ pub fn update_nsp<O: AsRef<Path>>(
 
     // Getting Nacp data
     let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
-    control_nca.extract_romfs(&nca_extractor, control_romfs_dir.path())?;
+    control_nca.unpack_romfs(&nca_extractor, control_romfs_dir.path())?;
     let nacp_data = NacpData::try_new(
         get_nacp_file(control_romfs_dir.path())
             .ok_or_else(|| eyre!("Couldn't find NACP file, maybe extraction was improper"))?,
@@ -129,7 +129,7 @@ pub fn update_nsp<O: AsRef<Path>>(
     let romfs_dir = fs_dir.path().join("romfs");
     let exefs_dir = fs_dir.path().join("exefs");
     // !Unpacking fs files from NCAs
-    _ = base_nca.unpack(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
+    _ = base_nca.unpack_all(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
     // TODO?: support for when main and update's titleid don't match
     // maybe handle this by having a override flag for TitleID
@@ -148,11 +148,9 @@ pub fn update_nsp<O: AsRef<Path>>(
     control_nca.path = nca_dir.path().join(control_nca_filename);
 
     // Early cleanup
-    info!(dir = ?base_data_dir.path(), "Cleaning up");
     if let Err(err) = base_data_dir.close() {
         warn!(?err);
     }
-    info!(dir = ?update_data_dir.path(), "Cleaning up");
     if let Err(err) = update_data_dir.close() {
         warn!(?err);
     }

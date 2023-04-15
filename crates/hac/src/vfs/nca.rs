@@ -6,7 +6,8 @@ use std::{
     str::FromStr,
 };
 
-use common::utils::ext_matches;
+use common::utils::{ext_matches, get_size};
+use derivative::Derivative;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
 use tracing::{debug, error, info, warn};
@@ -30,14 +31,21 @@ impl fmt::Display for ContentType {
     }
 }
 
-/// https://switchbrew.org/wiki/NCA
-///
+type ProgramID = [u8; 8];
+
+/// https://switchbrew.org/wiki/NCA\
 /// Provides some methods relating to Nca, an encrypted content archive.
-#[derive(Debug, Clone)]
+#[derive(Derivative, Clone)]
+#[derivative(Debug)]
 pub struct Nca {
     pub path: PathBuf,
-    pub program_id: [u8; 8],
+    #[derivative(Debug(format_with = "program_id_fmt"))]
+    pub program_id: ProgramID,
     pub content_type: ContentType,
+}
+
+fn program_id_fmt(program_id: &ProgramID, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fmt.write_fmt(format_args!("{:?}", hex::encode(program_id)))
 }
 
 // TODO?: add the stdout to the logs in case an error is catches in main
@@ -53,6 +61,7 @@ impl Nca {
 
         info!(
             nca = %file_path.as_ref().display(),
+            size = %get_size(file_path.as_ref()).unwrap_or("None".into()),
             "Identifying TitleID and ContentType",
         );
 
@@ -102,7 +111,7 @@ impl Nca {
                     file_path.as_ref().display()
                 )
             })??;
-        debug!(?program_id);
+        debug!(program_id = ?hex::encode(program_id)); // umm...
 
         let content_type = match stdout
             .lines()
@@ -144,7 +153,7 @@ impl Nca {
     pub fn get_program_id(&self) -> String {
         hex::encode(self.program_id)
     }
-    pub fn extract_romfs<P: AsRef<Path>>(&self, extractor: &Backend, romfs_dir: P) -> Result<()> {
+    pub fn unpack_romfs<P: AsRef<Path>>(&self, extractor: &Backend, romfs_dir: P) -> Result<()> {
         let output = Command::new(extractor.path())
             .args([
                 self.path.as_path(),
@@ -165,19 +174,19 @@ impl Nca {
         info!(
             ?self.path,
             romfs = ?romfs_dir.as_ref(),
-            "Extraction done"
+            "Unpacked romfs"
         );
 
         Ok(())
     }
-    pub fn unpack<P: AsRef<Path>, Q: AsRef<Path>>(
+    pub fn unpack_all<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
         extractor: &Backend,
         aux: &Nca,
         romfs_dir: P,
         exefs_dir: Q,
     ) -> Result<()> {
-        info!(?self.path, ?aux.path, "Extracting");
+        info!(?self.path, ?aux.path, "Unpacking romfs and exefs");
         let mut cmd = Command::new(extractor.path());
         cmd.args([
             "--basenca".as_ref(),
@@ -353,7 +362,7 @@ where
         .into_iter()
         .filter_map(|entry| match entry {
             Ok(entry) => {
-                if ext_matches(entry.path(), "nca") {
+                if entry.path().is_file() && ext_matches(entry.path(), "nca") {
                     Some(entry)
                 } else {
                     None
