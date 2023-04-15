@@ -125,9 +125,9 @@ pub fn update_nsp<O: AsRef<Path>>(
         warn!(%err);
     }
 
-    let patch_dir = tempdir_in(config.temp_dir.as_path())?;
-    let romfs_dir = patch_dir.path().join("romfs");
-    let exefs_dir = patch_dir.path().join("exefs");
+    let fs_dir = tempdir_in(config.temp_dir.as_path())?;
+    let romfs_dir = fs_dir.path().join("romfs");
+    let exefs_dir = fs_dir.path().join("exefs");
     // !Unpacking fs files from NCAs
     _ = base_nca.unpack(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
@@ -138,14 +138,14 @@ pub fn update_nsp<O: AsRef<Path>>(
     debug!(?program_id, "Selected TitleID for packing");
 
     // !Moving Control NCA
-    let nca_dir = patch_dir.path().join("nca");
-    fs::create_dir_all(&nca_dir)?;
+    let nca_dir = tempdir_in(config.temp_dir.as_path())?;
+    fs::create_dir_all(nca_dir.path())?;
     let control_nca_filename = control_nca
         .path
         .file_name()
         .expect("File should've a filename");
-    fs::rename(&control_nca.path, nca_dir.join(control_nca_filename))?;
-    control_nca.path = nca_dir.join(control_nca_filename);
+    fs::rename(&control_nca.path, nca_dir.path().join(control_nca_filename))?;
+    control_nca.path = nca_dir.path().join(control_nca_filename);
 
     // Early cleanup
     info!(dir = ?base_data_dir.path(), "Cleaning up");
@@ -164,8 +164,14 @@ pub fn update_nsp<O: AsRef<Path>>(
         DEFAULT_PRODKEYS_PATH.as_path(),
         &romfs_dir,
         &exefs_dir,
-        &nca_dir,
+        nca_dir.path(),
     )?;
+
+    // Cleaning up extracted FS files
+    if let Err(err) = fs_dir.close() {
+        warn!(?err);
+    }
+
     let patched_nca = readers
         .iter()
         // Could inspect and log the error if need be
@@ -181,7 +187,7 @@ pub fn update_nsp<O: AsRef<Path>>(
         DEFAULT_PRODKEYS_PATH.as_path(),
         &patched_nca,
         &control_nca,
-        &nca_dir,
+        nca_dir.path(),
     )?;
 
     // !Packing NCAs to NSP
@@ -189,13 +195,9 @@ pub fn update_nsp<O: AsRef<Path>>(
         &packer,
         &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
-        &nca_dir,
+        nca_dir.path(),
         outdir.as_ref(),
     )?;
-
-    if let Err(err) = patch_dir.close() {
-        warn!(?err);
-    }
 
     Ok((patched_nsp, nacp_data, program_id))
 }
