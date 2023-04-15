@@ -78,7 +78,8 @@ where
     let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
 
     // !Packing fs files to NCA
-    let patched_nca_path = Nca::pack(
+    let patched_nca = Nca::pack(
+        readers.iter(),
         &packer,
         &program_id,
         DEFAULT_PRODKEYS_PATH.as_path(),
@@ -86,13 +87,6 @@ where
         exefs_dir.as_ref(),
         temp_dir.path(),
     )?;
-    let patched_nca = readers
-        .iter()
-        // Could inspect and log the error if need be
-        .map(|reader| Nca::try_new(reader, &patched_nca_path).ok())
-        .find(|nca| nca.is_some())
-        .flatten()
-        .ok_or_else(|| eyre!("Failed to find Patched NCA"))?;
 
     // !Generating Meta NCA
     Nca::create_meta(

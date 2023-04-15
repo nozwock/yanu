@@ -213,23 +213,25 @@ impl Nca {
             ?self.path,
             romfs = ?romfs_dir.as_ref(),
             exefs = ?exefs_dir.as_ref(),
-            "Extraction done"
+            "Unpacked romfs and exefs"
         );
         Ok(())
     }
-    pub fn pack<P, Q, R, K>(
+    pub fn pack<'a, P, Q, R, K, I>(
+        readers: I,
         packer: &Backend,
         program_id: &str,
         keyfile: K,
         romfs_dir: P,
         exefs_dir: Q,
         outdir: R,
-    ) -> Result<PathBuf>
+    ) -> Result<Nca>
     where
         P: AsRef<Path>,
         Q: AsRef<Path>,
         R: AsRef<Path>,
         K: AsRef<Path>,
+        I: IntoIterator<Item = &'a Backend>,
     {
         info!(
             romfs = ?romfs_dir.as_ref(),
@@ -267,19 +269,17 @@ impl Nca {
             bail!("Encountered an error while packing FS files to NCA");
         }
 
-        for entry in WalkDir::new(outdir.as_ref())
-            .min_depth(1)
-            .max_depth(1)
+        let patched_nca = readers
             .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            if entry.path().is_file() && ext_matches(entry.path(), "nca") {
-                info!(outdir = %outdir.as_ref().display(), "Packing done");
-                info!(nca = %entry.path().display(), "Should be the Patched NCA");
-                return Ok(entry.into_path());
-            }
-        }
-        bail!("Failed to pack romfs/exefs to NCA");
+            .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
+            .map(|reader| nca_with_kind(reader, outdir.as_ref(), ContentType::Program))
+            .find(|filtered| filtered.is_some())
+            .flatten()
+            .ok_or_else(|| eyre!("Failed to find Patched NCA"))?
+            .remove(0);
+        info!(outdir = %outdir.as_ref().display(), "Packing done!");
+        info!(nca = %patched_nca.path.display(), "Should be the Patched NCA!");
+        Ok(patched_nca)
     }
     pub fn create_meta<K, O>(
         packer: &Backend,
