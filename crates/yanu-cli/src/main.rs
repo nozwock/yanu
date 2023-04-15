@@ -115,7 +115,7 @@ fn run() -> Result<()> {
             let (mut patched, nacp_data, program_id) = update_nsp(
                 &mut Nsp::try_new(opts.base)?,
                 &mut Nsp::try_new(opts.update)?,
-                default_outdir()?,
+                opts.outdir.unwrap_or(default_outdir()?),
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -133,12 +133,6 @@ fn run() -> Result<()> {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 bail!("Failed to find keyfile");
             }
-
-            let outdir = if let Some(outdir) = opts.outdir {
-                outdir
-            } else {
-                default_outdir()?
-            };
 
             // Path validation
             // ?let clap do this instead
@@ -162,7 +156,7 @@ fn run() -> Result<()> {
                 opts.titleid,
                 opts.romfsdir,
                 opts.exefsdir,
-                outdir,
+                opts.outdir.unwrap_or(default_outdir()?),
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -190,15 +184,12 @@ fn run() -> Result<()> {
                 "base."
             };
 
-            let outdir = if let Some(outdir) = opts.outdir {
-                outdir
-            } else {
+            let outdir = opts.outdir.unwrap_or(
                 tempfile::Builder::new()
                     .prefix(prefix)
                     .tempdir_in(std::env::current_dir()?)?
-                    .into_path()
-            };
-
+                    .into_path(),
+            );
             timer = Some(Instant::now());
             unpack_nsp(
                 Nsp::try_new(opts.base)?,
