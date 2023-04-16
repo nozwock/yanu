@@ -1,5 +1,3 @@
-mod opts;
-
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
@@ -21,8 +19,8 @@ use hac::{
     vfs::{nsp::Nsp, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
-use opts::YanuCli;
 use tracing::{debug, error, info};
+use yanu_cli::opts::{self, YanuCli};
 
 macro_rules! validate_paths {
     ($($a:expr),*) => {
