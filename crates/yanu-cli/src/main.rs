@@ -385,14 +385,20 @@ fn run() -> Result<()> {
             }
         }
         #[cfg(unix)]
-        Some(opts::Commands::BuildBackend) => {
-            // TODO: add option for force build
-            let mut res_pool = vec![
-                Backend::try_new(BackendKind::Hactool),
-                Backend::try_new(BackendKind::Hac2l),
-                Backend::try_new(BackendKind::Hacpack),
-                Backend::try_new(BackendKind::FourNXCI),
-            ];
+        Some(opts::Commands::SetupBackend { build }) => {
+            // List must be exhuastive
+            let mut res_pool = vec![];
+            if build {
+                res_pool.push(Backend::build(BackendKind::Hacpack));
+                res_pool.push(Backend::build(BackendKind::Hactool));
+                res_pool.push(Backend::build(BackendKind::Hac2l));
+                res_pool.push(Backend::build(BackendKind::FourNXCI));
+            } else {
+                res_pool.push(Backend::try_new(BackendKind::Hacpack));
+                res_pool.push(Backend::try_new(BackendKind::Hactool));
+                res_pool.push(Backend::try_new(BackendKind::Hac2l));
+                res_pool.push(Backend::try_new(BackendKind::FourNXCI));
+            }
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
             res_pool.push(Backend::try_new(BackendKind::Hactoolnet));
             let res_pool: Vec<_> = res_pool.into_iter().filter_map(|res| res.err()).collect();

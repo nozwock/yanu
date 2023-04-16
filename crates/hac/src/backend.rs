@@ -365,7 +365,7 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to clone {}", name)
+            bail!("Failed to clone {} repo", name)
         }
 
         git_checkout(src_dir.path(), &config.four_nxci_rev)?;

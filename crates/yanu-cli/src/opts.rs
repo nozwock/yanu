@@ -6,7 +6,8 @@ use std::path::PathBuf;
 #[command(author, version, about, long_about = None, arg_required_else_help = true)]
 #[command(after_help = get_section("Tip",r#"Remember that you can get help for subcommands too:
 $ yanu-cli pack --help
-Examples may or may not be included."#, "  "))]
+Examples may or may not be included.
+"#, "  "))]
 pub struct YanuCli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -33,9 +34,14 @@ pub enum Commands {
     #[command()]
     UpdatePrompt,
     #[cfg(unix)]
-    /// Build backend utilities
+    /// Builds or extracts embedded backend components;
+    /// Useful when creating read-only containers
     #[command()]
-    BuildBackend,
+    SetupBackend {
+        /// Build backends that can be built
+        #[arg(short, long, action)]
+        build: bool,
+    },
 }
 
 // TODO: add value parsers
@@ -88,7 +94,8 @@ pub struct Pack {
 #[command(after_long_help = get_section("Examples", r#"For unpacking only single NSP:
 $ yanu-cli unpack --base './path/to/base
 For unpacking both base and update NSPs together (i.e. updating):
-$ yanu-cli unpack --base '/path/to/base' --update '/path/to/update'"#, "  "))]
+$ yanu-cli unpack --base '/path/to/base' --update '/path/to/update'
+"#, "  "))]
 pub struct Unpack {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
