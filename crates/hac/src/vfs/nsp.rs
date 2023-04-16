@@ -1,5 +1,5 @@
 use crate::{backend::Backend, vfs::ticket::TitleKey};
-use common::utils::ext_matches;
+use common::utils::{ext_matches, get_size};
 use eyre::{bail, Result};
 use std::{
     path::{Path, PathBuf},
@@ -90,8 +90,13 @@ impl Nsp {
             bail!("Encountered an error while packing NCAs to NSP");
         }
 
-        info!(outdir = ?outdir.as_ref(), "Packed NCAs to NSP");
-        Nsp::try_new(outdir.as_ref().join(format!("{}.nsp", program_id)))
+        let nsp_path = outdir.as_ref().join(format!("{}.nsp", program_id));
+        info!(
+            outdir = ?outdir.as_ref(),
+            size = %get_size(&nsp_path).unwrap_or("None".into()),
+            "Packed NCAs to NSP"
+        );
+        Nsp::try_new(nsp_path)
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {

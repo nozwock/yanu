@@ -104,9 +104,9 @@ pub fn custom_nsp_rename(
         .ok_or_else(|| eyre!("Failed to get parent"))?
         .join(format!(
             "{} [{}][v{}]{suffix}.nsp",
-            dbg!(nacp_data.get_application_name()),
+            nacp_data.get_application_name(),
             program_id,
-            dbg!(nacp_data.get_application_version())
+            nacp_data.get_application_version()
         ));
 
     info!(from = %nsp_path.display(), to = %dest.display(), "Moving");
