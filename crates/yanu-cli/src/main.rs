@@ -4,7 +4,7 @@ use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 use common::{
-    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
+    defines::{APP_CACHE_DIR, APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     error::MultiReport,
     utils::ext_matches,
 };
@@ -388,16 +388,22 @@ fn run() -> Result<()> {
         }
         #[cfg(unix)]
         Some(opts::Commands::BuildBackend) => {
+            // TODO: add option for force build
             let mut res_pool = vec![
                 Backend::try_new(BackendKind::Hactool),
                 Backend::try_new(BackendKind::Hac2l),
                 Backend::try_new(BackendKind::Hacpack),
+                Backend::try_new(BackendKind::FourNXCI),
             ];
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
             res_pool.push(Backend::try_new(BackendKind::Hactoolnet));
             let res_pool: Vec<_> = res_pool.into_iter().filter_map(|res| res.err()).collect();
             if res_pool.is_empty() {
-                eprintln!("{}", style("Successfully built backend!").green().bold());
+                eprintln!(
+                    "{} {}",
+                    style("Successfully built backend!").green().bold(),
+                    style(format!("({})", APP_CACHE_DIR.display())).bold().dim()
+                );
             } else {
                 let err = MultiReport::new(res_pool);
                 bail!(err.join("\n"));

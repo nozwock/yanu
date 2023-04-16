@@ -46,7 +46,7 @@ impl Cache<'_> {
         Ok(file.path().into())
     }
     /// Looks for a file with `filename` in the cache dir and returns its path.
-    pub fn path(&self, filename: &str) -> Result<PathBuf> {
+    pub fn get(&self, filename: &str) -> Result<PathBuf> {
         for entry in walkdir::WalkDir::new(self.dir)
             .min_depth(1)
             .max_depth(1)

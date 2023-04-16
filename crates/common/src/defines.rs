@@ -12,13 +12,23 @@ pub const HACTOOL: &[u8] = include_bytes!("../../../assets/x86_64-windows/hactoo
 pub const HACTOOLNET: &[u8] = include_bytes!("../../../assets/x86_64-windows/hactoolnet.exe");
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
 pub const HAC2L: &[u8] = include_bytes!("../../../assets/x86_64-windows/hac2l.exe");
+#[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+pub const FOURNXCI: &[u8] = include_bytes!("../../../assets/x86_64-windows/4nxci");
 
 // Hactoolnet v0.18
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
 pub const HACTOOLNET: &[u8] = include_bytes!("../../../assets/x86_64-linux/hactoolnet");
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+pub const FOURNXCI: &[u8] = include_bytes!("../../../assets/x86_64-linux/4nxci");
 
 #[cfg(feature = "android-proot")]
+pub const HACPACK: &[u8] = include_bytes!("../../../assets/aarch64-linux/hacpack");
+#[cfg(feature = "android-proot")]
+pub const HACTOOL: &[u8] = include_bytes!("../../../assets/aarch64-linux/hactool");
+#[cfg(feature = "android-proot")]
 pub const HAC2L: &[u8] = include_bytes!("../../../assets/aarch64-linux/hac2l");
+#[cfg(feature = "android-proot")]
+pub const FOURNXCI: &[u8] = include_bytes!("../../../assets/aarch64-linux/4nxci");
 
 pub static APP_CACHE_DIR: Lazy<PathBuf> =
     Lazy::new(|| dirs::cache_dir().unwrap_or_default().join(APP_DIR));

@@ -42,6 +42,8 @@ pub struct Config {
     pub hac2l_rev: String,
     #[cfg(unix)]
     pub atmosphere_rev: String,
+    #[cfg(unix)]
+    pub four_nxci_rev: String,
 }
 
 impl Default for Config {
@@ -62,6 +64,8 @@ impl Default for Config {
             hac2l_rev: "7fc1b3a32c6a870c47d7459b23fd7c7b63014186".into(),
             #[cfg(unix)]
             atmosphere_rev: "1afb184c143f4319e5d6d4ea27260e61830c42a0".into(),
+            #[cfg(unix)]
+            four_nxci_rev: "33044e650ad58a72d231d9793383f5f279b73884".into(),
         }
     }
 }
