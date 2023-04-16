@@ -11,7 +11,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 ## About
 
-**Yanu** is a **Nintendo Switch** ROM updater designed to work with Skyline on [**Android w/Termux**](https://github.com/nozwock/yanu#android-wtermux), [**Linux**](https://github.com/nozwock/yanu#linux), and [**Windows**](https://github.com/nozwock/yanu#windows), as well as other platforms with the help of [Docker images](https://github.com/nozwock/yanu#docker). It serves as a temporary solution until Skyline supports Updates/DLCs natively.
+**Yanu** is a **Nintendo Switch** ROM updater designed to work with Skyline on [Android w/Termux](https://github.com/nozwock/yanu#android-wtermux), [Linux](https://github.com/nozwock/yanu#linux), and [Windows](https://github.com/nozwock/yanu#windows), as well as other platforms with the help of [Docker images](https://github.com/nozwock/yanu#docker). It serves as a temporary solution until Skyline supports Updates/DLCs natively.
 
 > **Warning** - **Doesn't support DLCs.**
 
@@ -42,7 +42,7 @@ Relevant resources:
 
 ### Linux
 
-1. Make sure dependencies required to build hactool/hacPack are installed on your system, for eg-
+1. Ensure that your system has all the necessary dependencies installed to build hactool/hacPack/etc. For example:
    ```console
    sudo apt -y install gcc-12 g++-12 make git libjpeg-dev binutils-dev libicu-dev
    ```
@@ -59,8 +59,8 @@ Relevant resources:
 > Due to the lack of code-signing, some anti-virus programs may falsely identify the program as malicious. I cannot afford expensive certificates to prevent this. Exercise caution if concerned and consider using tools like [virustotal.com](https://www.virustotal.com) or [hybrid-analysis.com](https://www.hybrid-analysis.com).
 
 ### Docker
-Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) and pull the container you'd like to use.
-Then it can be used as such:
+Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) to pull the container you wish to use.
+Once you have the container, you can use it like this:
    ```sh
       # Expecting 'prod.keys` in pwd
       docker run -v $(pwd)/prod.keys:/root/.switch/prod.keys -v $(pwd):/work ghcr.io/nozwock/yanu update --base '/path/to/base' --update '/path/to/update' 
@@ -113,14 +113,13 @@ yanu repack --controlnca './base+update.bylies/patchdata/nca_around_1mb.nca' --t
 
 ## Troubleshooting
 
-- For "Failed to sync package repos" like errors while trying to install `yanu` on Termux:
-   - Update your outdated repos using:
-      ```sh
-      termux-change-repo
-      ```
+- If you encounter errors such as 'Failed to sync package repos' while installing yanu on Termux, try updating your outdated repositories using:
+   ```sh
+   termux-change-repo
+   ```
 
 ## Special Thanks
 
-- [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack), [hac2l](https://github.com/Atmosphere-NX/hac2l) and [hactoolnet](https://github.com/Thealexbarney/LibHac) used internally for the heavy lifting.
+- [hactool](https://github.com/SciresM/hactool), [hacPack](https://github.com/The-4n/hacPack), [hac2l](https://github.com/Atmosphere-NX/hac2l), [hactoolnet](https://github.com/Thealexbarney/LibHac), and [4NXCI](https://github.com/The-4n/4NXCI) are used internally for the heavy lifting.
 - [@Pipetto-crypto](https://github.com/Pipetto-crypto) for the `aarch64-linux` `hac2l` binary.
 - [Willfaust's script](https://gist.github.com/willfaust/fb90dec409b8918290012031f09a78ef) for reference.
