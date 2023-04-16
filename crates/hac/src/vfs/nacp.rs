@@ -15,13 +15,8 @@ const NACP_FILENAME: &'static str = "control.nacp";
 /// Provides access to some of the data contained within a NACP file.
 #[derive(Debug, Default, Clone)]
 pub struct NacpData {
-    pub title_entry: ApplicationTitle, // only first title entry instead of [Title; 0x10]
+    pub title_entry: ApplicationTitle, // Only using the first title entry instead of [ApplicationTitle; 0x10]
     pub application_version: [u8; 0x10],
-}
-
-impl NacpData {
-    const TITLE_ENTRY_OFFSET: usize = 0x0;
-    const APPLICATION_VERSION_OFFSET: usize = 0x3060;
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +35,9 @@ impl Default for ApplicationTitle {
 }
 
 impl NacpData {
+    const TITLE_ENTRY_OFFSET: usize = 0x0;
+    const APPLICATION_VERSION_OFFSET: usize = 0x3060;
+
     pub fn try_new<P: AsRef<Path>>(nacp_path: P) -> Result<Self> {
         if !nacp_path.as_ref().is_file() || !is_nacp(nacp_path.as_ref()) {
             bail!("'{}' is not a NACP file", nacp_path.as_ref().display());
@@ -85,7 +83,7 @@ fn is_nacp<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().file_name() == Some(NACP_FILENAME.as_ref())
 }
 
-/// Returns the first Nacp file in a dir.
+/// Returns the first NACP file in a dir.
 pub fn get_nacp_file<P: AsRef<Path>>(from: P) -> Option<PathBuf> {
     for entry in WalkDir::new(from.as_ref())
         .min_depth(1)

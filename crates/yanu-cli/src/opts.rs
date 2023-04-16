@@ -16,9 +16,9 @@ pub enum Commands {
     /// Update NSP
     #[command()]
     Update(Update),
-    /// Repack to NSP
+    /// Pack to NSP
     #[command()]
-    Repack(Repack),
+    Pack(Pack),
     /// Unpack NSP
     #[command()]
     Unpack(Unpack),
@@ -50,14 +50,17 @@ pub struct Update {
 }
 
 #[derive(Debug, Args, Default, PartialEq, Eq)]
-pub struct Repack {
+pub struct Pack {
+    /// Set Control NCA, it's usually the NCA file around ~1MB in size
     #[arg(long, value_name = "FILE")]
     pub controlnca: PathBuf,
     /// Set TitleID
     #[arg(short, long)]
     pub titleid: String,
+    /// Set path to extracted romfs
     #[arg(long, value_name = "DIR")]
     pub romfsdir: PathBuf,
+    /// Set path to extracted exefs
     #[arg(long, value_name = "DIR")]
     pub exefsdir: PathBuf,
     #[arg(short, long, value_name = "DIR")]
@@ -95,10 +98,11 @@ pub enum NcaExtractor {
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
+    // TODO: change `roms_dir` to `yanu_dir` once mod functionality is introduced
     /// Set roms directory path, used in prompt to look for ROMS
     #[arg(long, value_name = "DIR")]
     pub roms_dir: Option<PathBuf>,
-    /// Temp files will be stored here while patching
+    /// Temp files generated while patching will be stored here
     #[arg(
         long,
         value_name = "DIR",

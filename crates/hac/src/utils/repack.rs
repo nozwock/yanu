@@ -18,7 +18,7 @@ use crate::{
 };
 
 /// Repack romfs/exefs back to NSP.
-pub fn repack_fs_data<N, E, R, O>(
+pub fn pack_fs_data<N, E, R, O>(
     control_path: N,
     mut program_id: String,
     romfs_dir: R,

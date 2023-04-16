@@ -1,5 +1,5 @@
 use common::{defines::APP_CACHE_DIR, utils::move_file};
-use eyre::{bail, Result};
+use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use std::{
     io::Write,
@@ -26,7 +26,7 @@ impl Cache<'_> {
         info!(dir = ?self.dir, "Caching '{}'", file_path.as_ref().display());
         fs::create_dir_all(self.dir)?;
         let dst = self.dir.join(file_path.as_ref().file_name().ok_or_else(|| {
-            eyre::eyre!(
+            eyre!(
                 "Failed to get filename of '{}'",
                 file_path.as_ref().display()
             )

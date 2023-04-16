@@ -1,8 +1,7 @@
 //! https://switchbrew.org/wiki/Ticket
 //!
-//! Contains method for extracting TitleKey from Tickets, a format used to store an encrypted title key.
-//!
-//! Cheap implementation only supporting 'common' Title key type.
+//! Contains method for extracting `TitleKey` from Tickets, a format used to store an encrypted title key.\
+//! Cheap implementation only supporting 'Common' Title key type.
 
 use eyre::Result;
 use fs_err as fs;
@@ -19,11 +18,6 @@ pub struct TitleKey {
     title_key: [u8; 0x10], // for Common TitleKey type
 }
 
-impl TitleKey {
-    const RIGHTS_ID_OFFSET: usize = 0x2a0;
-    const TITLE_KEY_OFFSET: usize = 0x180;
-}
-
 impl fmt::Display for TitleKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -36,6 +30,9 @@ impl fmt::Display for TitleKey {
 }
 
 impl TitleKey {
+    const RIGHTS_ID_OFFSET: usize = 0x2a0;
+    const TITLE_KEY_OFFSET: usize = 0x180;
+
     pub fn try_new<P: AsRef<Path>>(decrypted_tik_path: P) -> Result<TitleKey> {
         let mut title_key = TitleKey::default();
         let mut ticket = fs::File::open(decrypted_tik_path.as_ref())?;

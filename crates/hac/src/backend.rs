@@ -66,6 +66,8 @@ pub struct Backend {
     path: PathBuf,
 }
 
+// TODO?: Some method in which backends are builded no matter what
+
 impl Backend {
     pub fn try_new(kind: BackendKind) -> Result<Self> {
         let filename = kind.to_filename();

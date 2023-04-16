@@ -16,7 +16,7 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    utils::{custom_nsp_rename, repack::repack_fs_data, unpack::unpack_nsp, update::update_nsp},
+    utils::{custom_nsp_rename, repack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
@@ -129,7 +129,7 @@ fn run() -> Result<()> {
                 patched.path.display()
             );
         }
-        Some(opts::Commands::Repack(opts)) => {
+        Some(opts::Commands::Pack(opts)) => {
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 bail!("Failed to find keyfile");
             }
@@ -151,7 +151,7 @@ fn run() -> Result<()> {
             }
 
             timer = Some(Instant::now());
-            let (mut patched, nacp_data, program_id) = repack_fs_data(
+            let (mut patched, nacp_data, program_id) = pack_fs_data(
                 opts.controlnca,
                 opts.titleid,
                 opts.romfsdir,
@@ -162,11 +162,11 @@ fn run() -> Result<()> {
                 &mut patched.path,
                 &nacp_data,
                 &program_id,
-                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-repacked]"),
+                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-packed]"),
             )?;
             eprintln!(
                 "{} '{}'",
-                style("Repacked NSP created at").green().bold(),
+                style("Packed NSP created at").green().bold(),
                 patched.path.display()
             );
         }
