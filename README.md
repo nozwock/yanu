@@ -58,11 +58,7 @@ Relevant resources:
 - Just [download](https://github.com/nozwock/yanu/releases) & run.
 
 > **Note**\
-> Since the builds are not code-signed, some AVs might false positively flag the program as malicious.\
-> Not much can be done about it since I'm not willing to pay for those expensive certs.\
-> Use these with common sense if you're paranoid ig :weary: -
-> - https://www.virustotal.com
-> - https://www.hybrid-analysis.com 
+> Due to the lack of code-signing, some anti-virus programs may falsely identify the program as malicious. I cannot afford expensive certificates to prevent this. Exercise caution if concerned and consider using tools like [virustotal.com](https://www.virustotal.com) or [hybrid-analysis.com](https://www.hybrid-analysis.com).
 
 ### Docker
 Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) and pull the container you'd like to use.
