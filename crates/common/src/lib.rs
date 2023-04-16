@@ -12,5 +12,6 @@ pub mod defines;
 pub mod filename;
 pub mod utils;
 
+pub mod error;
 #[cfg(target_os = "android")]
 pub mod termux;
