@@ -77,7 +77,7 @@ pub struct Pack {
         short,
         long,
         long_help = "Set TitleID\n\
-        Look at the logs if you're using a wrong TitleID, it'll mention which TitleID to use instead."
+        Check the logs for guidance on which TitleID to use if using the wrong one."
     )]
     pub titleid: String,
     /// Set path to extracted romfs

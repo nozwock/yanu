@@ -11,9 +11,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 ## About
 
-**Yanu** is a **Nintendo Switch** ROM updater made to be compatible with Skyline. The supported platforms currently consist of **Android w/Termux**, **Linux** and **Windows**.
-
-The software is to act as sort-of a band-aid until Skyline supports Updates/DLCs natively.
+**Yanu** is a **Nintendo Switch** ROM updater designed to work with Skyline on [**Android w/Termux**](https://github.com/nozwock/yanu#android-wtermux), [**Linux**](https://github.com/nozwock/yanu#linux), and [**Windows**](https://github.com/nozwock/yanu#windows), as well as other platforms with the help of [Docker images](https://github.com/nozwock/yanu#docker). It serves as a temporary solution until Skyline supports Updates/DLCs natively.
 
 > **Warning** - **Doesn't support DLCs.**
 
@@ -100,10 +98,10 @@ yanu repack --controlnca './base+update.bylies/patchdata/nca_around_1mb.nca' --t
 ```
 
 > **Note**
-> - The above examples were for *nix systems, adapt them appropriately for Windows (Replacing `/` with `\` and with proper path to the executable).
-> - Control NCA is usually the NCA around ~1MiB in size.
-> - Yanu will only accept Control Type NCA, so you can atleast figure out the Type by trial & error incase it's too hard to guess.
-> - Look at the logs if you're using a wrong TitleID, it'll mention which TitleID to use instead.
+> - For Windows, adapt the above examples by replacing `/` with `\` and using the appropriate path to the executable.
+> - Control NCA is typically around 1MB in size.
+> - Yanu only accepts Control Type NCA. If unsure of the Type, trial and error can help narrow down the options.
+> - Check the logs for guidance on which TitleID to use if using the wrong one.
 
 ## Directories Used
 
