@@ -107,15 +107,6 @@ fn run() -> Result<()> {
         bail!("'{}' is not a file", update_path.display());
     }
 
-    let base_name = base_path
-        .file_name()
-        .expect("File should've a filename")
-        .to_string_lossy();
-    let update_name = update_path
-        .file_name()
-        .expect("File should've a filename")
-        .to_string_lossy();
-
     // Warning for Unicode paths
     let temp_dir = config.temp_dir.canonicalize()?;
     let mut unicode_warn_msg = vec![];
@@ -134,6 +125,15 @@ fn run() -> Result<()> {
             ))
             .show();
     }
+
+    let base_name = base_path
+        .file_name()
+        .expect("File should've a filename")
+        .to_string_lossy();
+    let update_name = update_path
+        .file_name()
+        .expect("File should've a filename")
+        .to_string_lossy();
 
     if rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Info)

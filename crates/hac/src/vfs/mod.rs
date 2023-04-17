@@ -2,6 +2,7 @@ pub mod nacp;
 pub mod nca;
 pub mod nsp;
 pub mod ticket;
+pub mod xci;
 
 // Yes....this is vfs....
 
