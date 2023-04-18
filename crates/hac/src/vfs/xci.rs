@@ -2,16 +2,16 @@ use super::nsp::Nsp;
 use crate::backend::{Backend, BackendKind};
 use common::{
     defines::DEFAULT_PRODKEYS_PATH,
-    utils::{ext_matches, move_file},
+    utils::{ext_matches, get_size, move_file},
 };
 use eyre::{bail, Result};
 use fs_err as fs;
 use std::{path::Path, process::Command};
 use tempfile::tempdir_in;
-use tracing::warn;
+use tracing::{info, warn};
 use walkdir::WalkDir;
 
-pub fn xci_to_nsps<P, Q, R>(xci: P, outdir: Q, temp_dir: R) -> Result<Vec<Nsp>>
+pub fn xci_to_nsps<P, Q, R>(xci: P, outdir: Q, temp_dir_in: R) -> Result<Vec<Nsp>>
 where
     P: AsRef<Path>,
     Q: AsRef<Path>,
@@ -19,16 +19,22 @@ where
 {
     is_xci(xci.as_ref())?;
 
+    info!(
+        xci = %xci.as_ref().display(),
+        size = %get_size(xci.as_ref()).unwrap_or("None".into()),
+        "Converting to NSP"
+    );
+
     let backend = Backend::try_new(BackendKind::FourNXCI)?;
-    let _temp_dir = tempdir_in(temp_dir.as_ref())?;
-    let temp_outdir = tempdir_in(temp_dir.as_ref())?;
+    let temp_dir = tempdir_in(temp_dir_in.as_ref())?;
+    let temp_outdir = tempdir_in(temp_dir_in.as_ref())?;
     fs::create_dir_all(&temp_outdir)?;
     if !Command::new(backend.path())
         .args([
             "--keyset".as_ref(),
             DEFAULT_PRODKEYS_PATH.as_path(),
             "--tempdir".as_ref(),
-            _temp_dir.path(),
+            temp_dir.path(),
             "--outdir".as_ref(),
             temp_outdir.path(),
             "--rename".as_ref(),
@@ -58,6 +64,8 @@ where
     if nsps.is_empty() {
         bail!("4NXCI failed to convert XCI to NSP");
     }
+
+    info!(?nsps, "Converted to NSPs");
 
     Ok(nsps)
 }

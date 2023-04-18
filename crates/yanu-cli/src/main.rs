@@ -4,7 +4,7 @@ use clap::Parser;
 use common::{
     defines::{APP_CACHE_DIR, APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     error::MultiReport,
-    utils::ext_matches,
+    utils::{ext_matches, get_size},
 };
 use config::Config;
 #[cfg(not(feature = "android-proot"))]
@@ -16,13 +16,13 @@ use fs_err as fs;
 use hac::backend::{Backend, BackendKind};
 use hac::{
     utils::{custom_nsp_rename, repack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
-    vfs::{nsp::Nsp, PROGRAMID_LEN},
+    vfs::{nsp::Nsp, xci::xci_to_nsps, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
 use tracing::{debug, error, info};
 use yanu_cli::opts::{self, YanuCli};
 
-macro_rules! validate_paths {
+macro_rules! path_exists {
     ($($a:expr),*) => {
         [$($a,)*]
         .into_iter()
@@ -107,7 +107,7 @@ fn run() -> Result<()> {
             }
 
             // Path validation
-            validate_paths!(Some(&opts.base), Some(&opts.update))?;
+            path_exists!(Some(&opts.base), Some(&opts.update))?;
 
             info!("Started patching!");
             timer = Some(Instant::now());
@@ -135,7 +135,7 @@ fn run() -> Result<()> {
 
             // Path validation
             // ?let clap do this instead
-            validate_paths!(
+            path_exists!(
                 Some(&opts.controlnca),
                 Some(&opts.romfsdir),
                 Some(&opts.exefsdir)
@@ -175,7 +175,7 @@ fn run() -> Result<()> {
             }
 
             // Path validation
-            validate_paths!(Some(&opts.base), opts.update.as_ref())?;
+            path_exists!(Some(&opts.base), opts.update.as_ref())?;
 
             let prefix = if opts.update.is_some() {
                 "base+patch."
@@ -201,7 +201,41 @@ fn run() -> Result<()> {
                 outdir.display()
             );
         }
-        Some(opts::Commands::Convert(opts)) => {}
+        Some(opts::Commands::Convert(opts)) => {
+            path_exists!(Some(&opts.file), opts.outdir.as_ref())?;
+
+            let outdir = opts.outdir.unwrap_or(default_outdir()?);
+
+            match opts.kind {
+                opts::ConvertKind::Nsp => {
+                    match opts.file.extension().map(|ext| ext.to_ascii_lowercase()) {
+                        Some(ext) if ext == "xci" => {
+                            timer = Some(Instant::now());
+                            let nsps = xci_to_nsps(opts.file, outdir, &config.temp_dir)?;
+                            println!("{}", style("\nPath to converted NSPs:").bold().underlined());
+                            for nsp in nsps {
+                                println!(
+                                    "'{}' {}",
+                                    nsp.path.display(),
+                                    style(format!(
+                                        "({})",
+                                        get_size(&nsp.path).unwrap_or("None".into())
+                                    ))
+                                    .bold()
+                                    .dim()
+                                );
+                            }
+                        }
+                        Some(ext) => bail!(
+                            "Not supported conversion '{} -> {:?}'",
+                            ext.to_string_lossy(),
+                            opts.kind
+                        ),
+                        None => bail!("Non Unicode chars"),
+                    }
+                }
+            }
+        }
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {
