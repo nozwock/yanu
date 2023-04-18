@@ -245,7 +245,7 @@ fn run() -> Result<()> {
             Config::store(config)?;
             eprintln!("{}", style("Successfully modified config").green().bold());
         }
-        Some(opts::Commands::UpdatePrompt) => {
+        Some(opts::Commands::Tui) => {
             use walkdir::WalkDir;
 
             if config.yanu_dir.is_none() {

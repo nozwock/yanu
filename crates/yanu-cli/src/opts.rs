@@ -33,9 +33,8 @@ pub enum Commands {
     /// Manage yanu's config
     #[command(visible_alias = "cfg")]
     Config(Config),
-    /// Update NSP using prompt
     #[command()]
-    UpdatePrompt,
+    Tui,
     #[cfg(unix)]
     /// Builds or extracts embedded backend components;
     /// Useful when creating read-only containers
@@ -127,8 +126,9 @@ pub struct Convert {
     /// Input file
     #[arg()]
     pub file: PathBuf,
+    /// By default it'll be pwd
     #[arg(short, long)]
-    pub output: Option<PathBuf>,
+    pub outdir: Option<PathBuf>,
 }
 
 #[cfg(not(feature = "android-proot"))]
