@@ -109,19 +109,25 @@ pub struct Unpack {
     pub outdir: Option<PathBuf>,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
 pub enum ConvertKind {
-    #[default]
     Nsp,
 }
 
-#[derive(Debug, Args, Default, PartialEq, Eq)]
+#[derive(Debug, Args, PartialEq, Eq)]
 #[command(after_help = get_section("Examples", r#"For converting XCI to NSP:
 $ yanu-cli convert --kind nsp gta6.xci
 "#, "  "))]
 pub struct Convert {
     /// File format to convert to
-    #[arg(short, long, value_enum)]
+    #[arg(
+        short,
+        long,
+        value_enum,
+        long_help = r#"File format to convert to
+Possible coversions:
+    To nsp: xci"#
+    )]
     pub kind: ConvertKind,
     /// Input file
     #[arg()]

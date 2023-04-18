@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use common::utils::{ext_matches, get_size};
+use common::utils::{ext_matches, get_size_as_string};
 use derivative::Derivative;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
@@ -61,7 +61,7 @@ impl Nca {
 
         info!(
             nca = %file_path.as_ref().display(),
-            size = %get_size(file_path.as_ref()).unwrap_or("None".into()),
+            size = %get_size_as_string(file_path.as_ref()).unwrap_or("None".into()),
             "Identifying TitleID and ContentType",
         );
 

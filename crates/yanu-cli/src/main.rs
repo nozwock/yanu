@@ -4,7 +4,7 @@ use clap::Parser;
 use common::{
     defines::{APP_CACHE_DIR, APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     error::MultiReport,
-    utils::{ext_matches, get_size},
+    utils::{ext_matches, get_size_as_string},
 };
 use config::Config;
 #[cfg(not(feature = "android-proot"))]
@@ -219,7 +219,7 @@ fn run() -> Result<()> {
                                     nsp.path.display(),
                                     style(format!(
                                         "({})",
-                                        get_size(&nsp.path).unwrap_or("None".into())
+                                        get_size_as_string(&nsp.path).unwrap_or("None".into())
                                     ))
                                     .bold()
                                     .dim()

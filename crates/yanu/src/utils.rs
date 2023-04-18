@@ -8,7 +8,7 @@ where
     T: AsRef<[&'a str]> + 'a,
     I: IntoIterator<Item = (&'a str, T)>,
 {
-    use common::utils::get_size;
+    use common::utils::get_size_as_string;
     use eyre::eyre;
     use tracing::info;
 
@@ -18,7 +18,7 @@ where
     }
     let path = filedialog.pick_file();
     if let Some(path) = &path {
-        info!(?path, size = %get_size(path).unwrap_or("None".into()), "Selected file");
+        info!(?path, size = %get_size_as_string(path).unwrap_or("None".into()), "Selected file");
     }
     path.ok_or_else(|| eyre!("No file was selected"))
 }
