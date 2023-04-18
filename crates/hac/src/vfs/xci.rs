@@ -20,7 +20,7 @@ where
     is_xci(xci.as_ref())?;
 
     let backend = Backend::try_new(BackendKind::FourNXCI)?;
-    let temp_dir = tempdir_in(temp_dir.as_ref())?;
+    let _temp_dir = tempdir_in(temp_dir.as_ref())?;
     let temp_outdir = tempdir_in(temp_dir.as_ref())?;
     fs::create_dir_all(&temp_outdir)?;
     if !Command::new(backend.path())
@@ -28,7 +28,7 @@ where
             "--keyset".as_ref(),
             DEFAULT_PRODKEYS_PATH.as_path(),
             "--tempdir".as_ref(),
-            temp_dir.path(),
+            _temp_dir.path(),
             "--outdir".as_ref(),
             temp_outdir.path(),
             "--rename".as_ref(),
