@@ -201,6 +201,7 @@ fn run() -> Result<()> {
                 outdir.display()
             );
         }
+        Some(opts::Commands::Convert(opts)) => {}
         Some(opts::Commands::Config(opts)) => {
             if let Some(roms_dir) = opts.roms_dir {
                 if roms_dir.is_dir() {

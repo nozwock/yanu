@@ -27,6 +27,9 @@ pub enum Commands {
     /// Unpack NSP
     #[command()]
     Unpack(Unpack),
+    /// Convert Switch file formats
+    #[command()]
+    Convert(Convert),
     /// Manage yanu's config
     #[command(visible_alias = "cfg")]
     Config(Config),
@@ -105,6 +108,27 @@ pub struct Unpack {
     pub update: Option<PathBuf>,
     #[arg(short, long, value_name = "DIR")]
     pub outdir: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
+pub enum ConvertKind {
+    #[default]
+    Nsp,
+}
+
+#[derive(Debug, Args, Default, PartialEq, Eq)]
+#[command(after_help = get_section("Examples", r#"For converting XCI to NSP:
+$ yanu-cli convert --kind nsp gta6.xci
+"#, "  "))]
+pub struct Convert {
+    /// File format to convert to
+    #[arg(short, long, value_enum)]
+    pub kind: ConvertKind,
+    /// Input file
+    #[arg()]
+    pub file: PathBuf,
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
 }
 
 #[cfg(not(feature = "android-proot"))]
