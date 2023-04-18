@@ -58,6 +58,20 @@ impl fmt::Display for BackendKind {
     }
 }
 
+impl BackendKind {
+    // This is important, don't remove it again!
+    fn filename(&self) -> String {
+        #[cfg(unix)]
+        {
+            format!("{}", self).to_lowercase()
+        }
+        #[cfg(windows)]
+        {
+            format!("{}.exe", self).to_lowercase()
+        }
+    }
+}
+
 pub struct Backend {
     kind: BackendKind,
     path: PathBuf,
@@ -68,7 +82,7 @@ pub struct Backend {
 impl Backend {
     /// Prefers embedded, builds only if binary not available.
     pub fn try_new(kind: BackendKind) -> Result<Self> {
-        let filename = kind.to_string().to_lowercase();
+        let filename = kind.filename();
         let cache = Cache::default();
         let cached_path = if let Ok(cached_path) = cache.get(&filename) {
             cached_path
@@ -159,8 +173,8 @@ pub mod build {
 
     pub fn hacpack() -> Result<PathBuf> {
         let config = Config::load()?;
-        let name = BackendKind::Hacpack.to_string();
-        info!("Building {}", name);
+        let kind = BackendKind::Hacpack;
+        info!("Building {}", kind);
         let src_dir = tempdir()?;
 
         if !Command::new("git")
@@ -169,7 +183,7 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to clone {} repo", name);
+            bail!("Failed to clone {} repo", kind);
         }
 
         git_checkout(src_dir.path(), &config.hacpack_rev)?;
@@ -190,11 +204,11 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to build {}", name);
+            bail!("Failed to build {}", kind);
         }
 
         //* Moving bin from temp dir to cache dir
-        let filename = name.to_lowercase();
+        let filename = kind.filename();
         fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
         let dest = APP_CACHE_DIR.join(&filename);
         move_file(src_dir.path().join(&filename), &dest)?;
@@ -204,8 +218,8 @@ pub mod build {
 
     pub fn hactool() -> Result<PathBuf> {
         let config = Config::load()?;
-        let name = BackendKind::Hactool.to_string();
-        info!("Building {}", name);
+        let kind = BackendKind::Hactool;
+        info!("Building {}", kind);
         let src_dir = tempdir()?;
 
         if !Command::new("git")
@@ -214,7 +228,7 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to clone {} repo", name);
+            bail!("Failed to clone {} repo", kind);
         }
 
         git_checkout(src_dir.path(), &config.hactool_rev)?;
@@ -258,11 +272,11 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to build {}", name);
+            bail!("Failed to build {}", kind);
         }
 
         //* Moving bin from temp dir to cache dir
-        let filename = name.to_lowercase();
+        let filename = kind.filename();
         fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
         let dest = APP_CACHE_DIR.join(&filename);
         move_file(src_dir.path().join(&filename), &dest)?;
@@ -280,8 +294,8 @@ pub mod build {
 
         let config = Config::load()?;
 
-        let name = BackendKind::Hac2l.to_string();
-        info!("Building {}", name);
+        let kind = BackendKind::Hac2l;
+        info!("Building {}", kind);
         let src_dir = tempdir()?;
 
         if !Command::new("git")
@@ -302,7 +316,7 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to clone {} repo", name);
+            bail!("Failed to clone {} repo", kind);
         }
 
         if !Command::new("git")
@@ -326,11 +340,11 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to build {}", name);
+            bail!("Failed to build {}", kind);
         }
 
         //* Moving bin from temp dir to cache dir
-        let filename = name.to_lowercase();
+        let filename = kind.filename();
         fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
         let dest = APP_CACHE_DIR.join(&filename);
         for entry in walkdir::WalkDir::new(hac2l_src_dir.join("out"))
@@ -350,13 +364,13 @@ pub mod build {
             }
         }
 
-        bail!("Failed to build {}", name);
+        bail!("Failed to build {}", kind);
     }
 
     pub fn four_nxci() -> Result<PathBuf> {
         let config = Config::load()?;
-        let name = "4NXCI";
-        info!("Building {}", name);
+        let kind = BackendKind::FourNXCI;
+        info!("Building {}", kind);
         let src_dir = tempdir()?;
 
         if !Command::new("git")
@@ -365,7 +379,7 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to clone {} repo", name)
+            bail!("Failed to clone {} repo", kind)
         }
 
         git_checkout(src_dir.path(), &config.four_nxci_rev)?;
@@ -386,11 +400,11 @@ pub mod build {
             .status()?
             .success()
         {
-            bail!("Failed to build {}", name);
+            bail!("Failed to build {}", kind);
         }
 
         //* Moving bin from temp dir to cache dir
-        let filename = name.to_lowercase();
+        let filename = kind.filename();
         fs_err::create_dir_all(APP_CACHE_DIR.as_path())?;
         let dest = APP_CACHE_DIR.join(&filename);
         move_file(src_dir.path().join(&filename), &dest)?;
