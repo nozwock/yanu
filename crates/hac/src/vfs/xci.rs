@@ -21,7 +21,7 @@ where
 
     info!(
         xci = %xci.as_ref().display(),
-        size = %get_size_as_string(xci.as_ref()).unwrap_or("None".into()),
+        size = %get_size_as_string(xci.as_ref()).unwrap_or_default(),
         "Converting to NSP"
     );
 

@@ -61,7 +61,7 @@ impl Nca {
 
         info!(
             nca = %file_path.as_ref().display(),
-            size = %get_size_as_string(file_path.as_ref()).unwrap_or("None".into()),
+            size = %get_size_as_string(file_path.as_ref()).unwrap_or_default(),
             "Identifying TitleID and ContentType",
         );
 

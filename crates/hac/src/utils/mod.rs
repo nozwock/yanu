@@ -1,4 +1,4 @@
-pub mod repack;
+pub mod pack;
 pub mod unpack;
 pub mod update;
 

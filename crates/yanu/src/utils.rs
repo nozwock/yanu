@@ -18,7 +18,7 @@ where
     }
     let path = filedialog.pick_file();
     if let Some(path) = &path {
-        info!(?path, size = %get_size_as_string(path).unwrap_or("None".into()), "Selected file");
+        info!(?path, size = %get_size_as_string(path).unwrap_or_default(), "Selected file");
     }
     path.ok_or_else(|| eyre!("No file was selected"))
 }

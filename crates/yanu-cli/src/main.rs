@@ -15,7 +15,7 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    utils::{custom_nsp_rename, repack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
+    utils::{custom_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, xci::xci_to_nsps, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
@@ -239,7 +239,7 @@ fn run() -> Result<()> {
                                     nsp.path.display(),
                                     style(format!(
                                         "({})",
-                                        get_size_as_string(&nsp.path).unwrap_or("None".into())
+                                        get_size_as_string(&nsp.path).unwrap_or_default()
                                     ))
                                     .bold()
                                     .dim()
