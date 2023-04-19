@@ -4,7 +4,7 @@ use clap::Parser;
 use common::{
     defines::{APP_CACHE_DIR, APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     error::MultiReport,
-    utils::{ext_matches, get_size_as_string},
+    utils::{ext_matches, get_disk_free, get_paths_size, get_size_as_string},
 };
 use config::Config;
 #[cfg(not(feature = "android-proot"))]
@@ -19,9 +19,10 @@ use hac::{
     vfs::{nsp::Nsp, xci::xci_to_nsps, PROGRAMID_LEN},
 };
 use indicatif::HumanDuration;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use yanu_cli::opts::{self, YanuCli};
 
+// TODO: this but for specifics like file, and dir
 macro_rules! path_exists {
     ($($a:expr),*) => {
         [$($a,)*]
@@ -30,6 +31,25 @@ macro_rules! path_exists {
         .find(|meta| meta.is_err())
         .transpose()
     };
+}
+
+macro_rules! check_space_with_prompt {
+    ($modifier:expr, $paths:expr, $disk_path:expr) => {{
+        let recommended_space = bytesize::ByteSize(get_paths_size($paths)?.as_u64() * $modifier);
+        let available_space = get_disk_free($disk_path)?;
+        if recommended_space > available_space {
+            warn!(?recommended_space, ?available_space);
+            inquire::Confirm::new(&format!(
+                "Insufficient Space ({} {}) Continue?",
+                style(format!("Recommended: {:?}+", recommended_space)).yellow(),
+                style(format!("Available: {:?}", available_space)).red()
+            ))
+            .with_default(false)
+            .prompt()?
+        } else {
+            true
+        }
+    }};
 }
 
 fn main() -> Result<()> {
@@ -397,6 +417,10 @@ fn run() -> Result<()> {
                     "Selected package '{}' should be in {:#?}",
                     choice, roms_path
                 ));
+
+            if !check_space_with_prompt!(2, &[&base.path, &update.path], &config.temp_dir) {
+                return Ok(());
+            }
 
             if inquire::Confirm::new("Are you sure?")
                 .with_default(false)

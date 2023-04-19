@@ -57,7 +57,7 @@ pub fn get_size<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
 /// Returns free disk space.\
 /// `Disk` is retrieved from a given `path`.
 /// For example, The `Disk` mounted on `/` will be used for a given path `/home`.
-fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<u64> {
+pub fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
     use sysinfo::{DiskExt, RefreshKind, System, SystemExt};
 
     let system = System::new_with_specifics(RefreshKind::new().with_disks().with_disks_list());
@@ -71,7 +71,7 @@ fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<u64> {
             for disk in system.disks() {
                 if inner_parent == disk.mount_point().canonicalize()? {
                     debug!(?disk);
-                    return Ok(disk.available_space());
+                    return Ok(ByteSize(disk.available_space()));
                 }
             }
             parent = parent.and_then(|path| path.parent());
@@ -81,4 +81,15 @@ fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<u64> {
     }
 
     unreachable!()
+}
+
+pub fn get_paths_size<P>(paths: &[P]) -> Result<ByteSize>
+where
+    P: AsRef<Path>,
+{
+    let mut size = 0;
+    for path in paths {
+        size += path.as_ref().metadata()?.len();
+    }
+    Ok(ByteSize(size))
 }

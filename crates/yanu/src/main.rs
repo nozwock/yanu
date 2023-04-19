@@ -6,6 +6,7 @@ mod utils;
 ))]
 use crate::utils::pick_nsp_file;
 use common::defines::DEFAULT_PRODKEYS_PATH;
+use common::utils::{get_disk_free, get_paths_size};
 use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
@@ -13,7 +14,7 @@ use hac::utils::custom_nsp_rename;
 use hac::{utils::update::update_nsp, vfs::nsp::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 fn main() -> Result<()> {
     // Colorful errors
@@ -146,6 +147,26 @@ fn run() -> Result<()> {
         .set_buttons(rfd::MessageButtons::YesNo)
         .show()
     {
+        let recommended_space =
+            bytesize::ByteSize(get_paths_size(&[&base_path, &update_path])?.as_u64() * 2);
+        let available_space = get_disk_free(&config.temp_dir)?;
+        if recommended_space > available_space {
+            warn!(?recommended_space, ?available_space);
+            if !rfd::MessageDialog::new()
+                .set_level(rfd::MessageLevel::Warning)
+                .set_title("Insufficient space")
+                .set_description(&format!(
+                    "Recommended: {:?}+\nAvailable: {:?}\n\
+                    Do you want to continue?",
+                    recommended_space, available_space
+                ))
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show()
+            {
+                return Ok(());
+            }
+        }
+
         info!("Started patching!");
         let started = Instant::now();
         let (mut patched, nacp_data, program_id) = update_nsp(

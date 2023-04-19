@@ -29,3 +29,4 @@ tempfile.workspace = true
 tracing.workspace = true
 walkdir.workspace = true
 derivative.workspace = true
+bytesize.workspace = true
