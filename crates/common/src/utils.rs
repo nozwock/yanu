@@ -2,7 +2,7 @@ use bytesize::ByteSize;
 use eyre::Result;
 use fs_err as fs;
 use std::path::Path;
-use tracing::warn;
+use tracing::{debug, warn};
 
 pub fn str_truncate(s: &str, new_len: usize) -> &str {
     match s.char_indices().nth(new_len) {
@@ -52,4 +52,33 @@ pub fn get_size_as_string<P: AsRef<Path>>(path: P) -> Option<String> {
 
 pub fn get_size<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
     Ok(ByteSize::b(path.as_ref().metadata()?.len()))
+}
+
+/// Returns free disk space.\
+/// `Disk` is retrieved from a given `path`.
+/// For example, The `Disk` mounted on `/` will be used for a given path `/home`.
+fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<u64> {
+    use sysinfo::{DiskExt, RefreshKind, System, SystemExt};
+
+    let system = System::new_with_specifics(RefreshKind::new().with_disks().with_disks_list());
+
+    // canonicalizing both paths is important, since we want both paths to be of same type
+    // and absent of any intermediate components.
+    let abs_path = path.as_ref().canonicalize()?;
+    let mut parent = Some(abs_path.as_path());
+    loop {
+        if let Some(inner_parent) = parent {
+            for disk in system.disks() {
+                if inner_parent == disk.mount_point().canonicalize()? {
+                    debug!(?disk);
+                    return Ok(disk.available_space());
+                }
+            }
+            parent = parent.and_then(|path| path.parent());
+        } else {
+            break;
+        }
+    }
+
+    unreachable!()
 }

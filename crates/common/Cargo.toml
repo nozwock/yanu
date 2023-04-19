@@ -19,3 +19,4 @@ fs-err.workspace = true
 once_cell = "1.17"
 tracing.workspace = true
 bytesize.workspace = true
+sysinfo.workspace = true
