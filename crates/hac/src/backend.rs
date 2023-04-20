@@ -94,6 +94,7 @@ impl Backend {
                     BackendKind::Hactool => cache.store_bytes(defines::HACTOOL, &filename)?,
                     BackendKind::Hactoolnet => cache.store_bytes(defines::HACTOOLNET, &filename)?,
                     BackendKind::Hac2l => cache.store_bytes(defines::HAC2L, &filename)?,
+                    BackendKind::FourNXCI => cache.store_bytes(defines::FOURNXCI, &filename)?,
                 }
             }
             #[cfg(unix)]
