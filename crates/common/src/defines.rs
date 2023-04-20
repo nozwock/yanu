@@ -13,7 +13,7 @@ pub const HACTOOLNET: &[u8] = include_bytes!("../../../assets/x86_64-windows/hac
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
 pub const HAC2L: &[u8] = include_bytes!("../../../assets/x86_64-windows/hac2l.exe");
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
-pub const FOURNXCI: &[u8] = include_bytes!("../../../assets/x86_64-windows/4nxci");
+pub const FOURNXCI: &[u8] = include_bytes!("../../../assets/x86_64-windows/4nxci.exe");
 
 // Hactoolnet v0.18
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
