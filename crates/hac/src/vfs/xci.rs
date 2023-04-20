@@ -43,7 +43,7 @@ where
         .status()?
         .success()
     {
-        warn!("4NXCI returned non-zero exit status while trying to convert XCI to NSP");
+        warn!("Encountered an error while trying to convert XCI to NSP");
     }
 
     let mut nsps = vec![];
@@ -62,7 +62,7 @@ where
     }
 
     if nsps.is_empty() {
-        bail!("4NXCI failed to convert XCI to NSP");
+        bail!("Failed to convert XCI to NSP");
     }
 
     info!(?nsps, "Converted to NSPs");

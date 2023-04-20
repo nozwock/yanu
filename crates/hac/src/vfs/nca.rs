@@ -75,15 +75,6 @@ impl Nca {
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while viewing info",
             );
-        } else {
-            let stderr = std::str::from_utf8(output.stderr.as_slice())?
-                .lines()
-                .filter(|line| !line.to_lowercase().contains("failed to match key"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            if !stderr.trim().is_empty() {
-                warn!(backend = ?reader.kind(), %stderr);
-            }
         }
         let stdout = String::from_utf8(output.stdout)?;
 
@@ -154,27 +145,29 @@ impl Nca {
         hex::encode(self.program_id)
     }
     pub fn unpack_romfs<P: AsRef<Path>>(&self, extractor: &Backend, romfs_dir: P) -> Result<()> {
+        info!(nca = %self.path.display(), "Unpacking RomFS from NCA");
         let output = Command::new(extractor.path())
             .args([
                 self.path.as_path(),
                 "--romfsdir".as_ref(),
                 romfs_dir.as_ref(),
             ])
+            .stdout(Stdio::inherit())
             .output()?;
         if !output.status.success() {
             warn!(
                 nca = %self.path.display(),
                 backend = ?extractor.kind(),
                 stderr = %String::from_utf8(output.stderr)?,
-                "Encountered an error while extracting romfs",
+                "Encountered an error while unpacking RomFS from NCA",
             );
-            bail!("Encountered an error while extracting romfs");
+            bail!("Encountered an error while unpacking RomFS from NCA");
         }
 
         info!(
-            ?self.path,
-            romfs = ?romfs_dir.as_ref(),
-            "Unpacked romfs"
+            nca = %self.path.display(),
+            romfs = %romfs_dir.as_ref().display(),
+            "Unpacked RomFS from NCA"
         );
 
         Ok(())
@@ -186,7 +179,7 @@ impl Nca {
         romfs_dir: P,
         exefs_dir: Q,
     ) -> Result<()> {
-        info!(?self.path, ?aux.path, "Unpacking romfs and exefs");
+        info!(basenca = %self.path.display(), nca = %aux.path.display(), "Unpacking RomFS/ExeFS from NCAs");
         let mut cmd = Command::new(extractor.path());
         cmd.args([
             "--basenca".as_ref(),
@@ -204,16 +197,17 @@ impl Nca {
                 backend = ?extractor.kind(),
                 code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
-                "Encountered an error while unpacking NCAs"
+                "Encountered an error while unpacking RomFS/ExeFS from NCAs"
             );
-            bail!("Encountered an error while unpacking NCAs");
+            bail!("Encountered an error while unpacking RomFS/ExeFS from NCAs");
         }
 
         info!(
-            ?self.path,
-            romfs = ?romfs_dir.as_ref(),
-            exefs = ?exefs_dir.as_ref(),
-            "Unpacked romfs and exefs"
+            basenca = %self.path.display(),
+            nca = %aux.path.display(),
+            romfs = %romfs_dir.as_ref().display(),
+            exefs = %exefs_dir.as_ref().display(),
+            "Unpacked RomFS/ExeFS from NCAs"
         );
         Ok(())
     }
@@ -260,13 +254,12 @@ impl Nca {
         cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(
+            warn!(
                 backend = ?packer.kind(),
                 exit_code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while packing FS files to NCA"
             );
-            bail!("Encountered an error while packing FS files to NCA");
         }
 
         let patched_nca = readers
@@ -275,7 +268,7 @@ impl Nca {
             .map(|reader| nca_with_kind(reader, outdir.as_ref(), ContentType::Program))
             .find(|filtered| filtered.is_some())
             .flatten()
-            .ok_or_else(|| eyre!("Failed to find Patched NCA"))?
+            .ok_or_else(|| eyre!("Failed to pack FS files to NCA"))?
             .remove(0);
         info!(
             nca = %patched_nca.path.display(),

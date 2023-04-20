@@ -29,7 +29,7 @@ impl Nsp {
         })
     }
     pub fn unpack<P: AsRef<Path>>(&self, extractor: &Backend, to: P) -> Result<()> {
-        info!(?self.path, "Extracting");
+        info!(nsp = %self.path.display(), "Unpacking NSP");
         let mut cmd = Command::new(extractor.path());
         cmd.args([
             "-t".as_ref(),
@@ -42,6 +42,7 @@ impl Nsp {
         let output = cmd.output()?;
         if !output.status.success() {
             error!(
+                nsp = %self.path.display(),
                 backend = ?extractor.kind(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while unpacking NSP"
@@ -49,7 +50,7 @@ impl Nsp {
             bail!("Failed to extract '{}'", self.path.display());
         }
 
-        info!(?self.path, to = ?to.as_ref(), "Extraction done!");
+        info!(nsp = %self.path.display(), to = %to.as_ref().display(), "Unpacked NSP");
         Ok(())
     }
     pub fn pack<K, P, Q>(
@@ -92,7 +93,7 @@ impl Nsp {
 
         let nsp_path = outdir.as_ref().join(format!("{}.nsp", program_id));
         info!(
-            outdir = ?outdir.as_ref(),
+            outdir = %outdir.as_ref().display(),
             size = %get_size_as_string(&nsp_path).unwrap_or_default(),
             "Packed NCAs to NSP"
         );
@@ -100,7 +101,7 @@ impl Nsp {
     }
     pub fn derive_title_key<P: AsRef<Path>>(&mut self, data_path: P) -> Result<()> {
         if self.title_key.is_none() {
-            info!(nsp = ?self.path, "Deriving TitleKey");
+            info!(nsp = %self.path.display(), "Deriving TitleKey");
             for entry in WalkDir::new(data_path.as_ref())
                 .min_depth(1)
                 .into_iter()
@@ -110,17 +111,16 @@ impl Nsp {
                     self.title_key = Some(TitleKey::try_new(entry.path())?);
                     break;
                 }
-                continue;
             }
             if self.title_key.is_none() {
-                bail!(
-                    "Couldn't derive TitleKey, '{}' doesn't have a .tik file",
-                    self.path.display()
-                );
+                bail!("Couldn't find a Ticket file in '{}'", self.path.display());
             }
-            info!("Derived TitleKey successfully!");
+            info!("Derived TitleKey");
         } else {
-            info!("TitleKey already exists");
+            info!(
+                title_key = ?self.title_key.as_ref().map(|key| key.to_string()),
+                "TitleKey already exists!"
+            );
         }
 
         Ok(())
