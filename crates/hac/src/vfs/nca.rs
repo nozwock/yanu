@@ -6,10 +6,12 @@ use std::{
     str::FromStr,
 };
 
-use common::utils::{ext_matches, get_size_as_string};
+use common::utils::{ext_matches, get_size_as_string, move_file};
+use config::Config;
 use derivative::Derivative;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
+use tempfile::tempdir_in;
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
@@ -289,7 +291,11 @@ impl Nca {
         K: AsRef<Path>,
         O: AsRef<Path>,
     {
+        // figure out a solution for this
+        let config = Config::load()?;
         info!(?program.path, ?control.path, "Generating Meta NCA");
+
+        let temp_outdir = tempdir_in(&config.temp_dir)?;
         let mut cmd = Command::new(packer.path());
         cmd.args([
             "--keyset".as_ref(),
@@ -307,22 +313,33 @@ impl Nca {
             "--titleid".as_ref(),
             program_id.as_ref(),
             "--outdir".as_ref(),
-            outdir.as_ref(),
+            temp_outdir.path(),
         ]);
         cmd.stdout(Stdio::inherit());
         let output = cmd.output()?;
         if !output.status.success() {
-            error!(
+            warn!(
                 backend = ?packer.kind(),
                 code = ?output.status.code(),
                 stderr = %String::from_utf8(output.stderr)?,
                 "Encountered an error while generating Meta NCA"
             );
-            bail!("Encountered an error while generating Meta NCA");
         }
 
-        info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");
-        Ok(())
+        for entry in WalkDir::new(temp_outdir.path())
+            .min_depth(1)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if entry.path().is_file() && ext_matches(entry.path(), "nca") {
+                // Moving NCA file from temp outdir to outdir
+                move_file(entry.path(), outdir.as_ref().join(entry.file_name()))?;
+                info!(outdir = ?outdir.as_ref(), "Generated Meta NCA");
+                return Ok(());
+            }
+        }
+
+        bail!("Failed to generate Meta NCA");
     }
 }
 
