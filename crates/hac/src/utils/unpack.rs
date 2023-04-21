@@ -8,11 +8,19 @@ use crate::{
 };
 use config::Config;
 use eyre::{eyre, Result};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
-/// Unpack NSP(s) to romfs/exefs.
-pub fn unpack_nsp<O>(mut base: Nsp, mut patch: Option<Nsp>, outdir: O) -> Result<()>
+/// It corresponds to **(ProgramID, BaseUnpacked, UpdateUnpacked, MainRomFS, MainExeFS)**.
+type UnpackedNSPData = (String, PathBuf, PathBuf, PathBuf, PathBuf);
+
+/// Unpack NSPs to RomFS/ExeFS.\
+/// **Note:** Whether `BaseUnpacked` path is valid depends on the `update` value.
+pub fn unpack_nsp<O>(
+    base: &mut Nsp,
+    mut update: Option<&mut Nsp>,
+    outdir: O,
+) -> Result<UnpackedNSPData>
 where
     O: AsRef<Path>,
 {
@@ -36,7 +44,9 @@ where
     let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
 
     let base_data_dir = outdir.as_ref().join("basedata");
-    let patch_data_dir = outdir.as_ref().join("patchdata");
+    let update_data_dir = outdir.as_ref().join("updatedata");
+    let romfs_dir = outdir.as_ref().join("romfs");
+    let exefs_dir = outdir.as_ref().join("exefs");
 
     // Important to do before any sort of unpacking
     // to avoid them being used when they were not supposed to
@@ -49,23 +59,25 @@ where
         warn!(?err);
     }
 
-    if let Some(patch) = patch.as_mut() {
-        // If patch is also to be extracted
-        patch.unpack(&nsp_extractor, &patch_data_dir)?;
+    // If update is also to be extracted
+    if let Some(update) = update.as_deref_mut() {
+        // !Extracting pfs0
+        update.unpack(&nsp_extractor, &update_data_dir)?;
         // Setting TitleKeys
-        if let Err(err) = patch.derive_title_key(&patch_data_dir) {
+        if let Err(err) = update.derive_title_key(&update_data_dir) {
             warn!(?err);
         }
     }
 
     // !Storing TitleKeys file
-    store_titlekeys([&base.title_key].iter().filter_map(|key| key.as_ref()))?;
-    if let Some(patch) = patch.as_ref() {
+    if let Some(update) = update.as_deref_mut() {
         store_titlekeys(
-            [&base.title_key, &patch.title_key]
+            [&base.title_key, &update.title_key]
                 .iter()
                 .filter_map(|key| key.as_ref()),
         )?;
+    } else {
+        store_titlekeys([&base.title_key].iter().filter_map(|key| key.as_ref()))?;
     }
 
     // !Getting Base NCA
@@ -79,36 +91,30 @@ where
         .remove(0);
     debug!(?base_nca);
 
-    if let Some(patch) = &patch {
+    if let Some(patch) = update.as_deref() {
         // !Getting Patch NCA
         let patch_nca = readers
             .iter()
             .inspect(|reader| info!("Using {:?} as reader", reader.kind()))
-            .map(|reader| nca_with_kind(reader, &patch_data_dir, nca::ContentType::Program))
+            .map(|reader| nca_with_kind(reader, &update_data_dir, nca::ContentType::Program))
             .find(|filtered| filtered.is_some())
             .flatten()
             .ok_or_else(|| eyre!("Failed to find Patch NCA in '{}'", patch.path.display()))?
             .remove(0);
         debug!(?patch_nca);
 
-        // !Unpacking fs files from NCAs
-        _ = base_nca.unpack_all(
-            &nca_extractor,
-            &patch_nca,
-            outdir.as_ref().join("romfs"),
-            outdir.as_ref().join("exefs"),
-        );
+        // !Unpacking FS files from NCAs
+        _ = base_nca.unpack_all(&nca_extractor, &patch_nca, &romfs_dir, &exefs_dir);
+    } else {
+        // !Unpacking FS files from NCAs
+        _ = base_nca.unpack_all(&nca_extractor, &base_nca, &romfs_dir, &exefs_dir);
     }
 
-    if patch.is_none() {
-        // !Unpacking fs files from NCAs
-        _ = base_nca.unpack_all(
-            &nca_extractor,
-            &base_nca,
-            outdir.as_ref().join("romfs"),
-            outdir.as_ref().join("exefs"),
-        );
-    }
-
-    Ok(())
+    Ok((
+        base_nca.get_program_id().to_lowercase(),
+        base_data_dir,
+        update_data_dir,
+        romfs_dir,
+        exefs_dir,
+    ))
 }

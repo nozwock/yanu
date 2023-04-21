@@ -24,7 +24,7 @@ pub fn pack_fs_data<N, E, R, O>(
     romfs_dir: R,
     exefs_dir: E,
     outdir: O,
-) -> Result<(Nsp, NacpData, String)>
+) -> Result<(Nsp, NacpData)>
 where
     N: AsRef<Path>,
     E: AsRef<Path>,
@@ -114,5 +114,5 @@ where
         outdir.as_ref(),
     )?;
 
-    Ok((packed_nsp, nacp_data, program_id))
+    Ok((packed_nsp, nacp_data))
 }

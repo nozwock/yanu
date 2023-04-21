@@ -170,9 +170,9 @@ fn run() -> Result<()> {
             }
 
             timer = Some(Instant::now());
-            let (mut patched, nacp_data, program_id) = pack_fs_data(
+            let (mut patched, nacp_data) = pack_fs_data(
                 opts.controlnca,
-                opts.titleid,
+                opts.titleid.clone(),
                 opts.romfsdir,
                 opts.exefsdir,
                 opts.outdir.unwrap_or(default_outdir()?),
@@ -180,7 +180,7 @@ fn run() -> Result<()> {
             custom_nsp_rename(
                 &mut patched.path,
                 &nacp_data,
-                &program_id,
+                &opts.titleid,
                 concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-packed]"),
             )?;
             eprintln!(
@@ -211,8 +211,8 @@ fn run() -> Result<()> {
             );
             timer = Some(Instant::now());
             unpack_nsp(
-                Nsp::try_new(opts.base)?,
-                opts.update.map(|f| Nsp::try_new(f).ok()).flatten(),
+                &mut Nsp::try_new(opts.base)?,
+                opts.update.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
                 &outdir,
             )?;
             eprintln!(

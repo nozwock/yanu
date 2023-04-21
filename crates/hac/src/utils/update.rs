@@ -19,14 +19,11 @@ use crate::{
 
 use super::hacpack_cleanup_install;
 
-// TODO: update can be reduced to a combination of unpack and repack
-
 /// Apply update NSP to the base NSP.
-pub fn update_nsp<O: AsRef<Path>>(
-    base: &mut Nsp,
-    update: &mut Nsp,
-    outdir: O,
-) -> Result<(Nsp, NacpData, String)> {
+pub fn update_nsp<O>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<(Nsp, NacpData, String)>
+where
+    O: AsRef<Path>,
+{
     let config = Config::load()?;
     let curr_dir = std::env::current_dir()?;
     let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
