@@ -18,13 +18,13 @@ pub struct YanuCli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Update NSP
+    /// Apply an update to a base NSP
     #[command()]
     Update(Update),
-    /// Pack to NSP
+    /// Pack FS files to NSP
     #[command()]
     Pack(Pack),
-    /// Unpack NSP
+    /// Unpack a NSP
     #[command()]
     Unpack(Unpack),
     /// Convert Switch file formats
@@ -71,7 +71,7 @@ $ yanu-cli pack \
 If only base was unpacked, get the control NCA from basedata.
 "#, "  "))]
 pub struct Pack {
-    /// Set Control NCA, it's usually the NCA file around ~1MB in size
+    /// Set Control NCA, it's typically around 1MB in size.
     #[arg(long, value_name = "FILE")]
     pub controlnca: PathBuf,
     /// Set TitleID
@@ -82,10 +82,10 @@ pub struct Pack {
         Check the logs for guidance on which TitleID to use if using the wrong one."
     )]
     pub titleid: String,
-    /// Set path to extracted romfs
+    /// Set path to extracted main NCA's RomFS
     #[arg(long, value_name = "DIR")]
     pub romfsdir: PathBuf,
-    /// Set path to extracted exefs
+    /// Set path to extracted main NCA's ExeFS
     #[arg(long, value_name = "DIR")]
     pub exefsdir: PathBuf,
     #[arg(short, long, value_name = "DIR")]
@@ -132,7 +132,7 @@ Possible coversions:
     /// Input file
     #[arg()]
     pub file: PathBuf,
-    /// By default it'll be pwd
+    /// By default it'll be 'pwd'
     #[arg(short, long)]
     pub outdir: Option<PathBuf>,
 }
@@ -156,10 +156,9 @@ pub enum NcaExtractor {
 #[derive(Debug, Args, Default, PartialEq, Eq)]
 #[command(arg_required_else_help = true)]
 pub struct Config {
-    // TODO: change `roms_dir` to `yanu_dir` once mod functionality is introduced
-    /// Set roms directory path, used in prompt to look for ROMS
+    /// Set Yanu directory path, used in tui to look for Game Packages and keys
     #[arg(long, value_name = "DIR")]
-    pub roms_dir: Option<PathBuf>,
+    pub yanu_dir: Option<PathBuf>,
     /// Temp files generated while patching will be stored here
     #[arg(
         long,

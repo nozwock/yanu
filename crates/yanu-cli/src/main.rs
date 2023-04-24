@@ -257,11 +257,11 @@ fn run() -> Result<()> {
             }
         }
         Some(opts::Commands::Config(opts)) => {
-            if let Some(roms_dir) = opts.roms_dir {
-                if roms_dir.is_dir() {
-                    config.yanu_dir = Some(dbg!(&roms_dir).canonicalize()?);
+            if let Some(yanu_dir) = opts.yanu_dir {
+                if yanu_dir.is_dir() {
+                    config.yanu_dir = Some(dbg!(&yanu_dir).canonicalize()?);
                 } else {
-                    bail!("'{}' is not a valid directory", roms_dir.display());
+                    bail!("'{}' is not a valid directory", yanu_dir.display());
                 }
             }
 
@@ -316,13 +316,13 @@ fn run() -> Result<()> {
                 #[cfg(unix)]
                 let prompt_input =
                     String::from_utf8(tilde_expand::tilde_expand(prompt_input.as_bytes()))?;
-                let roms_dir = PathBuf::from(prompt_input);
-                info!(?roms_dir);
+                let yanu_dir = PathBuf::from(prompt_input);
+                info!(?yanu_dir);
 
-                if !roms_dir.is_dir() {
-                    bail!("'{}' is not a valid directory", roms_dir.display());
+                if !yanu_dir.is_dir() {
+                    bail!("'{}' is not a valid directory", yanu_dir.display());
                 }
-                config.yanu_dir = Some(roms_dir.canonicalize()?);
+                config.yanu_dir = Some(yanu_dir.canonicalize()?);
                 info!("Updating config at '{}'", APP_CONFIG_PATH.display());
                 config.clone().store()?;
             }
