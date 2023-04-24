@@ -15,7 +15,7 @@ const NACP_FILENAME: &'static str = "control.nacp";
 /// Provides access to some of the data contained within a NACP file.
 #[derive(Debug, Default, Clone)]
 pub struct NacpData {
-    pub title_entry: ApplicationTitle, // Only using the first title entry instead of [ApplicationTitle; 0x10]
+    pub title_entry: ApplicationTitle, // Only using the "AmericanEnglish" entry
     pub application_version: [u8; 0x10],
 }
 
