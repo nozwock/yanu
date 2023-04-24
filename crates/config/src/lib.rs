@@ -23,7 +23,7 @@ pub enum NcaExtractor {
     Hac2l,
 }
 
-const SCHEMA_VERSION: u8 = 1;
+const SCHEMA_VERSION: u8 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
