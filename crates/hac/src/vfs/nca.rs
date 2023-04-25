@@ -264,7 +264,7 @@ impl Nca {
             warn!(
                 backend = ?packer.kind(),
                 exit_code = ?output.status.code(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while packing FS files to NCA"
             );
         }
@@ -327,7 +327,7 @@ impl Nca {
             warn!(
                 backend = ?packer.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while generating Meta NCA"
             );
         }

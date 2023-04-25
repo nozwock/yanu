@@ -167,9 +167,11 @@ pub mod build {
     use super::*;
 
     static NPROC: Lazy<Result<u8>> = Lazy::new(|| {
-        Ok(String::from_utf8(Command::new("nproc").output()?.stdout)?
-            .trim()
-            .parse()?)
+        Ok(
+            String::from_utf8_lossy(&Command::new("nproc").output()?.stdout)
+                .trim()
+                .parse()?,
+        )
     });
 
     pub fn hacpack() -> Result<PathBuf> {
