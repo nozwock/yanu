@@ -1,9 +1,7 @@
 use common::defines::DEFAULT_PRODKEYS_PATH;
-use config::Config;
 use eyre::{eyre, Result};
 use fs_err as fs;
 use std::path::Path;
-use tempfile::tempdir_in;
 use tracing::debug;
 
 use crate::{
@@ -18,20 +16,22 @@ use crate::{
 };
 
 /// Pack romfs/exefs back to NSP.
-pub fn pack_fs_data<N, E, R, O>(
+pub fn pack_fs_data<N, E, R, O, T>(
     control_path: N,
     mut program_id: String,
     romfs_dir: R,
     exefs_dir: E,
     outdir: O,
+    tempdir_in: T,
+    nca_extractor: BackendKind,
 ) -> Result<(Nsp, NacpData)>
 where
     N: AsRef<Path>,
     E: AsRef<Path>,
     R: AsRef<Path>,
     O: AsRef<Path>,
+    T: AsRef<Path>,
 {
-    let config = Config::load()?;
     let curr_dir = std::env::current_dir()?;
     let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
 
@@ -46,7 +46,7 @@ where
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
+    let nca_extractor = Backend::try_new(BackendKind::from(nca_extractor))?;
     #[cfg(feature = "android-proot")]
     let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
     let packer = Backend::try_new(BackendKind::Hacpack)?;
@@ -68,14 +68,14 @@ where
     debug!(?program_id, "Selected ProgramID for packing");
 
     // Getting Nacp data
-    let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
+    let control_romfs_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     control_nca.unpack_romfs(&nca_extractor, control_romfs_dir.path())?;
     let nacp_data = NacpData::try_new(
         get_nacp_file(control_romfs_dir.path())
             .ok_or_else(|| eyre!("Couldn't find NACP file, maybe extraction was improper"))?,
     )?;
 
-    let temp_dir = tempdir_in(Config::load()?.temp_dir.as_path())?;
+    let temp_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
 
     // !Packing fs files to NCA
     let patched_nca = Nca::pack_program(
@@ -96,6 +96,7 @@ where
         &patched_nca,
         &control_nca,
         temp_dir.path(),
+        tempdir_in.as_ref(),
     )?;
 
     // !Copying Control NCA

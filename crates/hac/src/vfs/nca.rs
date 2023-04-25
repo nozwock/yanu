@@ -8,11 +8,9 @@ use std::{
 };
 
 use common::utils::{ext_matches, get_size_as_string, move_file};
-use config::Config;
 use derivative::Derivative;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
-use tempfile::tempdir_in;
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
@@ -284,23 +282,24 @@ impl Nca {
         );
         Ok(patched_nca)
     }
-    pub fn create_meta<K, O>(
+    pub fn create_meta<K, O, T>(
         packer: &Backend,
         program_id: &str,
         keyfile: K,
         program: &Nca,
         control: &Nca,
         outdir: O,
+        tempdir_in: T,
     ) -> Result<()>
     where
         K: AsRef<Path>,
         O: AsRef<Path>,
+        T: AsRef<Path>,
     {
         // figure out a solution for this
-        let config = Config::load()?;
         info!(?program.path, ?control.path, "Generating Meta NCA");
 
-        let temp_outdir = tempdir_in(&config.temp_dir)?;
+        let temp_outdir = tempfile::tempdir_in(tempdir_in.as_ref())?;
         let mut cmd = Command::new(packer.path());
         cmd.args([
             "--keyset".as_ref(),

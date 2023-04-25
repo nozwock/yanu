@@ -1,4 +1,6 @@
 use common::defines;
+#[cfg(unix)]
+use config::Config;
 use eyre::Result;
 #[cfg(unix)]
 use once_cell::sync::Lazy;
@@ -129,17 +131,22 @@ impl Backend {
     #[cfg(unix)]
     /// Opposite of `try_new`.
     pub fn build(kind: BackendKind) -> Result<Self> {
+        let cfg = Config::load()?;
         let cache = Cache::default();
         let cached_path = match kind {
-            BackendKind::Hacpack => cache.store_path(build::hacpack()?)?,
-            BackendKind::Hactool => cache.store_path(build::hactool()?)?,
+            BackendKind::Hacpack => cache.store_path(build::hacpack(&cfg.hacpack_rev)?)?,
+            BackendKind::Hactool => cache.store_path(build::hactool(&cfg.hactool_rev)?)?,
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
             BackendKind::Hactoolnet => Backend::try_new(kind)?.path,
             #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-            BackendKind::Hac2l => cache.store_path(build::hac2l(["linux_x64_release"])?)?,
+            BackendKind::Hac2l => cache.store_path(build::hac2l(
+                ["linux_x64_release"],
+                &cfg.atmosphere_rev,
+                &cfg.hac2l_rev,
+            )?)?,
             #[cfg(feature = "android-proot")]
             BackendKind::Hac2l => Backend::try_new(kind)?.path,
-            BackendKind::FourNXCI => cache.store_path(build::four_nxci()?)?,
+            BackendKind::FourNXCI => cache.store_path(build::four_nxci(&cfg.four_nxci_rev)?)?,
         };
         set_executable_bit(&cached_path, true)?;
 
@@ -159,7 +166,6 @@ impl Backend {
 #[cfg(unix)]
 pub mod build {
     use common::{defines::APP_CACHE_DIR, utils::move_file};
-    use config::Config;
     use eyre::{bail, eyre};
     use fs_err as fs;
     use tracing::info;
@@ -174,8 +180,7 @@ pub mod build {
         )
     });
 
-    pub fn hacpack() -> Result<PathBuf> {
-        let config = Config::load()?;
+    pub fn hacpack(rev: &str) -> Result<PathBuf> {
         let kind = BackendKind::Hacpack;
         info!("Building {}", kind);
         let src_dir = tempdir()?;
@@ -189,7 +194,7 @@ pub mod build {
             bail!("Failed to clone {} repo", kind);
         }
 
-        git_checkout(src_dir.path(), &config.hacpack_rev)?;
+        git_checkout(src_dir.path(), rev)?;
 
         info!("Renaming config file");
         fs::rename(
@@ -219,8 +224,7 @@ pub mod build {
         Ok(dest)
     }
 
-    pub fn hactool() -> Result<PathBuf> {
-        let config = Config::load()?;
+    pub fn hactool(rev: &str) -> Result<PathBuf> {
         let kind = BackendKind::Hactool;
         info!("Building {}", kind);
         let src_dir = tempdir()?;
@@ -234,7 +238,7 @@ pub mod build {
             bail!("Failed to clone {} repo", kind);
         }
 
-        git_checkout(src_dir.path(), &config.hactool_rev)?;
+        git_checkout(src_dir.path(), rev)?;
 
         info!("Renaming config file");
         fs::rename(
@@ -288,14 +292,12 @@ pub mod build {
     }
 
     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-    pub fn hac2l<I, S>(args: I) -> Result<PathBuf>
+    pub fn hac2l<I, S>(args: I, atmosphere_rev: &str, hac2l_rev: &str) -> Result<PathBuf>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
         use tracing::debug;
-
-        let config = Config::load()?;
 
         let kind = BackendKind::Hac2l;
         info!("Building {}", kind);
@@ -310,7 +312,7 @@ pub mod build {
             bail!("Failed to clone Atmosphere repo");
         }
 
-        git_checkout(src_dir.path(), &config.atmosphere_rev)?;
+        git_checkout(src_dir.path(), atmosphere_rev)?;
 
         let hac2l_src_dir = src_dir.path().join("tools/hac2l");
         if !Command::new("git")
@@ -323,7 +325,7 @@ pub mod build {
         }
 
         if !Command::new("git")
-            .args(["checkout", &config.hac2l_rev])
+            .args(["checkout", hac2l_rev])
             .current_dir(&hac2l_src_dir)
             .status()?
             .success()
@@ -370,8 +372,7 @@ pub mod build {
         bail!("Failed to build {}", kind);
     }
 
-    pub fn four_nxci() -> Result<PathBuf> {
-        let config = Config::load()?;
+    pub fn four_nxci(rev: &str) -> Result<PathBuf> {
         let kind = BackendKind::FourNXCI;
         info!("Building {}", kind);
         let src_dir = tempdir()?;
@@ -385,7 +386,7 @@ pub mod build {
             bail!("Failed to clone {} repo", kind)
         }
 
-        git_checkout(src_dir.path(), &config.four_nxci_rev)?;
+        git_checkout(src_dir.path(), rev)?;
 
         info!("Renaming config file");
         fs::rename(

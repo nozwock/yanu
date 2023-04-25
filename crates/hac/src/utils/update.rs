@@ -1,10 +1,8 @@
 use std::{collections::HashSet, path::Path};
 
 use common::defines::DEFAULT_PRODKEYS_PATH;
-use config::Config;
 use eyre::{eyre, Result};
 use fs_err as fs;
-use tempfile::tempdir_in;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -20,11 +18,18 @@ use crate::{
 use super::hacpack_cleanup_install;
 
 /// Apply update NSP to the base NSP.
-pub fn update_nsp<O>(base: &mut Nsp, update: &mut Nsp, outdir: O) -> Result<(Nsp, NacpData, String)>
+pub fn update_nsp<O, P>(
+    base: &mut Nsp,
+    update: &mut Nsp,
+    outdir: O,
+    tempdir_in: P,
+    nsp_extractor: BackendKind,
+    nca_extractor: BackendKind,
+) -> Result<(Nsp, NacpData, String)>
 where
     O: AsRef<Path>,
+    P: AsRef<Path>,
 {
-    let config = Config::load()?;
     let curr_dir = std::env::current_dir()?;
     let _hacpack_cleanup_bind = hacpack_cleanup_install!(curr_dir);
 
@@ -36,17 +41,17 @@ where
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nsp_extractor = Backend::try_new(BackendKind::from(config.nsp_extractor))?;
+    let nsp_extractor = Backend::try_new(BackendKind::from(nsp_extractor))?;
     #[cfg(feature = "android-proot")]
     let nsp_extractor = Backend::try_new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
-    let nca_extractor = Backend::try_new(BackendKind::from(config.nca_extractor))?;
+    let nca_extractor = Backend::try_new(BackendKind::from(nca_extractor))?;
     #[cfg(feature = "android-proot")]
     let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
     let packer = Backend::try_new(BackendKind::Hacpack)?;
 
-    let base_data_dir = tempdir_in(config.temp_dir.as_path())?;
-    let update_data_dir = tempdir_in(config.temp_dir.as_path())?;
+    let base_data_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
+    let update_data_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     fs::create_dir_all(base_data_dir.path())?;
     fs::create_dir_all(update_data_dir.path())?;
 
@@ -112,7 +117,7 @@ where
     debug!(?control_nca);
 
     // Getting Nacp data
-    let control_romfs_dir = tempdir_in(config.temp_dir.as_path())?;
+    let control_romfs_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     control_nca.unpack_romfs(&nca_extractor, control_romfs_dir.path())?;
     let nacp_data = NacpData::try_new(
         get_nacp_file(control_romfs_dir.path())
@@ -122,7 +127,7 @@ where
         warn!(%err);
     }
 
-    let fs_dir = tempdir_in(config.temp_dir.as_path())?;
+    let fs_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     let romfs_dir = fs_dir.path().join("romfs");
     let exefs_dir = fs_dir.path().join("exefs");
     // !Unpacking fs files from NCAs
@@ -135,7 +140,7 @@ where
     debug!(?program_id, "Selected TitleID for packing");
 
     // !Moving Control NCA
-    let nca_dir = tempdir_in(config.temp_dir.as_path())?;
+    let nca_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     fs::create_dir_all(nca_dir.path())?;
     let control_nca_filename = control_nca
         .path
@@ -176,6 +181,7 @@ where
         &patched_nca,
         &control_nca,
         nca_dir.path(),
+        tempdir_in.as_ref(),
     )?;
 
     // !Packing NCAs to NSP

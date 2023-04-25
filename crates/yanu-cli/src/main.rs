@@ -135,6 +135,9 @@ fn run() -> Result<()> {
                 &mut Nsp::try_new(opts.base)?,
                 &mut Nsp::try_new(opts.update)?,
                 opts.outdir.unwrap_or(default_outdir()?),
+                &config.temp_dir,
+                config.nsp_extractor.into(),
+                config.nca_extractor.into(),
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -176,6 +179,8 @@ fn run() -> Result<()> {
                 opts.romfsdir,
                 opts.exefsdir,
                 opts.outdir.unwrap_or(default_outdir()?),
+                &config.temp_dir,
+                config.nca_extractor.into(),
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -214,6 +219,8 @@ fn run() -> Result<()> {
                 &mut Nsp::try_new(opts.base)?,
                 opts.update.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
                 &outdir,
+                config.nsp_extractor.into(),
+                config.nca_extractor.into(),
             )?;
             eprintln!(
                 "{} '{}'",
@@ -428,8 +435,14 @@ fn run() -> Result<()> {
             {
                 info!("Started patching!");
                 timer = Some(Instant::now());
-                let (mut patched, nacp_data, program_id) =
-                    update_nsp(&mut base, &mut update, default_outdir()?)?;
+                let (mut patched, nacp_data, program_id) = update_nsp(
+                    &mut base,
+                    &mut update,
+                    default_outdir()?,
+                    &config.temp_dir,
+                    config.nsp_extractor.into(),
+                    config.nca_extractor.into(),
+                )?;
                 custom_nsp_rename(
                     &mut patched.path,
                     &nacp_data,
