@@ -173,9 +173,7 @@ fn run() -> Result<()> {
             &mut Nsp::try_new(&base_path)?,
             &mut Nsp::try_new(&update_path)?,
             default_pack_outdir()?,
-            &config.temp_dir,
-            config.nsp_extractor.into(),
-            config.nca_extractor.into(),
+            &config,
         )?;
         custom_nsp_rename(
             &mut patched.path,

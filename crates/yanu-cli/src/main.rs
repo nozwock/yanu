@@ -2,8 +2,7 @@ use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 use common::{
-    defines::{APP_CACHE_DIR, APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
-    error::MultiReport,
+    defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     utils::{ext_matches, get_disk_free, get_paths_size, get_size_as_string},
 };
 use config::Config;
@@ -135,9 +134,7 @@ fn run() -> Result<()> {
                 &mut Nsp::try_new(opts.base)?,
                 &mut Nsp::try_new(opts.update)?,
                 opts.outdir.unwrap_or(default_outdir()?),
-                &config.temp_dir,
-                config.nsp_extractor.into(),
-                config.nca_extractor.into(),
+                &config,
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -179,8 +176,7 @@ fn run() -> Result<()> {
                 opts.romfsdir,
                 opts.exefsdir,
                 opts.outdir.unwrap_or(default_outdir()?),
-                &config.temp_dir,
-                config.nca_extractor.into(),
+                &config,
             )?;
             custom_nsp_rename(
                 &mut patched.path,
@@ -219,8 +215,7 @@ fn run() -> Result<()> {
                 &mut Nsp::try_new(opts.base)?,
                 opts.update.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
                 &outdir,
-                config.nsp_extractor.into(),
-                config.nca_extractor.into(),
+                &config,
             )?;
             eprintln!(
                 "{} '{}'",
@@ -435,14 +430,8 @@ fn run() -> Result<()> {
             {
                 info!("Started patching!");
                 timer = Some(Instant::now());
-                let (mut patched, nacp_data, program_id) = update_nsp(
-                    &mut base,
-                    &mut update,
-                    default_outdir()?,
-                    &config.temp_dir,
-                    config.nsp_extractor.into(),
-                    config.nca_extractor.into(),
-                )?;
+                let (mut patched, nacp_data, program_id) =
+                    update_nsp(&mut base, &mut update, default_outdir()?, &config)?;
                 custom_nsp_rename(
                     &mut patched.path,
                     &nacp_data,
@@ -458,6 +447,8 @@ fn run() -> Result<()> {
         }
         #[cfg(unix)]
         Some(opts::Commands::SetupBackend { build }) => {
+            use common::{defines::APP_CACHE_DIR, error::MultiReport};
+
             // List must be exhuastive
             let mut res_pool = vec![];
             if build {

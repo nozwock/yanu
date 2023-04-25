@@ -6,6 +6,7 @@ use crate::{
         nsp::Nsp,
     },
 };
+use config::Config;
 use eyre::{eyre, Result};
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
@@ -19,8 +20,7 @@ pub fn unpack_nsp<O>(
     base: &mut Nsp,
     mut update: Option<&mut Nsp>,
     outdir: O,
-    nsp_extractor: BackendKind,
-    nca_extractor: BackendKind,
+    cfg: &Config,
 ) -> Result<UnpackedNSPData>
 where
     O: AsRef<Path>,
@@ -33,11 +33,11 @@ where
     #[cfg(feature = "android-proot")]
     let readers = vec![Backend::try_new(BackendKind::Hac2l)?];
     #[cfg(not(feature = "android-proot"))]
-    let nsp_extractor = Backend::try_new(BackendKind::from(nsp_extractor))?;
+    let nsp_extractor = Backend::try_new(BackendKind::from(cfg.nsp_extractor))?;
     #[cfg(feature = "android-proot")]
     let nsp_extractor = Backend::try_new(BackendKind::Hactool)?;
     #[cfg(not(feature = "android-proot"))]
-    let nca_extractor = Backend::try_new(BackendKind::from(nca_extractor))?;
+    let nca_extractor = Backend::try_new(BackendKind::from(cfg.nca_extractor))?;
     #[cfg(feature = "android-proot")]
     let nca_extractor = Backend::try_new(BackendKind::Hac2l)?;
 
