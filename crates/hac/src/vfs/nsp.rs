@@ -2,6 +2,7 @@ use crate::{backend::Backend, vfs::ticket::TitleKey};
 use common::utils::{ext_matches, get_size_as_string};
 use eyre::{bail, Result};
 use std::{
+    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -37,14 +38,17 @@ impl Nsp {
             "--outdir".as_ref(),
             to.as_ref(),
             self.path.as_path(),
-        ]);
-        cmd.stdout(Stdio::inherit());
-        let output = cmd.output()?;
+        ])
+        .stderr(Stdio::piped());
+        let output = cmd.spawn()?.wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             error!(
                 nsp = %self.path.display(),
                 backend = ?extractor.kind(),
-                stderr = %String::from_utf8(output.stderr)?,
+                // Better to have it lossy since accuracy doesn't matter here,
+                // also it won't bail from the function anymore.
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while unpacking NSP"
             );
             bail!("Failed to extract '{}'", self.path.display());
@@ -78,14 +82,15 @@ impl Nsp {
             program_id.as_ref(),
             "--outdir".as_ref(),
             outdir.as_ref(),
-        ]);
-        cmd.stdout(Stdio::inherit());
-        let output = cmd.output()?;
+        ])
+        .stderr(Stdio::piped());
+        let output = cmd.spawn()?.wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             error!(
                 backend = ?packer.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while packing NCAs to NSP"
             );
             bail!("Encountered an error while packing NCAs to NSP");

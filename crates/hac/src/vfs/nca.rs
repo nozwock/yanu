@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt,
+    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,
@@ -50,13 +51,13 @@ fn program_id_fmt(program_id: &ProgramID, fmt: &mut std::fmt::Formatter) -> std:
     fmt.write_fmt(format_args!("{:?}", hex::encode(program_id)))
 }
 
-// TODO?: add the stdout to the logs in case an error is catches in main
+// TODO?: Add the stdout to the logs in case an error is catched in main
 
 impl Nca {
     pub fn try_new<P: AsRef<Path>>(reader: &Backend, file_path: P) -> Result<Self> {
-        // Can't rely on Backend tools to check for Nca file because they're
-        // garbage cli tools (don't even have non zero exit status on failure)
-        // excluding Hactoolnet
+        // Can't rely on Backend tools to check for NCA file because they're
+        // pretty bad cli tools (don't even have non zero exit status on failure)
+        // excluding Hactoolnet.
         if !file_path.as_ref().is_file() || !ext_matches(file_path.as_ref(), "nca") {
             bail!("'{}' is not a NCA file", file_path.as_ref().display())
         }
@@ -69,16 +70,16 @@ impl Nca {
 
         let output = Command::new(reader.path())
             .args([file_path.as_ref()])
-            .output()?;
+            .output()?; // All streams are piped
         if !output.status.success() {
             warn!(
                 nca = %file_path.as_ref().display(),
                 backend = ?reader.kind(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while viewing info",
             );
         }
-        let stdout = String::from_utf8(output.stdout)?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
         let program_id_pat = match reader.kind() {
             #[cfg(all(
@@ -154,13 +155,15 @@ impl Nca {
                 "--romfsdir".as_ref(),
                 romfs_dir.as_ref(),
             ])
-            .stdout(Stdio::inherit())
-            .output()?;
+            .stderr(Stdio::piped())
+            .spawn()?
+            .wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             warn!(
                 nca = %self.path.display(),
                 backend = ?extractor.kind(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while unpacking RomFS from NCA",
             );
             bail!("Encountered an error while unpacking RomFS from NCA");
@@ -191,14 +194,15 @@ impl Nca {
             romfs_dir.as_ref(),
             "--exefsdir".as_ref(),
             exefs_dir.as_ref(),
-        ]);
-        cmd.stdout(Stdio::inherit());
-        let output = cmd.output()?;
+        ])
+        .stderr(Stdio::piped());
+        let output = cmd.spawn()?.wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             error!(
                 backend = ?extractor.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8(output.stderr)?,
+                stderr = %String::from_utf8_lossy(&output.stderr),
                 "Encountered an error while unpacking RomFS/ExeFS from NCAs"
             );
             bail!("Encountered an error while unpacking RomFS/ExeFS from NCAs");
@@ -252,9 +256,10 @@ impl Nca {
             program_id.as_ref(),
             "--outdir".as_ref(),
             outdir.as_ref(),
-        ]);
-        cmd.stdout(Stdio::inherit());
-        let output = cmd.output()?;
+        ])
+        .stderr(Stdio::piped());
+        let output = cmd.spawn()?.wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             warn!(
                 backend = ?packer.kind(),
@@ -314,9 +319,10 @@ impl Nca {
             program_id.as_ref(),
             "--outdir".as_ref(),
             temp_outdir.path(),
-        ]);
-        cmd.stdout(Stdio::inherit());
-        let output = cmd.output()?;
+        ])
+        .stderr(Stdio::piped());
+        let output = cmd.spawn()?.wait_with_output()?;
+        io::stderr().write_all(&output.stderr)?;
         if !output.status.success() {
             warn!(
                 backend = ?packer.kind(),
