@@ -2,12 +2,14 @@ use crate::utils::get_section;
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
+const SECTION_PADDING: &'static str = "  ";
+
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help = true)]
 #[command(after_help = get_section("Tip",r#"Remember that you can get help for subcommands too:
 $ yanu-cli pack --help
 Examples may or may not be included.
-"#, "  "))]
+"#, SECTION_PADDING))]
 pub struct YanuCli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -69,7 +71,7 @@ $ yanu-cli pack \
             --romfsdir './base+update.xxxxxx/romfs' \
             --exefsdir './base+update.xxxxxx/exefs'
 If only base was unpacked, get the control NCA from basedata.
-"#, "  "))]
+"#, SECTION_PADDING))]
 pub struct Pack {
     /// Set Control NCA, it's typically around 1MB in size.
     #[arg(long, value_name = "FILE")]
@@ -97,7 +99,7 @@ pub struct Pack {
 $ yanu-cli unpack --base './path/to/base
 For unpacking both base and update NSPs together (i.e. updating):
 $ yanu-cli unpack --base '/path/to/base' --update '/path/to/update'
-"#, "  "))]
+"#, SECTION_PADDING))]
 pub struct Unpack {
     /// Select base package
     #[arg(short, long, value_name = "FILE")]
@@ -117,7 +119,7 @@ pub enum ConvertKind {
 #[derive(Debug, Args, PartialEq, Eq)]
 #[command(after_help = get_section("Examples", r#"For converting XCI to NSP:
 $ yanu-cli convert --kind nsp gta6.xci
-"#, "  "))]
+"#, SECTION_PADDING))]
 pub struct Convert {
     /// File format to convert to
     #[arg(
