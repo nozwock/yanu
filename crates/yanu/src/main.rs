@@ -6,6 +6,7 @@ mod utils;
 ))]
 use crate::utils::pick_nsp_file;
 use common::defines::DEFAULT_PRODKEYS_PATH;
+use common::log;
 use common::utils::{get_disk_free, get_paths_size};
 use config::Config;
 use eyre::{bail, eyre, Result};
@@ -27,6 +28,7 @@ fn main() -> Result<()> {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
+        .event_format(log::CustomFmt)
         .with_writer(non_blocking)
         .init();
 

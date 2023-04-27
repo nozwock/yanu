@@ -3,6 +3,7 @@ use std::{path::PathBuf, time::Instant};
 use clap::Parser;
 use common::{
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
+    log,
     utils::{ext_matches, get_disk_free, get_paths_size, get_size_as_string},
 };
 use config::Config;
@@ -61,7 +62,9 @@ fn main() -> Result<()> {
     let file_appender = tracing_appender::rolling::hourly(".", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
+        // TODO: read from `RUST_LOG`
         .with_max_level(tracing::Level::DEBUG)
+        .event_format(log::CustomFmt)
         .with_writer(non_blocking)
         .init();
 

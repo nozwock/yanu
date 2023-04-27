@@ -9,9 +9,10 @@
 compile_error!("This traget configuration is not supported");
 
 pub mod defines;
+pub mod error;
 pub mod filename;
+pub mod log;
 pub mod utils;
 
-pub mod error;
 #[cfg(target_os = "android")]
 pub mod termux;
