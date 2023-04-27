@@ -3,7 +3,7 @@ pub mod unpack;
 pub mod update;
 
 use crate::vfs::{nacp::NacpData, ticket::TitleKey};
-use common::{defines::DEFAULT_TITLEKEYS_PATH, utils::move_file};
+use common::{defines::DEFAULT_TITLEKEYS_PATH, error::MultiReport, utils::move_file};
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use std::{
@@ -51,23 +51,25 @@ impl CleanupDirsOnDrop {
         }
     }
     fn close_impl(&mut self) -> Result<()> {
-        // TODO: look up how to propogate multiple errors
-        let mut outerr = None;
-        for dir in &self.dirs {
-            match fs::remove_dir_all(dir) {
-                Ok(_) => {}
-                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
-                Err(err) => {
-                    warn!(%err);
-                    outerr.get_or_insert(err);
+        let errs = self
+            .dirs
+            .iter()
+            .flat_map(|dir| fs::remove_dir_all(dir).err())
+            .filter_map(|err| {
+                if err.kind() != io::ErrorKind::NotFound {
+                    Some(eyre!(err))
+                } else {
+                    None
                 }
-            }
-        }
+            })
+            .inspect(|err| warn!(%err))
+            .collect::<Vec<_>>();
 
-        if let Some(err) = outerr {
-            bail!(err)
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            bail!(MultiReport::new(errs).join("\n"));
         }
-        Ok(())
     }
     pub fn close(mut self) -> Result<()> {
         let res = self.close_impl();

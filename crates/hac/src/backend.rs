@@ -79,8 +79,6 @@ pub struct Backend {
     path: PathBuf,
 }
 
-// TODO?: Some method in which backends are builded no matter what
-
 impl Backend {
     /// Prefers embedded, builds only if binary not available.
     pub fn try_new(kind: BackendKind) -> Result<Self> {

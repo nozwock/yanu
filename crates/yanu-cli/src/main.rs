@@ -95,7 +95,7 @@ fn main() -> Result<()> {
 }
 
 fn run() -> Result<()> {
-    info!("Parsing args, will exit on error");
+    info!("Parsing args, exit on error");
     let opts = YanuCli::parse();
     let mut config = Config::load()?;
     debug!(?config);
