@@ -79,7 +79,6 @@ fn run() -> Result<()> {
             bail!("'{}' is not a file", keyfile_path.display());
         }
 
-        //? maybe validate if it's indeed prod.keys
         let default_path = DEFAULT_PRODKEYS_PATH.as_path();
         fs::create_dir_all(
             default_path
