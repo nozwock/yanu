@@ -30,6 +30,9 @@ tracing-subscriber = { workspace = true }
 walkdir = { workspace = true }
 bytesize.workspace = true
 
+egui = "0.21.0"
+eframe = "0.21.3"
+
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }
 

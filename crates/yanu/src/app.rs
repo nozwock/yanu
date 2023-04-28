@@ -1,7 +1,18 @@
 use eframe::egui;
 
 #[derive(Debug, Default)]
-pub struct YanuApp {}
+pub struct YanuApp {
+    page: Page,
+}
+
+#[derive(Debug, Default, PartialEq)]
+enum Page {
+    #[default]
+    Update,
+    Pack,
+    Repack,
+    Convert,
+}
 
 impl YanuApp {
     /// Called once before the first frame.
@@ -33,16 +44,25 @@ impl eframe::App for YanuApp {
         egui::gui_zoom::zoom_with_keyboard_shortcuts(ctx, frame.info().native_pixels_per_point);
 
         egui::TopBottomPanel::top("menu_panel").show(ctx, |ui| {});
-        egui::SidePanel::left("options_panel")
+
+        egui::SidePanel::left("actions_panel")
             .resizable(true)
             .show(ctx, |ui| {
                 egui::ScrollArea::new([true, true])
                     .auto_shrink([false, true])
-                    .show(ui, |ui| {});
+                    .show(ui, |ui| {
+                        ui.selectable_value(&mut self.page, Page::Update, "Update");
+                        ui.selectable_value(&mut self.page, Page::Pack, "Pack");
+                        ui.selectable_value(&mut self.page, Page::Repack, "Repack");
+                        ui.selectable_value(&mut self.page, Page::Convert, "Convert");
+                    });
             });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.button("ff");
-            ui.label("fk");
+
+        egui::CentralPanel::default().show(ctx, |ui| match self.page {
+            Page::Update => {}
+            Page::Pack => {}
+            Page::Repack => {}
+            Page::Convert => {}
         });
     }
 }
