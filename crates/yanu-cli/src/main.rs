@@ -479,7 +479,7 @@ fn run() -> Result<()> {
                 bail!(err.join("\n"));
             }
         }
-        None => unreachable!(),
+        None => {}
     }
 
     if let Some(timer) = timer {
