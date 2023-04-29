@@ -59,7 +59,7 @@ impl YanuApp {
 }
 
 const HEADING_SIZE: f32 = 21.6; // 1.2x of default
-const VERTICAL_PADDING: f32 = 6.25; // 0.5x of default Body size
+const PADDING: f32 = 6.25; // 0.5x of default Body size
 
 impl eframe::App for YanuApp {
     /// Called by the frame work to save state before shutdown.
@@ -75,16 +75,30 @@ impl eframe::App for YanuApp {
 
         self.top_bar(ctx, frame);
 
-        egui::SidePanel::left("actions_panel").show(ctx, |ui| {
-            egui::ScrollArea::new([true, true])
-                .auto_shrink([true, true])
-                .show(ui, |ui| {
-                    ui.selectable_value(&mut self.page, Page::Update, "Update");
-                    ui.selectable_value(&mut self.page, Page::Unpack, "Unpack");
-                    ui.selectable_value(&mut self.page, Page::Pack, "Pack");
-                    ui.selectable_value(&mut self.page, Page::Convert, "Convert");
+        egui::SidePanel::left("options panel")
+            .resizable(false)
+            .default_width(100.)
+            .show(ctx, |ui| {
+                ui.add_space(PADDING * 0.8);
+                ui.vertical_centered(|ui| {
+                    ui.heading("Options");
                 });
-        });
+
+                ui.separator();
+                ui.add_space(PADDING * 0.6);
+
+                egui::ScrollArea::new([true, true])
+                    .auto_shrink([true, true])
+                    .show(ui, |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.spacing_mut().item_spacing.y *= 1.5;
+                            ui.selectable_value(&mut self.page, Page::Update, "Update");
+                            ui.selectable_value(&mut self.page, Page::Unpack, "Unpack");
+                            ui.selectable_value(&mut self.page, Page::Pack, "Pack");
+                            ui.selectable_value(&mut self.page, Page::Convert, "Convert");
+                        });
+                    });
+            });
 
         egui::CentralPanel::default().show(ctx, |ui| match self.page {
             Page::Update => {
@@ -104,6 +118,8 @@ impl eframe::App for YanuApp {
                                 };
                             });
 
+                            ui.add_space(PADDING);
+
                             ui.label("Update Package:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path);
@@ -112,7 +128,7 @@ impl eframe::App for YanuApp {
                         });
                     });
 
-                    ui.add_space(VERTICAL_PADDING);
+                    ui.add_space(PADDING);
 
                     ui.vertical_centered(|ui| {
                         if ui
@@ -132,6 +148,8 @@ impl eframe::App for YanuApp {
                                 if ui.button("📂 Browse").clicked() {};
                             });
 
+                            ui.add_space(PADDING);
+
                             ui.label("Update Package:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path);
@@ -140,7 +158,7 @@ impl eframe::App for YanuApp {
                         });
                     });
 
-                    ui.add_space(VERTICAL_PADDING);
+                    ui.add_space(PADDING);
 
                     ui.vertical_centered(|ui| {
                         if ui
@@ -160,14 +178,20 @@ impl eframe::App for YanuApp {
                                 if ui.button("📂 Browse").clicked() {};
                             });
 
+                            ui.add_space(PADDING);
+
                             ui.label("TitleID:");
                             ui.text_edit_singleline(&mut self.pack_title_id);
+
+                            ui.add_space(PADDING);
 
                             ui.label("RomFS directory:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.romfs_dir);
                                 if ui.button("📂 Browse").clicked() {};
                             });
+
+                            ui.add_space(PADDING);
 
                             ui.label("ExeFS directory:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
@@ -177,7 +201,7 @@ impl eframe::App for YanuApp {
                         });
                     });
 
-                    ui.add_space(VERTICAL_PADDING);
+                    ui.add_space(PADDING);
 
                     ui.vertical_centered(|ui| {
                         if ui
@@ -197,6 +221,8 @@ impl eframe::App for YanuApp {
                                 if ui.button("📂 Browse").clicked() {};
                             });
 
+                            ui.add_space(PADDING);
+
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.label("Convert to:");
                                 egui::ComboBox::from_id_source("convert_kind")
@@ -212,7 +238,7 @@ impl eframe::App for YanuApp {
                         });
                     });
 
-                    ui.add_space(VERTICAL_PADDING);
+                    ui.add_space(PADDING);
 
                     ui.vertical_centered(|ui| {
                         if ui
@@ -228,7 +254,7 @@ impl eframe::App for YanuApp {
 
 impl YanuApp {
     fn top_bar(&mut self, egui_ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("top_bar").show(egui_ctx, |ui| {
+        egui::TopBottomPanel::top("top bar").show(egui_ctx, |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                 egui::menu::bar(ui, |ui| {
                     ui.menu_button("File", |ui| {
