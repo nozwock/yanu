@@ -30,3 +30,11 @@ where
         inner_response.response,
     )
 }
+
+pub fn increase_font_size_by(factor: f32, ctx: &Context) {
+    let mut style = (*ctx.style()).clone();
+    for font_id in style.text_styles.values_mut() {
+        font_id.size = font_id.size * factor;
+    }
+    ctx.set_style(style);
+}

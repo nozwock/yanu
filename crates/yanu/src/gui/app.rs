@@ -3,7 +3,7 @@ use std::process;
 use eframe::egui;
 use egui::RichText;
 
-use super::cross_centered;
+use super::{cross_centered, increase_font_size_by};
 use crate::utils::pick_nsp_file;
 
 #[derive(Debug, Default)]
@@ -52,13 +52,14 @@ impl YanuApp {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
 
-        setup_fonts(&cc.egui_ctx);
+        increase_font_size_by(1.2, &cc.egui_ctx);
 
         Default::default()
     }
 }
 
-const VERTICAL_PADDING: f32 = 7.;
+const HEADING_SIZE: f32 = 21.6; // 1.2x of default
+const VERTICAL_PADDING: f32 = 6.25; // 0.5x of default Body size
 
 impl eframe::App for YanuApp {
     /// Called by the frame work to save state before shutdown.
@@ -114,7 +115,10 @@ impl eframe::App for YanuApp {
                     ui.add_space(VERTICAL_PADDING);
 
                     ui.vertical_centered(|ui| {
-                        if ui.button(RichText::new("Update").size(24.)).clicked() {};
+                        if ui
+                            .button(RichText::new("Update").size(HEADING_SIZE))
+                            .clicked()
+                        {};
                     });
                 });
             }
@@ -139,7 +143,10 @@ impl eframe::App for YanuApp {
                     ui.add_space(VERTICAL_PADDING);
 
                     ui.vertical_centered(|ui| {
-                        if ui.button(RichText::new("Unpack").size(24.)).clicked() {};
+                        if ui
+                            .button(RichText::new("Unpack").size(HEADING_SIZE))
+                            .clicked()
+                        {};
                     });
                 });
             }
@@ -173,7 +180,10 @@ impl eframe::App for YanuApp {
                     ui.add_space(VERTICAL_PADDING);
 
                     ui.vertical_centered(|ui| {
-                        if ui.button(RichText::new("Pack").size(24.)).clicked() {};
+                        if ui
+                            .button(RichText::new("Pack").size(HEADING_SIZE))
+                            .clicked()
+                        {};
                     });
                 });
             }
@@ -205,7 +215,10 @@ impl eframe::App for YanuApp {
                     ui.add_space(VERTICAL_PADDING);
 
                     ui.vertical_centered(|ui| {
-                        if ui.button(RichText::new("Convert").size(24.)).clicked() {};
+                        if ui
+                            .button(RichText::new("Convert").size(HEADING_SIZE))
+                            .clicked()
+                        {};
                     });
                 });
             }
@@ -240,30 +253,4 @@ impl YanuApp {
             });
         });
     }
-}
-
-fn setup_fonts(ctx: &egui::Context) {
-    let mut style = (*ctx.style()).clone();
-    // * Other ways to increase font size but is set for every element
-    // style.override_font_id = Some(egui::FontId::proportional(24.));
-    // for (_text_style, font_id) in style.text_styles.iter_mut() {
-    //     font_id.size = 16.;
-    // }
-
-    style
-        .text_styles
-        .get_mut(&egui::TextStyle::Body)
-        .unwrap()
-        .size = 15.;
-    style
-        .text_styles
-        .get_mut(&egui::TextStyle::Heading)
-        .unwrap()
-        .size = 24.;
-    style
-        .text_styles
-        .get_mut(&egui::TextStyle::Button)
-        .unwrap()
-        .size = 15.;
-    ctx.set_style(style);
 }
