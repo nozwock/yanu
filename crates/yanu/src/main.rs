@@ -1,13 +1,9 @@
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-mod app;
-mod utils;
-
 #[cfg(all(
     target_arch = "x86_64",
     any(target_os = "windows", target_os = "linux")
 ))]
-use crate::utils::pick_nsp_file;
 use common::defines::{APP_NAME, DEFAULT_PRODKEYS_PATH, EXE_DIR};
 use common::log;
 use config::Config;
@@ -17,6 +13,7 @@ use hac::utils::update::update_nsp;
 use hac::vfs::nsp::Nsp;
 use std::{env, path::PathBuf};
 use tracing::info;
+use yanu::{gui::app, utils::pick_nsp_file};
 
 fn main() -> Result<()> {
     // Colorful errors
