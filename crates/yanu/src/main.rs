@@ -58,7 +58,11 @@ fn main() -> Result<()> {
     //     }
     // }
 
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        min_window_size: Some(egui::vec2(600., 400.)),
+        initial_window_size: Some(egui::vec2(600., 400.)),
+        ..Default::default()
+    };
     eframe::run_native(
         APP_NAME,
         native_options,
