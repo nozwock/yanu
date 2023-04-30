@@ -15,18 +15,22 @@ pub struct YanuApp {
     // need channel for modal windows...
     // channel_rx: Option<...>
 
+    // Update Page
+    overwrite_titleid: bool,
+    overwrite_titleid_buf: String,
+
     // Update/Unpack Page
-    base_pkg_path: String,
-    update_pkg_path: String,
+    base_pkg_path_buf: String,
+    update_pkg_path_buf: String,
 
     // Pack Page
-    control_nca_path: String,
-    pack_title_id: String,
-    romfs_dir: String,
-    exefs_dir: String,
+    control_nca_path_buf: String,
+    pack_title_id_buf: String,
+    romfs_dir_buf: String,
+    exefs_dir_buf: String,
 
     // Convert Page
-    source_file_path: String,
+    source_file_path_buf: String,
     convert_kind: ConvertKind,
 }
 
@@ -117,11 +121,11 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Base file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.base_pkg_path);
+                                ui.text_edit_singleline(&mut self.base_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nsp_file(Some("Pick a Base file")) {
                                         Ok(path) => {
-                                            self.base_pkg_path = path.to_string_lossy().into();
+                                            self.base_pkg_path_buf = path.to_string_lossy().into();
                                         }
                                         Err(_) => todo!("error dialog popup"),
                                     }
@@ -132,16 +136,23 @@ impl eframe::App for YanuApp {
 
                             ui.label("Update file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.update_pkg_path);
+                                ui.text_edit_singleline(&mut self.update_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nsp_file(Some("Pick an Update file")) {
                                         Ok(path) => {
-                                            self.update_pkg_path = path.to_string_lossy().into();
+                                            self.update_pkg_path_buf = path.to_string_lossy().into();
                                         }
                                         Err(_) => todo!("error dialog popup"),
                                     }
                                 };
                             });
+
+                            ui.add_space(PADDING);
+
+                            ui.checkbox(&mut self.overwrite_titleid, "Overwrite TitleID");
+                            if self.overwrite_titleid {
+                                ui.text_edit_singleline(&mut self.overwrite_titleid_buf);
+                            }
                         });
                     });
 
@@ -152,7 +163,7 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
                         {
-                            todo!("use `update_nsp`")
+                            todo!("validate TitleID if set to overwrite and use `update_nsp`")
                         };
                     });
                 });
@@ -163,11 +174,11 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Base file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.base_pkg_path);
+                                ui.text_edit_singleline(&mut self.base_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nsp_file(Some("Pick a Base file")) {
                                         Ok(path) => {
-                                            self.base_pkg_path = path.to_string_lossy().into();
+                                            self.base_pkg_path_buf = path.to_string_lossy().into();
                                         }
                                         Err(_) => todo!("error dialog popup"),
                                     }
@@ -178,11 +189,11 @@ impl eframe::App for YanuApp {
 
                             ui.label("Update file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.update_pkg_path);
+                                ui.text_edit_singleline(&mut self.update_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nsp_file(Some("Pick an Update file")) {
                                         Ok(path) => {
-                                            self.update_pkg_path = path.to_string_lossy().into();
+                                            self.update_pkg_path_buf = path.to_string_lossy().into();
                                         }
                                         Err(_) => todo!("error dialog popup"),
                                     }
@@ -213,12 +224,12 @@ impl eframe::App for YanuApp {
                                 //     egui::TextEdit::singleline(&mut self.control_nca_path).show(ui);
 
                                 // TODO: Figure out how to move the focus to the end on demand
-                                ui.text_edit_singleline(&mut self.control_nca_path);
+                                ui.text_edit_singleline(&mut self.control_nca_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nca_file(Some("Pick a Control NCA file")) {
                                         Ok(path) => {
                                             // TODO: Check ContentType and make sure selected NCA is of Control type
-                                            self.control_nca_path = path.to_string_lossy().into();
+                                            self.control_nca_path_buf = path.to_string_lossy().into();
                                         }
                                         Err(_) => todo!("error dialog popup"),
                                     }
@@ -228,20 +239,20 @@ impl eframe::App for YanuApp {
                             ui.add_space(PADDING);
 
                             ui.label("TitleID:");
-                            ui.text_edit_singleline(&mut self.pack_title_id);
+                            ui.text_edit_singleline(&mut self.pack_title_id_buf);
 
                             ui.add_space(PADDING);
 
                             ui.label("RomFS folder:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.romfs_dir);
+                                ui.text_edit_singleline(&mut self.romfs_dir_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match rfd::FileDialog::new()
                                         .set_title("Pick a RomFS folder")
                                         .pick_folder()
                                     {
                                         Some(dir) => {
-                                            self.romfs_dir = dir.to_string_lossy().into();
+                                            self.romfs_dir_buf = dir.to_string_lossy().into();
                                         }
                                         None => todo!("error dialog popup"),
                                     }
@@ -252,14 +263,14 @@ impl eframe::App for YanuApp {
 
                             ui.label("ExeFS folder:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.exefs_dir);
+                                ui.text_edit_singleline(&mut self.exefs_dir_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match rfd::FileDialog::new()
                                         .set_title("Pick a ExeFS folder")
                                         .pick_folder()
                                     {
                                         Some(dir) => {
-                                            self.exefs_dir = dir.to_string_lossy().into();
+                                            self.exefs_dir_buf = dir.to_string_lossy().into();
                                         }
                                         None => todo!("error dialog popup"),
                                     }
@@ -286,12 +297,12 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Source:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.source_file_path);
+                                ui.text_edit_singleline(&mut self.source_file_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     match rfd::FileDialog::new().pick_file() {
                                         Some(path) => {
                                             info!(?path, size = %get_size_as_string(&path).unwrap_or_default(), "Selected file");
-                                            self.source_file_path = path.to_string_lossy().into();
+                                            self.source_file_path_buf = path.to_string_lossy().into();
                                         }
                                         None => todo!("error dialog popup"),
                                     }
