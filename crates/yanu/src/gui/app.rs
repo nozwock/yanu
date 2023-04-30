@@ -1,6 +1,7 @@
 use std::process;
 
 use common::utils::get_size_as_string;
+use config::{NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
@@ -33,6 +34,10 @@ pub struct YanuApp {
     // Convert Page
     source_file_path_buf: String,
     convert_kind: ConvertKind,
+
+    // Config
+    nsp_extractor: NspExtractor,
+    nca_extractor: NcaExtractor,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -363,8 +368,8 @@ impl eframe::App for YanuApp {
 }
 
 impl YanuApp {
-    fn top_bar(&mut self, egui_ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("top bar").show(egui_ctx, |ui| {
+    fn top_bar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                 egui::menu::bar(ui, |ui| {
                     ui.menu_button("File", |ui| {
@@ -374,7 +379,41 @@ impl YanuApp {
                         }
                     });
 
-                    ui.menu_button("Config", |ui| {});
+                    ui.menu_button("Config", |ui| {
+                        if ui.button("Set Temp Folder").clicked() {
+                            todo!("rfd file dialog and mutate config")
+                        };
+                        ui.menu_button("NSP Extractor", |ui| {
+                            if ui
+                                .radio_value(
+                                    &mut self.nsp_extractor,
+                                    NspExtractor::Hactool,
+                                    "Hactool",
+                                )
+                                .changed()
+                            {
+                                todo!("mutate config")
+                            };
+                            ui.radio_value(
+                                &mut self.nsp_extractor,
+                                NspExtractor::Hactoolnet,
+                                "Hactoolnet",
+                            );
+                        });
+                        ui.menu_button("NCA Extractor", |ui| {
+                            if ui
+                                .radio_value(&mut self.nca_extractor, NcaExtractor::Hac2l, "Hac2l")
+                                .changed()
+                            {
+                                todo!("mutate config")
+                            };
+                            ui.radio_value(
+                                &mut self.nca_extractor,
+                                NcaExtractor::Hactoolnet,
+                                "Hactoolnet",
+                            );
+                        });
+                    });
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
                     ui.add_space(PADDING);
