@@ -267,6 +267,7 @@ impl YanuApp {
                     ui.menu_button("Config", |ui| {});
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                    ui.add_space(PADDING);
                     egui::warn_if_debug_build(ui);
                     if !cfg!(debug_assertions) {
                         ui.label(
@@ -274,7 +275,7 @@ impl YanuApp {
                                 .color(egui::Color32::LIGHT_GREEN),
                         );
                     }
-                    ui.hyperlink_to("", "https://github.com/nozwock/yanu");
+                    ui.hyperlink_to(" Github", "https://github.com/nozwock/yanu");
                 });
             });
         });
