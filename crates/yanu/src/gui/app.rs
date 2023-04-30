@@ -3,6 +3,7 @@ use std::process;
 use common::utils::get_size_as_string;
 use eframe::egui;
 use egui::RichText;
+use egui_modal::Modal;
 use tracing::info;
 
 use super::{cross_centered, increase_font_size_by};
@@ -89,6 +90,9 @@ impl eframe::App for YanuApp {
 
         self.top_bar(ctx, frame);
 
+        let mut dialog_modal = Modal::new(ctx, "dialog modal");
+        dialog_modal.show_dialog();
+
         egui::SidePanel::left("options panel")
             .resizable(false)
             .default_width(100.)
@@ -127,7 +131,9 @@ impl eframe::App for YanuApp {
                                         Ok(path) => {
                                             self.base_pkg_path_buf = path.to_string_lossy().into();
                                         }
-                                        Err(_) => todo!("error dialog popup"),
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -142,7 +148,9 @@ impl eframe::App for YanuApp {
                                         Ok(path) => {
                                             self.update_pkg_path_buf = path.to_string_lossy().into();
                                         }
-                                        Err(_) => todo!("error dialog popup"),
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -180,7 +188,9 @@ impl eframe::App for YanuApp {
                                         Ok(path) => {
                                             self.base_pkg_path_buf = path.to_string_lossy().into();
                                         }
-                                        Err(_) => todo!("error dialog popup"),
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -195,7 +205,9 @@ impl eframe::App for YanuApp {
                                         Ok(path) => {
                                             self.update_pkg_path_buf = path.to_string_lossy().into();
                                         }
-                                        Err(_) => todo!("error dialog popup"),
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -228,10 +240,11 @@ impl eframe::App for YanuApp {
                                 if ui.button("📂 Browse").clicked() {
                                     match pick_nca_file(Some("Pick a Control NCA file")) {
                                         Ok(path) => {
-                                            // TODO: Check ContentType and make sure selected NCA is of Control type
                                             self.control_nca_path_buf = path.to_string_lossy().into();
                                         }
-                                        Err(_) => todo!("error dialog popup"),
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -254,7 +267,9 @@ impl eframe::App for YanuApp {
                                         Some(dir) => {
                                             self.romfs_dir_buf = dir.to_string_lossy().into();
                                         }
-                                        None => todo!("error dialog popup"),
+                                        None => {
+                                            dialog_modal.open_dialog(None::<&str>, Some("No folder was selected"), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -272,7 +287,9 @@ impl eframe::App for YanuApp {
                                         Some(dir) => {
                                             self.exefs_dir_buf = dir.to_string_lossy().into();
                                         }
-                                        None => todo!("error dialog popup"),
+                                        None => {
+                                            dialog_modal.open_dialog(None::<&str>, Some("No folder was selected"), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });
@@ -286,6 +303,7 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Pack").size(HEADING_SIZE))
                             .clicked()
                         {
+                            // TODO: Check ContentType and make sure selected NCA is of Control type -> this will be done in `pack_fs_data`, so no need.
                             todo!("validate TitleID and use `pack_fs_data`")
                         };
                     });
@@ -304,7 +322,9 @@ impl eframe::App for YanuApp {
                                             info!(?path, size = %get_size_as_string(&path).unwrap_or_default(), "Selected file");
                                             self.source_file_path_buf = path.to_string_lossy().into();
                                         }
-                                        None => todo!("error dialog popup"),
+                                        None => {
+                                            dialog_modal.open_dialog(None::<&str>, Some("No file was selected"), Some(egui_modal::Icon::Error));
+                                        },
                                     }
                                 };
                             });

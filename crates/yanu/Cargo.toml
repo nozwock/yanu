@@ -32,6 +32,7 @@ bytesize.workspace = true
 
 egui = "0.21.0"
 eframe = "0.21.3"
+egui-modal = "0.2.2"
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }
