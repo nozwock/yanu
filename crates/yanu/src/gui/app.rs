@@ -1,14 +1,19 @@
 use std::process;
 
+use common::utils::get_size_as_string;
 use eframe::egui;
 use egui::RichText;
+use tracing::info;
 
 use super::{cross_centered, increase_font_size_by};
-use crate::utils::pick_nsp_file;
+use crate::utils::{pick_nca_file, pick_nsp_file};
 
 #[derive(Debug, Default)]
 pub struct YanuApp {
     page: Page,
+
+    // need channel for modal windows...
+    // channel_rx: Option<...>
 
     // Update/Unpack Page
     base_pkg_path: String,
@@ -21,6 +26,7 @@ pub struct YanuApp {
     exefs_dir: String,
 
     // Convert Page
+    source_file_path: String,
     convert_kind: ConvertKind,
 }
 
@@ -38,6 +44,9 @@ enum ConvertKind {
     #[default]
     Nsp,
 }
+
+#[derive(Debug, PartialEq)]
+enum Message {}
 
 impl YanuApp {
     /// Called once before the first frame.
@@ -59,7 +68,8 @@ impl YanuApp {
 }
 
 const HEADING_SIZE: f32 = 21.6; // 1.2x of default
-const PADDING: f32 = 6.25; // 0.5x of default Body size
+const BODY_SIZE: f32 = 12.5; // 1.2x of default
+const PADDING: f32 = BODY_SIZE * 0.5; // 0.5x of default Body size
 
 impl eframe::App for YanuApp {
     /// Called by the frame work to save state before shutdown.
@@ -105,11 +115,11 @@ impl eframe::App for YanuApp {
                 cross_centered("center update", ctx, |ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Base Package:");
+                            ui.label("Base file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.base_pkg_path);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nsp_file() {
+                                    match pick_nsp_file(Some("Pick a Base file")) {
                                         Ok(path) => {
                                             self.base_pkg_path = path.to_string_lossy().into();
                                         }
@@ -120,10 +130,17 @@ impl eframe::App for YanuApp {
 
                             ui.add_space(PADDING);
 
-                            ui.label("Update Package:");
+                            ui.label("Update file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match pick_nsp_file(Some("Pick an Update file")) {
+                                        Ok(path) => {
+                                            self.update_pkg_path = path.to_string_lossy().into();
+                                        }
+                                        Err(_) => todo!("error dialog popup"),
+                                    }
+                                };
                             });
                         });
                     });
@@ -134,7 +151,9 @@ impl eframe::App for YanuApp {
                         if ui
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
-                        {};
+                        {
+                            todo!("use `update_nsp`")
+                        };
                     });
                 });
             }
@@ -142,18 +161,32 @@ impl eframe::App for YanuApp {
                 cross_centered("center unpack", ctx, |ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Base Package:");
+                            ui.label("Base file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.base_pkg_path);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match pick_nsp_file(Some("Pick a Base file")) {
+                                        Ok(path) => {
+                                            self.base_pkg_path = path.to_string_lossy().into();
+                                        }
+                                        Err(_) => todo!("error dialog popup"),
+                                    }
+                                };
                             });
 
                             ui.add_space(PADDING);
 
-                            ui.label("Update Package:");
+                            ui.label("Update file:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match pick_nsp_file(Some("Pick an Update file")) {
+                                        Ok(path) => {
+                                            self.update_pkg_path = path.to_string_lossy().into();
+                                        }
+                                        Err(_) => todo!("error dialog popup"),
+                                    }
+                                };
                             });
                         });
                     });
@@ -164,7 +197,9 @@ impl eframe::App for YanuApp {
                         if ui
                             .button(RichText::new("Unpack").size(HEADING_SIZE))
                             .clicked()
-                        {};
+                        {
+                            todo!("use `unpack_nsp`")
+                        };
                     });
                 });
             }
@@ -174,8 +209,20 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Control NCA:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+                                // let text_edit =
+                                //     egui::TextEdit::singleline(&mut self.control_nca_path).show(ui);
+
+                                // TODO: Figure out how to move the focus to the end on demand
                                 ui.text_edit_singleline(&mut self.control_nca_path);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match pick_nca_file(Some("Pick a Control NCA file")) {
+                                        Ok(path) => {
+                                            // TODO: Check ContentType and make sure selected NCA is of Control type
+                                            self.control_nca_path = path.to_string_lossy().into();
+                                        }
+                                        Err(_) => todo!("error dialog popup"),
+                                    }
+                                };
                             });
 
                             ui.add_space(PADDING);
@@ -185,18 +232,38 @@ impl eframe::App for YanuApp {
 
                             ui.add_space(PADDING);
 
-                            ui.label("RomFS directory:");
+                            ui.label("RomFS folder:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.romfs_dir);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match rfd::FileDialog::new()
+                                        .set_title("Pick a RomFS folder")
+                                        .pick_folder()
+                                    {
+                                        Some(dir) => {
+                                            self.romfs_dir = dir.to_string_lossy().into();
+                                        }
+                                        None => todo!("error dialog popup"),
+                                    }
+                                };
                             });
 
                             ui.add_space(PADDING);
 
-                            ui.label("ExeFS directory:");
+                            ui.label("ExeFS folder:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.exefs_dir);
-                                if ui.button("📂 Browse").clicked() {};
+                                if ui.button("📂 Browse").clicked() {
+                                    match rfd::FileDialog::new()
+                                        .set_title("Pick a ExeFS folder")
+                                        .pick_folder()
+                                    {
+                                        Some(dir) => {
+                                            self.exefs_dir = dir.to_string_lossy().into();
+                                        }
+                                        None => todo!("error dialog popup"),
+                                    }
+                                };
                             });
                         });
                     });
@@ -207,7 +274,9 @@ impl eframe::App for YanuApp {
                         if ui
                             .button(RichText::new("Pack").size(HEADING_SIZE))
                             .clicked()
-                        {};
+                        {
+                            todo!("validate TitleID and use `pack_fs_data`")
+                        };
                     });
                 });
             }
@@ -217,8 +286,16 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Source:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                                ui.text_edit_singleline(&mut self.control_nca_path);
-                                if ui.button("📂 Browse").clicked() {};
+                                ui.text_edit_singleline(&mut self.source_file_path);
+                                if ui.button("📂 Browse").clicked() {
+                                    match rfd::FileDialog::new().pick_file() {
+                                        Some(path) => {
+                                            info!(?path, size = %get_size_as_string(&path).unwrap_or_default(), "Selected file");
+                                            self.source_file_path = path.to_string_lossy().into();
+                                        }
+                                        None => todo!("error dialog popup"),
+                                    }
+                                };
                             });
 
                             ui.add_space(PADDING);
@@ -244,7 +321,9 @@ impl eframe::App for YanuApp {
                         if ui
                             .button(RichText::new("Convert").size(HEADING_SIZE))
                             .clicked()
-                        {};
+                        {
+                            todo!("Check whether source can be converted to target type and then use `xci_to_nsps`")
+                        };
                     });
                 });
             }

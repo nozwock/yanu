@@ -108,7 +108,7 @@ fn run() -> Result<()> {
         .set_title("Base package required")
         .set_description("Select the BASE package file to update")
         .show();
-    let base_path = pick_nsp_file()?;
+    let base_path = pick_nsp_file(None)?;
     if !base_path.is_file() {
         bail!("\"{}\" is not a file", base_path.display());
     }
@@ -118,7 +118,7 @@ fn run() -> Result<()> {
         .set_title("Update package required")
         .set_description("Select the UPDATE package file to apply")
         .show();
-    let update_path = pick_nsp_file()?;
+    let update_path = pick_nsp_file(None)?;
     if !update_path.is_file() {
         bail!("\"{}\" is not a file", update_path.display());
     }
