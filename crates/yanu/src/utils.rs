@@ -1,4 +1,3 @@
-use common::defines::EXE_DIR;
 use eyre::{bail, Result};
 use std::path::PathBuf;
 

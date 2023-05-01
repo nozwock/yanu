@@ -30,21 +30,9 @@ fn main() -> Result<()> {
     // Tracing
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    let filter = filter::Targets::new()
-        .with_default(tracing::Level::DEBUG)
-        .with_targets(vec![
-            ("eframe", LevelFilter::OFF),
-            ("winit", LevelFilter::OFF),
-            ("egui_winit", LevelFilter::OFF),
-            ("egui_glow", LevelFilter::OFF),
-            ("zbus", LevelFilter::OFF),
-            ("async_io", LevelFilter::OFF),
-            ("arboard", LevelFilter::OFF),
-            ("polling", LevelFilter::OFF),
-            ("mio", LevelFilter::OFF),
-        ]);
-    // A stop-gap solution
-    // Look for a better way to log only local crates
+    let filter = tracing_subscriber::filter::EnvFilter::new(
+        "cache=debug,common=debug,config=debug,hac=debug,yanu=debug,off",
+    );
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
