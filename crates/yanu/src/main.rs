@@ -147,6 +147,7 @@ fn run() -> Result<()> {
         let (patched, _nacp_data, _program_id) = update_nsp(
             &mut Nsp::try_new(&base_path)?,
             &mut Nsp::try_new(&update_path)?,
+            None,
             default_outdir()?,
             &config,
         )?;
