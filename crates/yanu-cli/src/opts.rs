@@ -59,6 +59,14 @@ pub struct Update {
     /// Select update package
     #[arg(short, long, value_name = "FILE")]
     pub update: PathBuf,
+    /// Overwrite TitleID
+    #[arg(
+        short,
+        long,
+        long_help = "Set TitleID\n\
+        Check the logs for guidance on which TitleID to use if using the wrong one."
+    )]
+    pub titleid: Option<String>,
     #[arg(short, long, value_name = "DIR")]
     pub outdir: Option<PathBuf>,
 }

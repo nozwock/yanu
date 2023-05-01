@@ -22,6 +22,7 @@ use super::hacpack_cleanup_install;
 pub fn update_nsp<O>(
     base: &mut Nsp,
     update: &mut Nsp,
+    program_id: Option<&str>,
     outdir: O,
     cfg: &Config,
 ) -> Result<(Nsp, NacpData, String)>
@@ -131,10 +132,10 @@ where
     // !Unpacking fs files from NCAs
     _ = base_nca.unpack_all(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
-    // TODO?: Support for when main and update's titleid don't match
-    // maybe handle this by having a override flag for TitleID
-    // once unpack/repack combo is being used for updating
-    let program_id = base_nca.get_program_id().to_lowercase();
+    let program_id = match program_id {
+        Some(program_id) => program_id.into(),
+        None => base_nca.get_program_id().to_lowercase(),
+    };
     debug!(?program_id, "Selected TitleID for packing");
 
     // !Moving Control NCA

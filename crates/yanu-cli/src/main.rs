@@ -16,7 +16,7 @@ use fs_err as fs;
 use hac::backend::{Backend, BackendKind};
 use hac::{
     utils::{custom_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
-    vfs::{nsp::Nsp, xci::xci_to_nsps, PROGRAMID_LEN},
+    vfs::{nsp::Nsp, validate_program_id, xci::xci_to_nsps},
 };
 use indicatif::HumanDuration;
 use tracing::{debug, error, info, warn};
@@ -131,11 +131,16 @@ fn run() -> Result<()> {
             // Path validation
             path_exists!(Some(&opts.base), Some(&opts.update))?;
 
+            if let Some(program_id) = &opts.titleid {
+                validate_program_id(program_id)?;
+            }
+
             info!("Started patching!");
             timer = Some(Instant::now());
             let (mut patched, nacp_data, program_id) = update_nsp(
                 &mut Nsp::try_new(opts.base)?,
                 &mut Nsp::try_new(opts.update)?,
+                opts.titleid.as_deref(),
                 opts.outdir.unwrap_or(default_outdir()?),
                 &config,
             )?;
@@ -164,13 +169,7 @@ fn run() -> Result<()> {
                 Some(&opts.exefsdir)
             )?;
 
-            if opts.titleid.len() != PROGRAMID_LEN as _ {
-                bail!(
-                    "len: {} '{}' is invalid TitleID, TitleID should be in hexadecimal with a size of 8 bytes, i.e. 16 hexadecimal characters",
-                    opts.titleid.len(),
-                    opts.titleid
-                )
-            }
+            validate_program_id(&opts.titleid)?;
 
             timer = Some(Instant::now());
             let (mut patched, nacp_data) = pack_fs_data(
@@ -433,8 +432,9 @@ fn run() -> Result<()> {
             {
                 info!("Started patching!");
                 timer = Some(Instant::now());
+                // TODO?: Maybe ask for ProgramID here?
                 let (mut patched, nacp_data, program_id) =
-                    update_nsp(&mut base, &mut update, default_outdir()?, &config)?;
+                    update_nsp(&mut base, &mut update, None, default_outdir()?, &config)?;
                 custom_nsp_rename(
                     &mut patched.path,
                     &nacp_data,
