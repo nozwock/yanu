@@ -11,7 +11,7 @@ use common::utils::{get_disk_free, get_paths_size};
 use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
-use hac::utils::custom_nsp_rename;
+use hac::utils::formatted_nsp_rename;
 use hac::{utils::update::update_nsp, vfs::nsp::Nsp};
 use std::time::Instant;
 use std::{env, path::PathBuf};
@@ -177,7 +177,7 @@ fn run() -> Result<()> {
             default_pack_outdir()?,
             &config,
         )?;
-        custom_nsp_rename(
+        formatted_nsp_rename(
             &mut patched.path,
             &nacp_data,
             &program_id,

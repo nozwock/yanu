@@ -95,7 +95,7 @@ macro_rules! hacpack_cleanup_install {
 
 pub(super) use hacpack_cleanup_install;
 
-pub fn custom_nsp_rename(
+pub fn formatted_nsp_rename(
     nsp_path: &mut PathBuf,
     nacp_data: &NacpData,
     program_id: &str,

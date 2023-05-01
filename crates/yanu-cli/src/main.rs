@@ -15,7 +15,7 @@ use fs_err as fs;
 #[cfg(unix)]
 use hac::backend::{Backend, BackendKind};
 use hac::{
-    utils::{custom_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
+    utils::{formatted_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id, xci::xci_to_nsps},
 };
 use indicatif::HumanDuration;
@@ -144,7 +144,7 @@ fn run() -> Result<()> {
                 opts.outdir.unwrap_or(default_outdir()?),
                 &config,
             )?;
-            custom_nsp_rename(
+            formatted_nsp_rename(
                 &mut patched.path,
                 &nacp_data,
                 &program_id,
@@ -180,7 +180,7 @@ fn run() -> Result<()> {
                 opts.outdir.unwrap_or(default_outdir()?),
                 &config,
             )?;
-            custom_nsp_rename(
+            formatted_nsp_rename(
                 &mut patched.path,
                 &nacp_data,
                 &opts.titleid,
@@ -435,7 +435,7 @@ fn run() -> Result<()> {
                 // TODO?: Maybe ask for ProgramID here?
                 let (mut patched, nacp_data, program_id) =
                     update_nsp(&mut base, &mut update, None, default_outdir()?, &config)?;
-                custom_nsp_rename(
+                formatted_nsp_rename(
                     &mut patched.path,
                     &nacp_data,
                     &program_id,
