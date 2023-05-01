@@ -1,7 +1,7 @@
 use std::process;
 
 use common::utils::get_size_as_string;
-use config::{NcaExtractor, NspExtractor};
+use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
@@ -13,6 +13,7 @@ use crate::utils::{pick_nca_file, pick_nsp_file};
 #[derive(Debug, Default)]
 pub struct YanuApp {
     page: Page,
+    config: Config,
 
     // need channel for modal windows...
     // channel_rx: Option<...>
@@ -34,10 +35,6 @@ pub struct YanuApp {
     // Convert Page
     source_file_path_buf: String,
     convert_kind: ConvertKind,
-
-    // Config
-    nsp_extractor: NspExtractor,
-    nca_extractor: NcaExtractor,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -73,7 +70,11 @@ impl YanuApp {
 
         increase_font_size_by(1.2, &cc.egui_ctx);
 
-        Default::default()
+        Self {
+            config: Config::load().unwrap(), // TODO: handle this somehow
+            // maybe show a dialog message and then exit
+            ..Default::default()
+        }
     }
 }
 
@@ -88,12 +89,17 @@ impl eframe::App for YanuApp {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.config.clone().store().unwrap();
+        info!(config = ?self.config, "Stored Config before exiting...");
+    }
+
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::gui_zoom::zoom_with_keyboard_shortcuts(ctx, frame.info().native_pixels_per_point);
 
-        self.top_bar(ctx, frame);
+        show_top_bar(ctx, frame, &mut self.config);
 
         let mut dialog_modal = Modal::new(ctx, "dialog modal");
         dialog_modal.show_dialog();
@@ -367,66 +373,49 @@ impl eframe::App for YanuApp {
     }
 }
 
-impl YanuApp {
-    fn top_bar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-                egui::menu::bar(ui, |ui| {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ui.close_menu();
-                            process::exit(0);
-                        }
-                    });
-
-                    ui.menu_button("Config", |ui| {
-                        if ui.button("Set Temp Folder").clicked() {
-                            todo!("rfd file dialog and mutate config")
-                        };
-                        ui.menu_button("NSP Extractor", |ui| {
-                            if ui
-                                .radio_value(
-                                    &mut self.nsp_extractor,
-                                    NspExtractor::Hactool,
-                                    "Hactool",
-                                )
-                                .changed()
-                            {
-                                todo!("mutate config")
-                            };
-                            ui.radio_value(
-                                &mut self.nsp_extractor,
-                                NspExtractor::Hactoolnet,
-                                "Hactoolnet",
-                            );
-                        });
-                        ui.menu_button("NCA Extractor", |ui| {
-                            if ui
-                                .radio_value(&mut self.nca_extractor, NcaExtractor::Hac2l, "Hac2l")
-                                .changed()
-                            {
-                                todo!("mutate config")
-                            };
-                            ui.radio_value(
-                                &mut self.nca_extractor,
-                                NcaExtractor::Hactoolnet,
-                                "Hactoolnet",
-                            );
-                        });
-                    });
-                });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                    ui.add_space(PADDING);
-                    egui::warn_if_debug_build(ui);
-                    if !cfg!(debug_assertions) {
-                        ui.label(
-                            RichText::new(env!("CARGO_PKG_VERSION"))
-                                .color(egui::Color32::LIGHT_GREEN),
-                        );
+fn show_top_bar(ctx: &egui::Context, frame: &mut eframe::Frame, config: &mut Config) {
+    egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Quit").clicked() {
+                        ui.close_menu();
+                        process::exit(0);
                     }
-                    ui.hyperlink_to(" Github", "https://github.com/nozwock/yanu");
+                });
+
+                ui.menu_button("Config", |ui| {
+                    if ui.button("Set Temp Folder").clicked() {
+                        todo!("rfd file dialog and mutate config")
+                    };
+                    ui.menu_button("NSP Extractor", |ui| {
+                        ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
+                        ui.radio_value(
+                            &mut config.nsp_extractor,
+                            NspExtractor::Hactoolnet,
+                            "Hactoolnet",
+                        );
+                    });
+                    ui.menu_button("NCA Extractor", |ui| {
+                        ui.radio_value(&mut config.nca_extractor, NcaExtractor::Hac2l, "Hac2l");
+                        ui.radio_value(
+                            &mut config.nca_extractor,
+                            NcaExtractor::Hactoolnet,
+                            "Hactoolnet",
+                        );
+                    });
                 });
             });
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                ui.add_space(PADDING);
+                egui::warn_if_debug_build(ui);
+                if !cfg!(debug_assertions) {
+                    ui.label(
+                        RichText::new(env!("CARGO_PKG_VERSION")).color(egui::Color32::LIGHT_GREEN),
+                    );
+                }
+                ui.hyperlink_to(" Github", "https://github.com/nozwock/yanu");
+            });
         });
-    }
+    });
 }
