@@ -1,4 +1,5 @@
-use eyre::Result;
+use common::defines::EXE_DIR;
+use eyre::{bail, Result};
 use std::path::PathBuf;
 
 /// Don't make this public.\
@@ -32,4 +33,21 @@ pub fn pick_nsp_file(title: Option<&str>) -> Result<PathBuf> {
 
 pub fn pick_nca_file(title: Option<&str>) -> Result<PathBuf> {
     pick_file(title, [("NCA", &["nca"])])
+}
+
+pub fn default_pack_outdir() -> Result<PathBuf> {
+    let outdir: PathBuf = {
+        if cfg!(feature = "android-proot") {
+            PathBuf::from("/storage/emulated/0")
+        } else {
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            std::env::current_dir()?
+        }
+    };
+
+    if !outdir.is_dir() {
+        bail!("Failed to set '{}' as outdir", outdir.display());
+    }
+
+    Ok(outdir)
 }

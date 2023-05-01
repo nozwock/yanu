@@ -4,19 +4,22 @@
     target_arch = "x86_64",
     any(target_os = "windows", target_os = "linux")
 ))]
-use common::defines::{APP_NAME, DEFAULT_PRODKEYS_PATH, EXE_DIR};
+use common::defines::{APP_NAME, DEFAULT_PRODKEYS_PATH};
 use common::log;
 use config::Config;
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use hac::utils::update::update_nsp;
 use hac::vfs::nsp::Nsp;
-use std::{env, path::PathBuf};
+use std::env;
 use tracing::{info, metadata::LevelFilter};
 use tracing_subscriber::{
     filter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
-use yanu::{gui::app, utils::pick_nsp_file};
+use yanu::{
+    gui::app,
+    utils::{default_pack_outdir, pick_nsp_file},
+};
 
 fn main() -> Result<()> {
     // Colorful errors
@@ -168,7 +171,7 @@ fn run() -> Result<()> {
             &mut Nsp::try_new(&base_path)?,
             &mut Nsp::try_new(&update_path)?,
             None,
-            default_outdir()?,
+            default_pack_outdir()?,
             &config,
         )?;
         rfd::MessageDialog::new()
@@ -182,21 +185,4 @@ fn run() -> Result<()> {
     }
 
     Ok(())
-}
-
-fn default_outdir() -> Result<PathBuf> {
-    let outdir: PathBuf = {
-        if cfg!(feature = "android-proot") {
-            PathBuf::from("/storage/emulated/0")
-        } else {
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            EXE_DIR.to_owned()
-        }
-    };
-
-    if !outdir.is_dir() {
-        bail!("Failed to set \"{}\" as outdir", outdir.display());
-    }
-
-    Ok(outdir)
 }

@@ -1,19 +1,25 @@
-use std::process;
+use std::{process, time::Instant};
 
 use common::utils::get_size_as_string;
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
+use eyre::Result;
+use hac::{
+    utils::{custom_nsp_rename, update::update_nsp},
+    vfs::{nsp::Nsp, validate_program_id},
+};
 use tracing::info;
 
 use super::{cross_centered, increase_font_size_by};
-use crate::utils::{pick_nca_file, pick_nsp_file};
+use crate::utils::{default_pack_outdir, pick_nca_file, pick_nsp_file};
 
 #[derive(Debug, Default)]
 pub struct YanuApp {
     page: Page,
     config: Config,
+    timer: Option<Instant>,
 
     // need channel for modal windows...
     // channel_rx: Option<...>
@@ -182,9 +188,7 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
                         {
-                            // TODO: store config before this, bcz Backend loads config once more seperately
-                            // won't have to store if once that is fixed
-                            todo!("validate TitleID if set to overwrite and use `update_nsp`")
+                            self.do_update(&dialog_modal);
                         };
                     });
                 });
@@ -459,4 +463,45 @@ fn show_top_bar(
             });
         });
     });
+}
+
+impl YanuApp {
+    fn do_update(&mut self, dialog_modal: &Modal) {
+        if let Err(err) = || -> Result<()> {
+            self.config.clone().store()?;
+            self.timer = Some(Instant::now());
+            let program_id = if self.overwrite_titleid {
+                validate_program_id(&self.overwrite_titleid_buf)?;
+                Some(self.overwrite_titleid_buf.as_str())
+            } else {
+                None
+            };
+            // TODO: Spawn this in a thread
+            let (mut patched, nacp_data, program_id) = update_nsp(
+                &mut Nsp::try_new(&self.base_pkg_path_buf)?,
+                &mut Nsp::try_new(&self.update_pkg_path_buf)?,
+                program_id,
+                default_pack_outdir()?,
+                &self.config,
+            )?;
+            custom_nsp_rename(
+                &mut patched.path,
+                &nacp_data,
+                &program_id,
+                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
+            )?;
+            dialog_modal.open_dialog(
+                None::<&str>,
+                Some(format!(
+                    "Patched file created at:\n'{}'\nTook {:?}",
+                    patched.path.display(),
+                    self.timer.expect("timer is set to `Some` above").elapsed()
+                )),
+                Some(egui_modal::Icon::Success),
+            );
+            Ok(())
+        }() {
+            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+        };
+    }
 }
