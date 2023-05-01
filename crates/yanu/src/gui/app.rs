@@ -392,32 +392,43 @@ fn show_top_bar(
                 });
 
                 ui.menu_button("Config", |ui| {
-                    if ui.button("Set Temp Folder").clicked() {
-                        ui.close_menu();
-                        match rfd::FileDialog::new()
-                            .set_title("Pick a folder to create Temp folders in")
-                            .pick_folder()
-                        {
-                            Some(dir) => {
-                                dialog_modal.open_dialog(
-                                    None::<&str>,
-                                    Some(format!(
-                                        "Set '{}' as the folder to create Temp folders in.",
-                                        dir.display()
-                                    )),
-                                    Some(egui_modal::Icon::Success),
-                                );
-                                config.temp_dir = dir;
-                            }
-                            None => {
-                                dialog_modal.open_dialog(
-                                    None::<&str>,
-                                    Some("No folder was selected"),
-                                    Some(egui_modal::Icon::Error),
-                                );
+                    ui.menu_button("Temp Folder", |ui| {
+                        if ui.button("Reset").clicked() {
+                            ui.close_menu();
+                            config.temp_dir = ".".into();
+                            dialog_modal.open_dialog(
+                                None::<&str>,
+                                Some("Resetted Temp folder"),
+                                Some(egui_modal::Icon::Success),
+                            );
+                        }
+                        if ui.button("Pick folder").clicked() {
+                            ui.close_menu();
+                            match rfd::FileDialog::new()
+                                .set_title("Pick a folder to create Temp folders in")
+                                .pick_folder()
+                            {
+                                Some(dir) => {
+                                    dialog_modal.open_dialog(
+                                        None::<&str>,
+                                        Some(format!(
+                                            "Set '{}' as the folder to create Temp folders in",
+                                            dir.display()
+                                        )),
+                                        Some(egui_modal::Icon::Success),
+                                    );
+                                    config.temp_dir = dir;
+                                }
+                                None => {
+                                    dialog_modal.open_dialog(
+                                        None::<&str>,
+                                        Some("No folder was selected"),
+                                        Some(egui_modal::Icon::Error),
+                                    );
+                                }
                             }
                         }
-                    };
+                    });
                     ui.menu_button("NSP Extractor", |ui| {
                         ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
                         ui.radio_value(
