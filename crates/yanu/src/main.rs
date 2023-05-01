@@ -12,7 +12,10 @@ use fs_err as fs;
 use hac::utils::update::update_nsp;
 use hac::vfs::nsp::Nsp;
 use std::{env, path::PathBuf};
-use tracing::info;
+use tracing::{info, metadata::LevelFilter};
+use tracing_subscriber::{
+    filter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
+};
 use yanu::{gui::app, utils::pick_nsp_file};
 
 fn main() -> Result<()> {
@@ -24,11 +27,28 @@ fn main() -> Result<()> {
     // Tracing
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        // https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/targets/struct.Targets.html
-        .event_format(log::CustomFmt)
-        .with_writer(non_blocking)
+    let filter = filter::Targets::new()
+        .with_default(tracing::Level::DEBUG)
+        .with_targets(vec![
+            ("eframe", LevelFilter::OFF),
+            ("winit", LevelFilter::OFF),
+            ("egui_winit", LevelFilter::OFF),
+            ("egui_glow", LevelFilter::OFF),
+            ("zbus", LevelFilter::OFF),
+            ("async_io", LevelFilter::OFF),
+            ("arboard", LevelFilter::OFF),
+            ("polling", LevelFilter::OFF),
+            ("mio", LevelFilter::OFF),
+        ]);
+    // A stop-gap solution
+    // Look for a better way to log only local crates
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .event_format(log::CustomFmt)
+                .with_writer(non_blocking),
+        )
+        .with(filter)
         .init();
 
     info!(
