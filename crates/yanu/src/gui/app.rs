@@ -7,7 +7,7 @@ use egui::RichText;
 use egui_modal::Modal;
 use eyre::Result;
 use hac::{
-    utils::{custom_nsp_rename, update::update_nsp},
+    utils::{formatted_nsp_rename, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id},
 };
 use tracing::info;
@@ -20,9 +20,7 @@ pub struct YanuApp {
     page: Page,
     config: Config,
     timer: Option<Instant>,
-
-    // need channel for modal windows...
-    // channel_rx: Option<...>
+    // channel_rx: Option<mpsc::Receiver<Message>>,
 
     // Update Page
     overwrite_titleid: bool,
@@ -484,7 +482,7 @@ impl YanuApp {
                 default_pack_outdir()?,
                 &self.config,
             )?;
-            custom_nsp_rename(
+            formatted_nsp_rename(
                 &mut patched.path,
                 &nacp_data,
                 &program_id,
