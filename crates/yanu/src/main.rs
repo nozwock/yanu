@@ -30,6 +30,7 @@ fn main() -> Result<()> {
     // Tracing
     let file_appender = tracing_appender::rolling::hourly("", "yanu.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    // TODO: Take a look at `filter_fn` in tracing-subscriber
     let filter = tracing_subscriber::filter::EnvFilter::new(
         "cache=debug,common=debug,config=debug,hac=debug,yanu=debug,off",
     );

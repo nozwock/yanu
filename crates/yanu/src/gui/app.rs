@@ -1,11 +1,11 @@
-use std::{process, time::Instant};
+use std::{process, sync::mpsc::{self, TryRecvError}, thread, time::Instant};
 
 use common::utils::get_size_as_string;
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
-use eyre::Result;
+use eyre::{Result, eyre};
 use hac::{
     utils::{formatted_nsp_rename, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id},
@@ -20,7 +20,7 @@ pub struct YanuApp {
     page: Page,
     config: Config,
     timer: Option<Instant>,
-    // channel_rx: Option<mpsc::Receiver<Message>>,
+    channel_rx: Option<mpsc::Receiver<Message>>,
 
     // Update Page
     overwrite_titleid: bool,
@@ -39,6 +39,9 @@ pub struct YanuApp {
     // Convert Page
     source_file_path_buf: String,
     convert_kind: ConvertKind,
+
+    // MenuBar
+    enable_config: bool
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -48,6 +51,7 @@ enum Page {
     Unpack,
     Pack,
     Convert,
+    Loading,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -56,8 +60,10 @@ enum ConvertKind {
     Nsp,
 }
 
-#[derive(Debug, PartialEq)]
-enum Message {}
+#[derive(Debug)]
+enum Message {
+    DoUpdate(Result<Nsp>),
+}
 
 impl YanuApp {
     /// Called once before the first frame.
@@ -77,6 +83,7 @@ impl YanuApp {
         Self {
             config: Config::load().unwrap(), // TODO: handle this somehow
             // maybe show a dialog message and then exit
+            enable_config: true,
             ..Default::default()
         }
     }
@@ -106,32 +113,34 @@ impl eframe::App for YanuApp {
         let mut dialog_modal = Modal::new(ctx, "dialog modal");
         dialog_modal.show_dialog();
 
-        show_top_bar(ctx, frame, &dialog_modal, &mut self.config);
+        show_top_bar(ctx, frame, &dialog_modal, &mut self.config, self.enable_config);
 
-        egui::SidePanel::left("options panel")
-            .resizable(false)
-            .default_width(100.)
-            .show(ctx, |ui| {
-                ui.add_space(PADDING * 0.8);
-                ui.vertical_centered(|ui| {
-                    ui.heading("Options");
-                });
-
-                ui.separator();
-                ui.add_space(PADDING * 0.6);
-
-                egui::ScrollArea::new([true, true])
-                    .auto_shrink([true, true])
-                    .show(ui, |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.spacing_mut().item_spacing.y *= 1.5;
-                            ui.selectable_value(&mut self.page, Page::Update, "Update");
-                            ui.selectable_value(&mut self.page, Page::Unpack, "Unpack");
-                            ui.selectable_value(&mut self.page, Page::Pack, "Pack");
-                            ui.selectable_value(&mut self.page, Page::Convert, "Convert");
+        if self.page != Page::Loading {
+            egui::SidePanel::left("options panel")
+                .resizable(false)
+                .default_width(100.)
+                .show(ctx, |ui| {
+                    ui.add_space(PADDING * 0.8);
+                    ui.vertical_centered(|ui| {
+                        ui.heading("Options");
+                    });
+    
+                    ui.separator();
+                    ui.add_space(PADDING * 0.6);
+    
+                    egui::ScrollArea::new([true, true])
+                        .auto_shrink([true, true])
+                        .show(ui, |ui| {
+                            ui.vertical_centered(|ui| {
+                                ui.spacing_mut().item_spacing.y *= 1.5;
+                                ui.selectable_value(&mut self.page, Page::Update, "Update");
+                                ui.selectable_value(&mut self.page, Page::Unpack, "Unpack");
+                                ui.selectable_value(&mut self.page, Page::Pack, "Pack");
+                                ui.selectable_value(&mut self.page, Page::Convert, "Convert");
                         });
                     });
             });
+        }
 
         egui::CentralPanel::default().show(ctx, |ui| match self.page {
             Page::Update => {
@@ -186,6 +195,7 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
                         {
+                            self.enable_config = false;
                             self.do_update(&dialog_modal);
                         };
                     });
@@ -372,7 +382,53 @@ impl eframe::App for YanuApp {
                         };
                     });
                 });
-            }
+            },
+            Page::Loading => {
+                cross_centered("center loading", ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(format!("{:?}", self.timer.expect("must be set to `Some` before the Loading page").elapsed()));
+                        ui.add_space(PADDING * 2.);
+                        ui.add(egui::Spinner::default().size(HEADING_SIZE * 2.5));
+                    });
+                });
+
+                match self.channel_rx.as_ref().expect("must be set to `Some` before the Loading page").try_recv() {
+                    Ok(message) => match message {
+                        Message::DoUpdate(patched) => {
+                            self.page = Page::Update;
+                            ctx.request_repaint();
+                            if let Err(err) = || -> Result<()> {
+                                let patched = patched?;
+                                dialog_modal.open_dialog(
+                                    None::<&str>,
+                                    Some(format!(
+                                        "Patched file created at:\n'{}'\nTook {:?}",
+                                        patched.path.display(),
+                                        self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                    )),
+                                    Some(egui_modal::Icon::Success),
+                                );
+                                Ok(())
+                            }() {
+                                dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                            };
+                            self.timer = None;
+                            self.channel_rx = None;
+                            self.enable_config = true;
+                        },
+                    },
+                    Err(err) if err == TryRecvError::Disconnected => {
+                        self.page = Page::default();
+                        ctx.request_repaint();
+
+                        self.timer = None;
+                        self.channel_rx = None;
+                        self.enable_config = true;
+                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                    },
+                    _ => {}
+                }; 
+            },
         });
     }
 }
@@ -382,6 +438,7 @@ fn show_top_bar(
     frame: &mut eframe::Frame,
     dialog_modal: &Modal,
     config: &mut Config,
+    enable_config: bool
 ) {
     egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
@@ -393,59 +450,61 @@ fn show_top_bar(
                     }
                 });
 
-                ui.menu_button("Config", |ui| {
-                    ui.menu_button("Temp Folder", |ui| {
-                        if ui.button("Reset").clicked() {
-                            ui.close_menu();
-                            config.temp_dir = ".".into();
-                            dialog_modal.open_dialog(
-                                None::<&str>,
-                                Some("Resetted Temp folder"),
-                                Some(egui_modal::Icon::Success),
-                            );
-                        }
-                        if ui.button("Pick folder").clicked() {
-                            ui.close_menu();
-                            match rfd::FileDialog::new()
-                                .set_title("Pick a folder to create Temp folders in")
-                                .pick_folder()
-                            {
-                                Some(dir) => {
-                                    dialog_modal.open_dialog(
-                                        None::<&str>,
-                                        Some(format!(
-                                            "Set '{}' as the folder to create Temp folders in",
-                                            dir.display()
-                                        )),
-                                        Some(egui_modal::Icon::Success),
-                                    );
-                                    config.temp_dir = dir;
-                                }
-                                None => {
-                                    dialog_modal.open_dialog(
-                                        None::<&str>,
-                                        Some("No folder was selected"),
-                                        Some(egui_modal::Icon::Error),
-                                    );
+                ui.add_enabled_ui(enable_config, |ui| {
+                    ui.menu_button("Config", |ui| {
+                        ui.menu_button("Temp Folder", |ui| {
+                            if ui.button("Reset").clicked() {
+                                ui.close_menu();
+                                config.temp_dir = ".".into();
+                                dialog_modal.open_dialog(
+                                    None::<&str>,
+                                    Some("Resetted Temp folder"),
+                                    Some(egui_modal::Icon::Success),
+                                );
+                            }
+                            if ui.button("Pick folder").clicked() {
+                                ui.close_menu();
+                                match rfd::FileDialog::new()
+                                    .set_title("Pick a folder to create Temp folders in")
+                                    .pick_folder()
+                                {
+                                    Some(dir) => {
+                                        dialog_modal.open_dialog(
+                                            None::<&str>,
+                                            Some(format!(
+                                                "Set '{}' as the folder to create Temp folders in",
+                                                dir.display()
+                                            )),
+                                            Some(egui_modal::Icon::Success),
+                                        );
+                                        config.temp_dir = dir;
+                                    }
+                                    None => {
+                                        dialog_modal.open_dialog(
+                                            None::<&str>,
+                                            Some("No folder was selected"),
+                                            Some(egui_modal::Icon::Error),
+                                        );
+                                    }
                                 }
                             }
-                        }
-                    });
-                    ui.menu_button("NSP Extractor", |ui| {
-                        ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
-                        ui.radio_value(
-                            &mut config.nsp_extractor,
-                            NspExtractor::Hactoolnet,
-                            "Hactoolnet",
-                        );
-                    });
-                    ui.menu_button("NCA Extractor", |ui| {
-                        ui.radio_value(&mut config.nca_extractor, NcaExtractor::Hac2l, "Hac2l");
-                        ui.radio_value(
-                            &mut config.nca_extractor,
-                            NcaExtractor::Hactoolnet,
-                            "Hactoolnet",
-                        );
+                        });
+                        ui.menu_button("NSP Extractor", |ui| {
+                            ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
+                            ui.radio_value(
+                                &mut config.nsp_extractor,
+                                NspExtractor::Hactoolnet,
+                                "Hactoolnet",
+                            );
+                        });
+                        ui.menu_button("NCA Extractor", |ui| {
+                            ui.radio_value(&mut config.nca_extractor, NcaExtractor::Hac2l, "Hac2l");
+                            ui.radio_value(
+                                &mut config.nca_extractor,
+                                NcaExtractor::Hactoolnet,
+                                "Hactoolnet",
+                            );
+                        });
                     });
                 });
             });
@@ -470,33 +529,35 @@ impl YanuApp {
             self.timer = Some(Instant::now());
             let program_id = if self.overwrite_titleid {
                 validate_program_id(&self.overwrite_titleid_buf)?;
-                Some(self.overwrite_titleid_buf.as_str())
+                Some(self.overwrite_titleid_buf.clone())
             } else {
                 None
             };
-            // TODO: Spawn this in a thread
-            let (mut patched, nacp_data, program_id) = update_nsp(
-                &mut Nsp::try_new(&self.base_pkg_path_buf)?,
-                &mut Nsp::try_new(&self.update_pkg_path_buf)?,
-                program_id,
-                default_pack_outdir()?,
-                &self.config,
-            )?;
-            formatted_nsp_rename(
-                &mut patched.path,
-                &nacp_data,
-                &program_id,
-                concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
-            )?;
-            dialog_modal.open_dialog(
-                None::<&str>,
-                Some(format!(
-                    "Patched file created at:\n'{}'\nTook {:?}",
-                    patched.path.display(),
-                    self.timer.expect("timer is set to `Some` above").elapsed()
-                )),
-                Some(egui_modal::Icon::Success),
-            );
+            let (tx, rx) = mpsc::channel();
+            self.channel_rx = Some(rx);
+            let base_pkg_path = self.base_pkg_path_buf.clone();
+            let update_pkg_path = self.update_pkg_path_buf.clone();
+            let config = self.config.clone();
+            thread::spawn(move || {
+                tx.send(Message::DoUpdate(|| -> Result<Nsp> {
+                    let (mut patched, nacp_data, program_id) = update_nsp(
+                        &mut Nsp::try_new(base_pkg_path)?,
+                        &mut Nsp::try_new(update_pkg_path)?,
+                        program_id.as_deref(),
+                        default_pack_outdir()?,
+                        &config,
+                    )?;
+                    formatted_nsp_rename(
+                        &mut patched.path,
+                        &nacp_data,
+                        &program_id,
+                        concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-patched]"),
+                    )?;
+                    Ok(patched)
+                }()))
+                .unwrap();
+            });
+            self.page = Page::Loading;
             Ok(())
         }() {
             dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
