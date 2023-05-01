@@ -99,10 +99,10 @@ impl eframe::App for YanuApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::gui_zoom::zoom_with_keyboard_shortcuts(ctx, frame.info().native_pixels_per_point);
 
-        show_top_bar(ctx, frame, &mut self.config);
-
         let mut dialog_modal = Modal::new(ctx, "dialog modal");
         dialog_modal.show_dialog();
+
+        show_top_bar(ctx, frame, &dialog_modal, &mut self.config);
 
         egui::SidePanel::left("options panel")
             .resizable(false)
@@ -182,6 +182,8 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
                         {
+                            // TODO: store config before this, bcz Backend loads config once more seperately
+                            // won't have to store if once that is fixed
                             todo!("validate TitleID if set to overwrite and use `update_nsp`")
                         };
                     });
@@ -373,7 +375,12 @@ impl eframe::App for YanuApp {
     }
 }
 
-fn show_top_bar(ctx: &egui::Context, frame: &mut eframe::Frame, config: &mut Config) {
+fn show_top_bar(
+    ctx: &egui::Context,
+    frame: &mut eframe::Frame,
+    dialog_modal: &Modal,
+    config: &mut Config,
+) {
     egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
             egui::menu::bar(ui, |ui| {
@@ -386,7 +393,30 @@ fn show_top_bar(ctx: &egui::Context, frame: &mut eframe::Frame, config: &mut Con
 
                 ui.menu_button("Config", |ui| {
                     if ui.button("Set Temp Folder").clicked() {
-                        todo!("rfd file dialog and mutate config")
+                        ui.close_menu();
+                        match rfd::FileDialog::new()
+                            .set_title("Pick a folder to create Temp folders in")
+                            .pick_folder()
+                        {
+                            Some(dir) => {
+                                dialog_modal.open_dialog(
+                                    None::<&str>,
+                                    Some(format!(
+                                        "Set '{}' as the folder to create Temp folders in.",
+                                        dir.display()
+                                    )),
+                                    Some(egui_modal::Icon::Success),
+                                );
+                                config.temp_dir = dir;
+                            }
+                            None => {
+                                dialog_modal.open_dialog(
+                                    None::<&str>,
+                                    Some("No folder was selected"),
+                                    Some(egui_modal::Icon::Error),
+                                );
+                            }
+                        }
                     };
                     ui.menu_button("NSP Extractor", |ui| {
                         ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
