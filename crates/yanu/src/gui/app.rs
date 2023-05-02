@@ -1,4 +1,4 @@
-use std::{process, sync::mpsc::{self, TryRecvError}, thread, time::Instant};
+use std::{process, sync::mpsc::TryRecvError, thread, time::Instant};
 
 use common::utils::get_size_as_string;
 use config::{Config, NcaExtractor, NspExtractor};
@@ -13,14 +13,14 @@ use hac::{
 use tracing::info;
 
 use super::{cross_centered, increase_font_size_by};
-use crate::utils::{default_pack_outdir, pick_nca_file, pick_nsp_file};
+use crate::{utils::{default_pack_outdir, pick_nca_file, pick_nsp_file}, MpscChannel};
 
 #[derive(Debug, Default)]
 pub struct YanuApp {
     page: Page,
     config: Config,
     timer: Option<Instant>,
-    channel_rx: Option<mpsc::Receiver<Message>>,
+    channel: MpscChannel<Message>,
 
     // Update Page
     overwrite_titleid: bool,
@@ -392,7 +392,7 @@ impl eframe::App for YanuApp {
                     });
                 });
 
-                match self.channel_rx.as_ref().expect("must be set to `Some` before the Loading page").try_recv() {
+                match self.channel.rx.try_recv() {
                     Ok(message) => match message {
                         Message::DoUpdate(patched) => {
                             self.page = Page::Update;
@@ -413,7 +413,6 @@ impl eframe::App for YanuApp {
                                 dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
                             };
                             self.timer = None;
-                            self.channel_rx = None;
                             self.enable_config = true;
                         },
                     },
@@ -422,7 +421,6 @@ impl eframe::App for YanuApp {
                         ctx.request_repaint();
 
                         self.timer = None;
-                        self.channel_rx = None;
                         self.enable_config = true;
                         dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
                     },
@@ -533,11 +531,10 @@ impl YanuApp {
             } else {
                 None
             };
-            let (tx, rx) = mpsc::channel();
-            self.channel_rx = Some(rx);
             let base_pkg_path = self.base_pkg_path_buf.clone();
             let update_pkg_path = self.update_pkg_path_buf.clone();
             let config = self.config.clone();
+            let tx = self.channel.tx.clone();
             thread::spawn(move || {
                 tx.send(Message::DoUpdate(|| -> Result<Nsp> {
                     let (mut patched, nacp_data, program_id) = update_nsp(
