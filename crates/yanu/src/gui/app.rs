@@ -7,7 +7,7 @@ use egui::RichText;
 use egui_modal::Modal;
 use eyre::{Result, bail};
 use hac::{
-    utils::{formatted_nsp_rename, update::update_nsp, unpack::unpack_nsp},
+    utils::{formatted_nsp_rename, update::update_nsp, unpack::unpack_nsp, pack::pack_fs_data},
     vfs::{nsp::Nsp, validate_program_id},
 };
 use tracing::info;
@@ -63,7 +63,8 @@ enum ConvertKind {
 #[derive(Debug)]
 enum Message {
     DoUpdate(Result<Nsp>),
-    DoUnpack(Result<PathBuf>)
+    DoUnpack(Result<PathBuf>),
+    DoPack(Result<Nsp>)
 }
 
 impl YanuApp {
@@ -330,8 +331,8 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Pack").size(HEADING_SIZE))
                             .clicked()
                         {
-                            // TODO: Check ContentType and make sure selected NCA is of Control type -> this will be done in `pack_fs_data`, so no need.
-                            todo!("validate TitleID and use `pack_fs_data`")
+                            self.enable_config = false;
+                            self.do_pack(&dialog_modal);
                         };
                     });
                 });
@@ -424,6 +425,21 @@ impl eframe::App for YanuApp {
                                             dialog_modal.open_dialog(
                                                 None::<&str>,
                                                 Some(format!("Unpacked to '{}'", outdir.display())),
+                                                Some(egui_modal::Icon::Success),
+                                            );
+                                        },
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
+                                    }
+                                },
+                                Message::DoPack(response) => {
+                                    self.page = Page::Pack;
+                                    match response {
+                                        Ok(packed) => {
+                                            dialog_modal.open_dialog(
+                                                None::<&str>,
+                                                Some(format!("Packed NSP created at '{}'", packed.path.display())),
                                                 Some(egui_modal::Icon::Success),
                                             );
                                         },
@@ -543,6 +559,11 @@ impl YanuApp {
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
             
+            
+            if self.base_pkg_path_buf.is_empty() || self.update_pkg_path_buf.is_empty() {
+                bail!("All fields are required")
+            }
+
             let program_id = if self.overwrite_titleid {
                 validate_program_id(&self.overwrite_titleid_buf)?;
                 Some(self.overwrite_titleid_buf.clone())
@@ -550,12 +571,9 @@ impl YanuApp {
                 None
             };
 
-            if self.base_pkg_path_buf.is_empty() || self.update_pkg_path_buf.is_empty() {
-                bail!("Both file path must be set")
-            }
-
             let base_pkg_path = self.base_pkg_path_buf.clone();
             let update_pkg_path = self.update_pkg_path_buf.clone();
+
             let config = self.config.clone();
             let tx = self.channel.tx.clone();
             thread::spawn(move || {
@@ -577,7 +595,9 @@ impl YanuApp {
                 }()))
                 .unwrap();
             });
+
             self.page = Page::Loading;
+
             Ok(())
         }() {
             dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
@@ -589,7 +609,7 @@ impl YanuApp {
             self.timer = Some(Instant::now());
 
             if self.base_pkg_path_buf.is_empty() {
-                bail!("Base file path must be set");
+                bail!("Base file field must be set");
             }
 
             let base_pkg_path = self.base_pkg_path_buf.clone();
@@ -623,7 +643,60 @@ impl YanuApp {
                 }()))
                 .unwrap();
             });
+
             self.page = Page::Loading;
+
+            Ok(())
+        }() {
+            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+        }
+    }
+    fn do_pack(&mut self, dialog_modal: &Modal) {
+        if let Err(err) = || -> Result<()> {
+            self.config.clone().store()?;
+            self.timer = Some(Instant::now());
+            
+            if self.pack_title_id_buf.is_empty()
+                || self.control_nca_path_buf.is_empty()
+                || self.romfs_dir_buf.is_empty()
+                || self.exefs_dir_buf.is_empty()
+            {
+                bail!("All fields are required");
+            }
+            
+            validate_program_id(&self.pack_title_id_buf)?;
+            let program_id = self.pack_title_id_buf.clone();
+
+            let control_path = self.control_nca_path_buf.clone();
+            let romfs_dir = self.romfs_dir_buf.clone();
+            let exefs_dir = self.exefs_dir_buf.clone();
+            let outdir = default_pack_outdir()?;
+
+            let config = self.config.clone();
+            let tx = self.channel.tx.clone();
+            thread::spawn(move || {
+                tx.send(Message::DoPack(|| -> Result<Nsp> {
+                    let (mut patched, nacp_data) = pack_fs_data(
+                        control_path,
+                        program_id.clone(),
+                        romfs_dir,
+                        exefs_dir,
+                        outdir,
+                        &config
+                    )?;
+                    formatted_nsp_rename(
+                        &mut patched.path,
+                        &nacp_data,
+                        &program_id,
+                        concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-packed]"),
+                    )?;
+                    Ok(patched)
+                }()))
+                .unwrap();
+            });
+
+            self.page = Page::Loading;
+
             Ok(())
         }() {
             dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
