@@ -142,7 +142,7 @@ impl eframe::App for YanuApp {
             });
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| match self.page {
+        egui::CentralPanel::default().show(ctx, |_ui| match self.page {
             Page::Update => {
                 cross_centered("center update", ctx, |ui| {
                     ui.vertical(|ui| {
@@ -433,7 +433,7 @@ impl eframe::App for YanuApp {
 
 fn show_top_bar(
     ctx: &egui::Context,
-    frame: &mut eframe::Frame,
+    _frame: &mut eframe::Frame,
     dialog_modal: &Modal,
     config: &mut Config,
     enable_config: bool
