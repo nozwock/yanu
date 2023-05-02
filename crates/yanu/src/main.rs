@@ -12,10 +12,8 @@ use fs_err as fs;
 use hac::utils::update::update_nsp;
 use hac::vfs::nsp::Nsp;
 use std::env;
-use tracing::{info, metadata::LevelFilter};
-use tracing_subscriber::{
-    filter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
-};
+use tracing::info;
+use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 use yanu::{
     gui::app,
     utils::{default_pack_outdir, pick_nsp_file},

@@ -5,7 +5,7 @@ use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
-use eyre::{Result, eyre};
+use eyre::Result;
 use hac::{
     utils::{formatted_nsp_rename, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id},
@@ -393,38 +393,38 @@ impl eframe::App for YanuApp {
                 });
 
                 match self.channel.rx.try_recv() {
-                    Ok(message) => match message {
-                        Message::DoUpdate(patched) => {
-                            self.page = Page::Update;
-                            ctx.request_repaint();
-                            if let Err(err) = || -> Result<()> {
-                                let patched = patched?;
-                                dialog_modal.open_dialog(
-                                    None::<&str>,
-                                    Some(format!(
-                                        "Patched file created at:\n'{}'\nTook {:?}",
-                                        patched.path.display(),
-                                        self.timer.expect("must be set to `Some` before the Loading page").elapsed()
-                                    )),
-                                    Some(egui_modal::Icon::Success),
-                                );
-                                Ok(())
-                            }() {
+                    Err(err) if err == TryRecvError::Empty => {}
+                    rest => {
+                        match rest {
+                            Ok(message) => match message {
+                                Message::DoUpdate(patched) => {
+                                    self.page = Page::Update;
+                                    if let Err(err) = || -> Result<()> {
+                                        let patched = patched?;
+                                        dialog_modal.open_dialog(
+                                            None::<&str>,
+                                            Some(format!(
+                                                "Patched file created at:\n'{}'\nTook {:?}",
+                                                patched.path.display(),
+                                                self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                            )),
+                                            Some(egui_modal::Icon::Success),
+                                        );
+                                        Ok(())
+                                    }() {
+                                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                    };
+                                }
+                            }
+                            Err(err) => {
+                                self.page = Page::default();
                                 dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                            };
-                            self.timer = None;
-                            self.enable_config = true;
-                        },
-                    },
-                    Err(err) if err == TryRecvError::Disconnected => {
-                        self.page = Page::default();
-                        ctx.request_repaint();
+                            },
+                        };
 
                         self.timer = None;
                         self.enable_config = true;
-                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                    },
-                    _ => {}
+                    }
                 }; 
             },
         });
