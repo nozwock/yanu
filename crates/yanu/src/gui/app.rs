@@ -1,13 +1,13 @@
-use std::{process, sync::mpsc::TryRecvError, thread, time::Instant};
+use std::{process, sync::mpsc::TryRecvError, thread, time::Instant, path::PathBuf};
 
 use common::utils::get_size_as_string;
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
-use eyre::Result;
+use eyre::{Result, bail};
 use hac::{
-    utils::{formatted_nsp_rename, update::update_nsp},
+    utils::{formatted_nsp_rename, update::update_nsp, unpack::unpack_nsp},
     vfs::{nsp::Nsp, validate_program_id},
 };
 use tracing::info;
@@ -63,6 +63,7 @@ enum ConvertKind {
 #[derive(Debug)]
 enum Message {
     DoUpdate(Result<Nsp>),
+    DoUnpack(Result<PathBuf>)
 }
 
 impl YanuApp {
@@ -246,7 +247,8 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Unpack").size(HEADING_SIZE))
                             .clicked()
                         {
-                            todo!("use `unpack_nsp`")
+                            self.enable_config = false;
+                            self.do_unpack(&dialog_modal);
                         };
                     });
                 });
@@ -397,10 +399,10 @@ impl eframe::App for YanuApp {
                     rest => {
                         match rest {
                             Ok(message) => match message {
-                                Message::DoUpdate(patched) => {
+                                Message::DoUpdate(response) => {
                                     self.page = Page::Update;
                                     if let Err(err) = || -> Result<()> {
-                                        let patched = patched?;
+                                        let patched = response?;
                                         dialog_modal.open_dialog(
                                             None::<&str>,
                                             Some(format!(
@@ -415,6 +417,21 @@ impl eframe::App for YanuApp {
                                         dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
                                     };
                                 }
+                                Message::DoUnpack(response) => {
+                                    self.page = Page::Unpack;
+                                    match response {
+                                        Ok(outdir) => {
+                                            dialog_modal.open_dialog(
+                                                None::<&str>,
+                                                Some(format!("Unpacked to '{}'", outdir.display())),
+                                                Some(egui_modal::Icon::Success),
+                                            );
+                                        },
+                                        Err(err) => {
+                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                        },
+                                    }
+                                },
                             }
                             Err(err) => {
                                 self.page = Page::default();
@@ -525,12 +542,18 @@ impl YanuApp {
         if let Err(err) = || -> Result<()> {
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
+            
             let program_id = if self.overwrite_titleid {
                 validate_program_id(&self.overwrite_titleid_buf)?;
                 Some(self.overwrite_titleid_buf.clone())
             } else {
                 None
             };
+
+            if self.base_pkg_path_buf.is_empty() || self.update_pkg_path_buf.is_empty() {
+                bail!("Both file path must be set")
+            }
+
             let base_pkg_path = self.base_pkg_path_buf.clone();
             let update_pkg_path = self.update_pkg_path_buf.clone();
             let config = self.config.clone();
@@ -559,5 +582,51 @@ impl YanuApp {
         }() {
             dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
         };
+    }
+    fn do_unpack(&mut self, dialog_modal: &Modal) {
+        if let Err(err) = || -> Result<()> {
+            self.config.clone().store()?;
+            self.timer = Some(Instant::now());
+
+            if self.base_pkg_path_buf.is_empty() {
+                bail!("Base file path must be set");
+            }
+
+            let base_pkg_path = self.base_pkg_path_buf.clone();
+            let update_pkg_path = if self.update_pkg_path_buf.is_empty() {
+                None
+            } else {
+                Some(self.update_pkg_path_buf.clone())
+            };
+
+            let prefix = if update_pkg_path.is_some() {
+                "base+patch."
+            } else {
+                "base."
+            };
+            let outdir = tempfile::Builder::new()
+                    .prefix(prefix)
+                    .tempdir_in(std::env::current_dir()?)?
+                    .into_path();
+
+            let config = self.config.clone();
+            let tx = self.channel.tx.clone();
+            thread::spawn(move || {
+                tx.send(Message::DoUnpack(|| -> Result<PathBuf> {
+                    unpack_nsp(
+                        &mut Nsp::try_new(base_pkg_path)?,
+                        update_pkg_path.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
+                        &outdir,
+                        &config
+                    )?;
+                    Ok(outdir)
+                }()))
+                .unwrap();
+            });
+            self.page = Page::Loading;
+            Ok(())
+        }() {
+            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+        }
     }
 }
