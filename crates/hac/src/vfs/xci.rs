@@ -7,11 +7,10 @@ use common::{
 use eyre::{bail, Result};
 use fs_err as fs;
 use std::{path::Path, process::Command};
-use tempfile::tempdir_in;
 use tracing::{info, warn};
 use walkdir::WalkDir;
 
-pub fn xci_to_nsps<P, Q, R>(xci: P, outdir: Q, temp_dir_in: R) -> Result<Vec<Nsp>>
+pub fn xci_to_nsps<P, Q, R>(xci: P, outdir: Q, tempdir_in: R) -> Result<Vec<Nsp>>
 where
     P: AsRef<Path>,
     Q: AsRef<Path>,
@@ -26,8 +25,8 @@ where
     );
 
     let backend = Backend::try_new(BackendKind::FourNXCI)?;
-    let temp_dir = tempdir_in(temp_dir_in.as_ref())?;
-    let temp_outdir = tempdir_in(temp_dir_in.as_ref())?;
+    let temp_dir = tempfile::tempdir_in(tempdir_in.as_ref())?;
+    let temp_outdir = tempfile::tempdir_in(tempdir_in.as_ref())?;
     fs::create_dir_all(&temp_outdir)?;
     if !Command::new(backend.path())
         .args([

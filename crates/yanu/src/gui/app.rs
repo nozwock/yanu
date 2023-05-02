@@ -1,19 +1,22 @@
-use std::{process, sync::mpsc::TryRecvError, thread, time::Instant, path::PathBuf};
+use std::{path::PathBuf, process, sync::mpsc::TryRecvError, thread, time::Instant};
 
 use common::utils::get_size_as_string;
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
-use eyre::{Result, bail};
+use eyre::{bail, Result};
 use hac::{
-    utils::{formatted_nsp_rename, update::update_nsp, unpack::unpack_nsp, pack::pack_fs_data},
-    vfs::{nsp::Nsp, validate_program_id},
+    utils::{formatted_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
+    vfs::{nsp::Nsp, validate_program_id, xci::xci_to_nsps},
 };
 use tracing::info;
 
 use super::{cross_centered, increase_font_size_by};
-use crate::{utils::{default_pack_outdir, pick_nca_file, pick_nsp_file}, MpscChannel};
+use crate::{
+    utils::{default_pack_outdir, pick_nca_file, pick_nsp_file},
+    MpscChannel,
+};
 
 #[derive(Debug, Default)]
 pub struct YanuApp {
@@ -41,7 +44,7 @@ pub struct YanuApp {
     convert_kind: ConvertKind,
 
     // MenuBar
-    enable_config: bool
+    enable_config: bool,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -54,17 +57,31 @@ enum Page {
     Loading,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 enum ConvertKind {
     #[default]
     Nsp,
+}
+
+impl ConvertKind {
+    fn reach_from_types(&self) -> &[&'static str] {
+        match self {
+            ConvertKind::Nsp => &["xci"],
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Converted {
+    Nsp(Vec<Nsp>),
 }
 
 #[derive(Debug)]
 enum Message {
     DoUpdate(Result<Nsp>),
     DoUnpack(Result<PathBuf>),
-    DoPack(Result<Nsp>)
+    DoPack(Result<Nsp>),
+    DoConvert(Result<Converted>),
 }
 
 impl YanuApp {
@@ -115,7 +132,13 @@ impl eframe::App for YanuApp {
         let mut dialog_modal = Modal::new(ctx, "dialog modal");
         dialog_modal.show_dialog();
 
-        show_top_bar(ctx, frame, &dialog_modal, &mut self.config, self.enable_config);
+        show_top_bar(
+            ctx,
+            frame,
+            &dialog_modal,
+            &mut self.config,
+            self.enable_config,
+        );
 
         if self.page != Page::Loading {
             egui::SidePanel::left("options panel")
@@ -126,10 +149,10 @@ impl eframe::App for YanuApp {
                     ui.vertical_centered(|ui| {
                         ui.heading("Options");
                     });
-    
+
                     ui.separator();
                     ui.add_space(PADDING * 0.6);
-    
+
                     egui::ScrollArea::new([true, true])
                         .auto_shrink([true, true])
                         .show(ui, |ui| {
@@ -139,9 +162,9 @@ impl eframe::App for YanuApp {
                                 ui.selectable_value(&mut self.page, Page::Unpack, "Unpack");
                                 ui.selectable_value(&mut self.page, Page::Pack, "Pack");
                                 ui.selectable_value(&mut self.page, Page::Convert, "Convert");
+                            });
                         });
-                    });
-            });
+                });
         }
 
         egui::CentralPanel::default().show(ctx, |_ui| match self.page {
@@ -381,7 +404,8 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Convert").size(HEADING_SIZE))
                             .clicked()
                         {
-                            todo!("Check whether source can be converted to target type and then use `xci_to_nsps`")
+                            self.enable_config = false;
+                            self.do_convert(&dialog_modal);
                         };
                     });
                 });
@@ -448,6 +472,32 @@ impl eframe::App for YanuApp {
                                         },
                                     }
                                 },
+                                Message::DoConvert(response) => {
+                                    self.page = Page::Convert;
+                                    if let Err(err) = || -> Result<()> {
+                                        match response? {
+                                            Converted::Nsp(nsps) => {
+                                                dialog_modal.open_dialog(
+                                                    None::<&str>,
+                                                    Some(format!(
+                                                        "Converted NSPs:\n{}",
+                                                        itertools::intersperse(
+                                                            nsps.iter()
+                                                                .flat_map(|nsp| nsp.path.file_name())
+                                                                .map(|name| format!("- \"{}\"", name.to_string_lossy())),
+                                                            "\n".into()
+                                                        )
+                                                        .collect::<String>()
+                                                    )),
+                                                    Some(egui_modal::Icon::Success),
+                                                );
+                                            }
+                                        }
+                                        Ok(())
+                                    }() {
+                                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+                                    }
+                                },
                             }
                             Err(err) => {
                                 self.page = Page::default();
@@ -458,7 +508,7 @@ impl eframe::App for YanuApp {
                         self.timer = None;
                         self.enable_config = true;
                     }
-                }; 
+                };
             },
         });
     }
@@ -469,7 +519,7 @@ fn show_top_bar(
     _frame: &mut eframe::Frame,
     dialog_modal: &Modal,
     config: &mut Config,
-    enable_config: bool
+    enable_config: bool,
 ) {
     egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
@@ -521,7 +571,11 @@ fn show_top_bar(
                             }
                         });
                         ui.menu_button("NSP Extractor", |ui| {
-                            ui.radio_value(&mut config.nsp_extractor, NspExtractor::Hactool, "Hactool");
+                            ui.radio_value(
+                                &mut config.nsp_extractor,
+                                NspExtractor::Hactool,
+                                "Hactool",
+                            );
                             ui.radio_value(
                                 &mut config.nsp_extractor,
                                 NspExtractor::Hactoolnet,
@@ -558,8 +612,7 @@ impl YanuApp {
         if let Err(err) = || -> Result<()> {
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
-            
-            
+
             if self.base_pkg_path_buf.is_empty() || self.update_pkg_path_buf.is_empty() {
                 bail!("All fields are required")
             }
@@ -625,9 +678,9 @@ impl YanuApp {
                 "base."
             };
             let outdir = tempfile::Builder::new()
-                    .prefix(prefix)
-                    .tempdir_in(std::env::current_dir()?)?
-                    .into_path();
+                .prefix(prefix)
+                .tempdir_in(std::env::current_dir()?)?
+                .into_path();
 
             let config = self.config.clone();
             let tx = self.channel.tx.clone();
@@ -635,9 +688,12 @@ impl YanuApp {
                 tx.send(Message::DoUnpack(|| -> Result<PathBuf> {
                     unpack_nsp(
                         &mut Nsp::try_new(base_pkg_path)?,
-                        update_pkg_path.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
+                        update_pkg_path
+                            .map(|f| Nsp::try_new(f).ok())
+                            .flatten()
+                            .as_mut(),
                         &outdir,
-                        &config
+                        &config,
                     )?;
                     Ok(outdir)
                 }()))
@@ -655,7 +711,7 @@ impl YanuApp {
         if let Err(err) = || -> Result<()> {
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
-            
+
             if self.pack_title_id_buf.is_empty()
                 || self.control_nca_path_buf.is_empty()
                 || self.romfs_dir_buf.is_empty()
@@ -663,7 +719,7 @@ impl YanuApp {
             {
                 bail!("All fields are required");
             }
-            
+
             validate_program_id(&self.pack_title_id_buf)?;
             let program_id = self.pack_title_id_buf.clone();
 
@@ -682,7 +738,7 @@ impl YanuApp {
                         romfs_dir,
                         exefs_dir,
                         outdir,
-                        &config
+                        &config,
                     )?;
                     formatted_nsp_rename(
                         &mut patched.path,
@@ -691,6 +747,57 @@ impl YanuApp {
                         concat!("[yanu-", env!("CARGO_PKG_VERSION"), "-packed]"),
                     )?;
                     Ok(patched)
+                }()))
+                .unwrap();
+            });
+
+            self.page = Page::Loading;
+
+            Ok(())
+        }() {
+            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
+        }
+    }
+    fn do_convert(&mut self, dialog_modal: &Modal) {
+        if let Err(err) = || -> Result<()> {
+            self.timer = Some(Instant::now());
+
+            let source_path = PathBuf::from(&self.source_file_path_buf);
+            let is_convertable = source_path
+                .extension()
+                .map(|ext| {
+                    self.convert_kind
+                        .reach_from_types()
+                        .iter()
+                        .any(|s| *s == ext)
+                })
+                .unwrap_or_default();
+
+            if !is_convertable {
+                bail!(
+                    "Not supported conversion '{:?} -> {:?}'",
+                    source_path.extension(),
+                    self.convert_kind
+                )
+            }
+
+            let convert_kind = self.convert_kind;
+            let outdir = default_pack_outdir()?;
+            let tempdir_in = self.config.temp_dir.clone();
+
+            let tx = self.channel.tx.clone();
+            thread::spawn(move || {
+                tx.send(Message::DoConvert(|| -> Result<Converted> {
+                    let converted = match convert_kind {
+                        ConvertKind::Nsp => match source_path.extension() {
+                            Some(ext) if ext == "xci" => {
+                                Converted::Nsp(xci_to_nsps(source_path, outdir, tempdir_in)?)
+                            }
+                            Some(_) => bail!("Need to implement"),
+                            None => bail!("Non Unicode in the path"),
+                        },
+                    };
+                    Ok(converted)
                 }()))
                 .unwrap();
             });
