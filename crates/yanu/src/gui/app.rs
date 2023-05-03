@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::mpsc::TryRecvError, thread, time::Instant};
 use common::{
     defines::{APP_CACHE_DIR, APP_CONFIG_DIR, SWITCH_DIR},
     format::HumanDuration,
-    utils::get_size_as_string,
+    utils::get_fmt_size,
 };
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
@@ -16,9 +16,11 @@ use hac::{
 };
 use tracing::info;
 
-use super::{check_keyfile_exists, cross_centered, increase_font_size_by};
+use super::{cross_centered, increase_font_size_by};
 use crate::{
-    utils::{default_pack_outdir, pick_nca_file, pick_nsp_file},
+    utils::{
+        check_keyfile_exists, consume_err, consume_err_or, default_pack_outdir, pick_nsp_file,
+    },
     MpscChannel,
 };
 
@@ -170,14 +172,9 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.base_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nsp_file(Some("Pick a Base file")) {
-                                        Ok(path) => {
-                                            self.base_pkg_path_buf = path.to_string_lossy().into();
-                                        }
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                    pick_nsp_file(&dialog_modal, Some("Pick a Base file"), |path| {
+                                        self.base_pkg_path_buf = path.to_string_lossy().into();
+                                    });
                                 };
                             });
 
@@ -187,14 +184,9 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nsp_file(Some("Pick an Update file")) {
-                                        Ok(path) => {
+                                    pick_nsp_file(&dialog_modal, Some("Pick an Update file"), |path| {
                                             self.update_pkg_path_buf = path.to_string_lossy().into();
-                                        }
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                    });
                                 };
                             });
 
@@ -227,14 +219,9 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.base_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nsp_file(Some("Pick a Base file")) {
-                                        Ok(path) => {
-                                            self.base_pkg_path_buf = path.to_string_lossy().into();
-                                        }
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                    pick_nsp_file(&dialog_modal, Some("Pick a Base file"), |path| {
+                                        self.base_pkg_path_buf = path.to_string_lossy().into();
+                                    });
                                 };
                             });
 
@@ -244,14 +231,9 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.update_pkg_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nsp_file(Some("Pick an Update file")) {
-                                        Ok(path) => {
+                                    pick_nsp_file(&dialog_modal, Some("Pick an Update file"), |path| {
                                             self.update_pkg_path_buf = path.to_string_lossy().into();
-                                        }
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                    });
                                 };
                             });
                         });
@@ -281,14 +263,18 @@ impl eframe::App for YanuApp {
                                 // TODO: Figure out how to move the focus to the end on demand
                                 ui.text_edit_singleline(&mut self.control_nca_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match pick_nca_file(Some("Pick a Control NCA file")) {
-                                        Ok(path) => {
+                                    consume_err_or(
+                                        "No file was picked",
+                                        &dialog_modal,
+                                        rfd::FileDialog::new()
+                                            .set_title("Pick a Control NCA file")
+                                            .add_filter("NCA", &["nca"])
+                                            .pick_file(),
+                                        |path| {
+                                            info!(?path, size = %get_fmt_size(&path).unwrap_or_default(), "Selected file");
                                             self.control_nca_path_buf = path.to_string_lossy().into();
-                                        }
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
                                         },
-                                    }
+                                    );
                                 };
                             });
 
@@ -303,17 +289,16 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.romfs_dir_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match rfd::FileDialog::new()
-                                        .set_title("Pick a RomFS folder")
-                                        .pick_folder()
-                                    {
-                                        Some(dir) => {
+                                    consume_err_or(
+                                        "No folder was picked",
+                                        &dialog_modal,
+                                        rfd::FileDialog::new()
+                                            .set_title("Pick a RomFS folder")
+                                            .pick_folder(),
+                                        |dir| {
                                             self.romfs_dir_buf = dir.to_string_lossy().into();
-                                        }
-                                        None => {
-                                            dialog_modal.open_dialog(None::<&str>, Some("No folder was selected"), Some(egui_modal::Icon::Error));
                                         },
-                                    }
+                                    );
                                 };
                             });
 
@@ -323,17 +308,16 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.exefs_dir_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match rfd::FileDialog::new()
-                                        .set_title("Pick a ExeFS folder")
-                                        .pick_folder()
-                                    {
-                                        Some(dir) => {
+                                    consume_err_or(
+                                        "No folder was picked",
+                                        &dialog_modal,
+                                        rfd::FileDialog::new()
+                                            .set_title("Pick a ExeFS folder")
+                                            .pick_folder(),
+                                        |dir| {
                                             self.exefs_dir_buf = dir.to_string_lossy().into();
-                                        }
-                                        None => {
-                                            dialog_modal.open_dialog(None::<&str>, Some("No folder was selected"), Some(egui_modal::Icon::Error));
                                         },
-                                    }
+                                    );
                                 };
                             });
                         });
@@ -359,15 +343,15 @@ impl eframe::App for YanuApp {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.source_file_path_buf);
                                 if ui.button("📂 Browse").clicked() {
-                                    match rfd::FileDialog::new().pick_file() {
-                                        Some(path) => {
-                                            info!(?path, size = %get_size_as_string(&path).unwrap_or_default(), "Selected file");
+                                    consume_err_or(
+                                        "No file was picked",
+                                        &dialog_modal,
+                                        rfd::FileDialog::new().pick_file(),
+                                        |path| {
+                                            info!(?path, size = %get_fmt_size(&path).unwrap_or_default(), "Picked file");
                                             self.source_file_path_buf = path.to_string_lossy().into();
-                                        }
-                                        None => {
-                                            dialog_modal.open_dialog(None::<&str>, Some("No file was selected"), Some(egui_modal::Icon::Error));
                                         },
-                                    }
+                                    );
                                 };
                             });
 
@@ -416,28 +400,30 @@ impl eframe::App for YanuApp {
                             Ok(message) => match message {
                                 Message::DoUpdate(response) => {
                                     self.page = Page::Update;
-                                    if let Err(err) = || -> Result<()> {
-                                        let patched = response?;
-                                        dialog_modal.open_dialog(
-                                            None::<&str>,
-                                            Some(format!(
-                                                "Patched file created at:\n'{}'\nTook {}",
-                                                patched.path.display(),
-                                                HumanDuration(
-                                                    self.timer.expect("must be set to `Some` before the Loading page").elapsed()
-                                                )
-                                            )),
-                                            Some(egui_modal::Icon::Success),
-                                        );
-                                        Ok(())
-                                    }() {
-                                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                    };
+                                    consume_err(
+                                        &dialog_modal,
+                                        response,
+                                        |patched| {
+                                            dialog_modal.open_dialog(
+                                                None::<&str>,
+                                                Some(format!(
+                                                    "Patched file created at:\n'{}'\nTook {}",
+                                                    patched.path.display(),
+                                                    HumanDuration(
+                                                        self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                                    )
+                                                )),
+                                                Some(egui_modal::Icon::Success),
+                                            );
+                                        }
+                                    );
                                 }
                                 Message::DoUnpack(response) => {
                                     self.page = Page::Unpack;
-                                    match response {
-                                        Ok(outdir) => {
+                                    consume_err(
+                                        &dialog_modal,
+                                        response,
+                                        |outdir| {
                                             dialog_modal.open_dialog(
                                                 None::<&str>,
                                                 Some(format!(
@@ -449,16 +435,15 @@ impl eframe::App for YanuApp {
                                                 )),
                                                 Some(egui_modal::Icon::Success),
                                             );
-                                        },
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                        }
+                                    );
                                 },
                                 Message::DoPack(response) => {
                                     self.page = Page::Pack;
-                                    match response {
-                                        Ok(packed) => {
+                                    consume_err(
+                                        &dialog_modal,
+                                        response,
+                                        |packed| {
                                             dialog_modal.open_dialog(
                                                 None::<&str>,
                                                 Some(format!(
@@ -470,37 +455,36 @@ impl eframe::App for YanuApp {
                                                 )),
                                                 Some(egui_modal::Icon::Success),
                                             );
-                                        },
-                                        Err(err) => {
-                                            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                        },
-                                    }
+                                        }
+                                    );
                                 },
                                 Message::DoConvert(response) => {
                                     self.page = Page::Convert;
-                                    if let Err(err) = || -> Result<()> {
-                                        match response? {
-                                            Converted::Nsp(nsps) => {
-                                                dialog_modal.open_dialog(
-                                                    None::<&str>,
-                                                    Some(format!(
-                                                        "Converted NSPs:\n{}",
-                                                        itertools::intersperse(
-                                                            nsps.iter()
-                                                                .flat_map(|nsp| nsp.path.file_name())
-                                                                .map(|name| format!("- \"{}\"", name.to_string_lossy())),
-                                                            "\n".into()
-                                                        )
-                                                        .collect::<String>()
-                                                    )),
-                                                    Some(egui_modal::Icon::Success),
-                                                );
+                                    // This was manually formatted -_-
+                                    consume_err(
+                                        &dialog_modal,
+                                        response,
+                                        |converted| {
+                                            match converted {
+                                                Converted::Nsp(nsps) => {
+                                                    dialog_modal.open_dialog(
+                                                        None::<&str>,
+                                                        Some(format!(
+                                                            "Converted NSPs:\n{}",
+                                                            itertools::intersperse(
+                                                                nsps.iter()
+                                                                    .flat_map(|nsp| nsp.path.file_name())
+                                                                    .map(|name| format!("- \"{}\"", name.to_string_lossy())),
+                                                                "\n".into()
+                                                            )
+                                                            .collect::<String>()
+                                                        )),
+                                                        Some(egui_modal::Icon::Success),
+                                                    );
+                                                },
                                             }
                                         }
-                                        Ok(())
-                                    }() {
-                                        dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error));
-                                    }
+                                    );
                                 },
                             }
                             Err(err) => {
@@ -509,6 +493,7 @@ impl eframe::App for YanuApp {
                             },
                         };
 
+                        // Reset timer
                         self.timer = None;
                     }
                 };
@@ -535,27 +520,25 @@ fn show_top_bar(
                         }
 
                         ui.separator();
-                        if let Err(err) = || -> Result<()> {
-                            if ui.button("Open Config Folder").clicked() {
-                                ui.close_menu();
-                                opener::open(APP_CONFIG_DIR.as_path())?;
-                            }
-                            if ui.button("Open Cache Folder").clicked() {
-                                ui.close_menu();
-                                opener::open(APP_CACHE_DIR.as_path())?;
-                            }
-                            if ui.button("Open Keys Folder").clicked() {
-                                ui.close_menu();
-                                opener::open(SWITCH_DIR.as_path())?;
-                            }
-                            Ok(())
-                        }() {
-                            dialog_modal.open_dialog(
-                                None::<&str>,
-                                Some(err),
-                                Some(egui_modal::Icon::Error),
-                            );
-                        }
+                        consume_err(
+                            dialog_modal,
+                            || -> Result<()> {
+                                if ui.button("Open Config Folder").clicked() {
+                                    ui.close_menu();
+                                    opener::open(APP_CONFIG_DIR.as_path())?;
+                                }
+                                if ui.button("Open Cache Folder").clicked() {
+                                    ui.close_menu();
+                                    opener::open(APP_CACHE_DIR.as_path())?;
+                                }
+                                if ui.button("Open Keys Folder").clicked() {
+                                    ui.close_menu();
+                                    opener::open(SWITCH_DIR.as_path())?;
+                                }
+                                Ok(())
+                            }(),
+                            |_| {},
+                        );
                     });
 
                     ui.separator();
@@ -578,11 +561,13 @@ fn show_top_bar(
                             }
                             if ui.button("Pick folder").clicked() {
                                 ui.close_menu();
-                                match rfd::FileDialog::new()
-                                    .set_title("Pick a folder to create Temp folders in")
-                                    .pick_folder()
-                                {
-                                    Some(dir) => {
+                                consume_err_or(
+                                    "No folder was picked",
+                                    dialog_modal,
+                                    rfd::FileDialog::new()
+                                        .set_title("Pick a folder to create Temp folders in")
+                                        .pick_folder(),
+                                    |dir| {
                                         dialog_modal.open_dialog(
                                             None::<&str>,
                                             Some(format!(
@@ -592,15 +577,8 @@ fn show_top_bar(
                                             Some(egui_modal::Icon::Success),
                                         );
                                         config.temp_dir = dir;
-                                    }
-                                    None => {
-                                        dialog_modal.open_dialog(
-                                            None::<&str>,
-                                            Some("No folder was selected"),
-                                            Some(egui_modal::Icon::Error),
-                                        );
-                                    }
-                                }
+                                    },
+                                );
                             }
                         });
                         ui.menu_button("NSP Extractor", |ui| {

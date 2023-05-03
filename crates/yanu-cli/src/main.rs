@@ -4,7 +4,7 @@ use clap::Parser;
 use common::{
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
     log,
-    utils::{ext_matches, get_disk_free, get_paths_size, get_size_as_string},
+    utils::{ext_matches, get_disk_free, get_fmt_size, get_paths_size},
 };
 use config::Config;
 #[cfg(not(feature = "android-proot"))]
@@ -243,7 +243,7 @@ fn run() -> Result<()> {
                                     nsp.path.display(),
                                     style(format!(
                                         "({})",
-                                        get_size_as_string(&nsp.path).unwrap_or_default()
+                                        get_fmt_size(&nsp.path).unwrap_or_default()
                                     ))
                                     .bold()
                                     .dim()

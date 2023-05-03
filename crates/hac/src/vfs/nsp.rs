@@ -2,7 +2,7 @@ use crate::{
     backend::Backend,
     vfs::{filter_out_key_mismatches, ticket::TitleKey},
 };
-use common::utils::{ext_matches, get_size_as_string};
+use common::utils::{ext_matches, get_fmt_size};
 use eyre::{bail, Result};
 use std::{
     path::{Path, PathBuf},
@@ -103,7 +103,7 @@ impl Nsp {
         let nsp_path = outdir.as_ref().join(format!("{}.nsp", program_id));
         info!(
             outdir = %outdir.as_ref().display(),
-            size = %get_size_as_string(&nsp_path).unwrap_or_default(),
+            size = %get_fmt_size(&nsp_path).unwrap_or_default(),
             "Packed NCAs to NSP"
         );
         Nsp::try_new(nsp_path)

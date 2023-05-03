@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use common::utils::{ext_matches, get_size_as_string, move_file};
+use common::utils::{ext_matches, get_fmt_size, move_file};
 use derivative::Derivative;
 use eyre::{bail, eyre, Result};
 use strum_macros::EnumString;
@@ -64,7 +64,7 @@ impl Nca {
 
         info!(
             nca = %file_path.as_ref().display(),
-            size = %get_size_as_string(file_path.as_ref()).unwrap_or_default(),
+            size = %get_fmt_size(file_path.as_ref()).unwrap_or_default(),
             "Identifying TitleID and ContentType",
         );
 
@@ -110,11 +110,7 @@ impl Nca {
         let content_type = match stdout
             .lines()
             .find(|line| line.contains("Content Type:"))
-            .and_then(|line| {
-                line.trim()
-                    .split(' ')
-                    .last().map(ContentType::from_str)
-            })
+            .and_then(|line| line.trim().split(' ').last().map(ContentType::from_str))
             .transpose()
         {
             Ok(content_type) => content_type.ok_or_else(|| {

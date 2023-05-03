@@ -2,7 +2,7 @@ use super::nsp::Nsp;
 use crate::backend::{Backend, BackendKind};
 use common::{
     defines::DEFAULT_PRODKEYS_PATH,
-    utils::{ext_matches, get_size_as_string, move_file},
+    utils::{ext_matches, get_fmt_size, move_file},
 };
 use eyre::{bail, Result};
 use fs_err as fs;
@@ -20,7 +20,7 @@ where
 
     info!(
         xci = %xci.as_ref().display(),
-        size = %get_size_as_string(xci.as_ref()).unwrap_or_default(),
+        size = %get_fmt_size(xci.as_ref()).unwrap_or_default(),
         "Converting to NSP"
     );
 

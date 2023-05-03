@@ -46,12 +46,8 @@ pub fn ext_matches<P: AsRef<Path>>(path: P, ext: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn get_size_as_string<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
+pub fn get_fmt_size<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
     Ok(ByteSize(path.as_ref().metadata()?.len()))
-}
-
-pub fn get_size<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
-    Ok(ByteSize::b(path.as_ref().metadata()?.len()))
 }
 
 /// Returns free disk space.\
