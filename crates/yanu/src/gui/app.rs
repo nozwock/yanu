@@ -46,9 +46,6 @@ pub struct YanuApp {
     // Convert Page
     source_file_path_buf: String,
     convert_kind: ConvertKind,
-
-    // MenuBar
-    enable_config: bool,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -106,7 +103,6 @@ impl YanuApp {
         Self {
             config: Config::load().unwrap(), // TODO: handle this somehow
             // maybe show a dialog message and then exit
-            enable_config: true,
             ..Default::default()
         }
     }
@@ -136,13 +132,7 @@ impl eframe::App for YanuApp {
         let mut dialog_modal = Modal::new(ctx, "dialog modal");
         dialog_modal.show_dialog();
 
-        show_top_bar(
-            ctx,
-            frame,
-            &dialog_modal,
-            &mut self.config,
-            self.enable_config,
-        );
+        show_top_bar(ctx, frame, &dialog_modal, &mut self.config, &self.page);
 
         if self.page != Page::Loading {
             egui::SidePanel::left("options panel")
@@ -224,7 +214,6 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Update").size(HEADING_SIZE))
                             .clicked()
                         {
-                            self.enable_config = false;
                             self.do_update(&dialog_modal);
                         };
                     });
@@ -275,7 +264,6 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Unpack").size(HEADING_SIZE))
                             .clicked()
                         {
-                            self.enable_config = false;
                             self.do_unpack(&dialog_modal);
                         };
                     });
@@ -358,7 +346,6 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Pack").size(HEADING_SIZE))
                             .clicked()
                         {
-                            self.enable_config = false;
                             self.do_pack(&dialog_modal);
                         };
                     });
@@ -408,7 +395,6 @@ impl eframe::App for YanuApp {
                             .button(RichText::new("Convert").size(HEADING_SIZE))
                             .clicked()
                         {
-                            self.enable_config = false;
                             self.do_convert(&dialog_modal);
                         };
                     });
@@ -435,9 +421,11 @@ impl eframe::App for YanuApp {
                                         dialog_modal.open_dialog(
                                             None::<&str>,
                                             Some(format!(
-                                                "Patched file created at:\n'{}'\nTook {:?}",
+                                                "Patched file created at:\n'{}'\nTook {}",
                                                 patched.path.display(),
-                                                self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                                HumanDuration(
+                                                    self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                                )
                                             )),
                                             Some(egui_modal::Icon::Success),
                                         );
@@ -452,7 +440,13 @@ impl eframe::App for YanuApp {
                                         Ok(outdir) => {
                                             dialog_modal.open_dialog(
                                                 None::<&str>,
-                                                Some(format!("Unpacked to '{}'", outdir.display())),
+                                                Some(format!(
+                                                    "Unpacked to '{}'\nTook {}",
+                                                    outdir.display(),
+                                                    HumanDuration(
+                                                        self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                                    )
+                                                )),
                                                 Some(egui_modal::Icon::Success),
                                             );
                                         },
@@ -467,7 +461,13 @@ impl eframe::App for YanuApp {
                                         Ok(packed) => {
                                             dialog_modal.open_dialog(
                                                 None::<&str>,
-                                                Some(format!("Packed NSP created at '{}'", packed.path.display())),
+                                                Some(format!(
+                                                    "Packed NSP created at '{}'\nTook {}",
+                                                    packed.path.display(),
+                                                    HumanDuration(
+                                                        self.timer.expect("must be set to `Some` before the Loading page").elapsed()
+                                                    )
+                                                )),
                                                 Some(egui_modal::Icon::Success),
                                             );
                                         },
@@ -510,7 +510,6 @@ impl eframe::App for YanuApp {
                         };
 
                         self.timer = None;
-                        self.enable_config = true;
                     }
                 };
             },
@@ -523,13 +522,13 @@ fn show_top_bar(
     frame: &mut eframe::Frame,
     dialog_modal: &Modal,
     config: &mut Config,
-    enable_config: bool,
+    page: &Page,
 ) {
     egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.add_enabled_ui(enable_config, |ui| {
-                    ui.menu_button("File", |ui| {
+                ui.menu_button("File", |ui| {
+                    ui.add_enabled_ui(!page.eq(&Page::Loading), |ui| {
                         if ui.button("Import Keyfile").clicked() {
                             ui.close_menu();
                             todo!("import file after some refactor picking func")
@@ -553,13 +552,15 @@ fn show_top_bar(
                                 Some(egui_modal::Icon::Error),
                             );
                         }
-
-                        ui.separator();
-                        if ui.button("Exit").clicked() {
-                            ui.close_menu();
-                            frame.close();
-                        }
                     });
+
+                    ui.separator();
+                    if ui.button("Exit").clicked() {
+                        ui.close_menu();
+                        frame.close();
+                    }
+                });
+                ui.add_enabled_ui(!page.eq(&Page::Loading), |ui| {
                     ui.menu_button("Config", |ui| {
                         ui.menu_button("Temp Folder", |ui| {
                             if ui.button("Reset").clicked() {
