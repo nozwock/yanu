@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::mpsc::TryRecvError, thread, time::Instant};
 
 use common::{
-    defines::{APP_CACHE_DIR, APP_CONFIG_DIR},
+    defines::{APP_CACHE_DIR, APP_CONFIG_DIR, SWITCH_DIR},
     format::HumanDuration,
     utils::get_size_as_string,
 };
@@ -543,6 +543,10 @@ fn show_top_bar(
                             if ui.button("Open Cache Folder").clicked() {
                                 ui.close_menu();
                                 opener::open(APP_CACHE_DIR.as_path())?;
+                            }
+                            if ui.button("Open Keys Folder").clicked() {
+                                ui.close_menu();
+                                opener::open(SWITCH_DIR.as_path())?;
                             }
                             Ok(())
                         }() {

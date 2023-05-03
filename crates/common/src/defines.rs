@@ -35,10 +35,9 @@ pub static APP_CACHE_DIR: Lazy<PathBuf> =
 pub static APP_CONFIG_DIR: Lazy<PathBuf> =
     Lazy::new(|| dirs::config_dir().unwrap_or_default().join(APP_DIR));
 pub static APP_CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| APP_CONFIG_DIR.join("yanu.ron"));
-pub static DEFAULT_PRODKEYS_PATH: Lazy<PathBuf> =
-    Lazy::new(|| dirs::home_dir().unwrap().join(".switch").join("prod.keys"));
-pub static DEFAULT_TITLEKEYS_PATH: Lazy<PathBuf> =
-    Lazy::new(|| dirs::home_dir().unwrap().join(".switch").join("title.keys"));
+pub static SWITCH_DIR: Lazy<PathBuf> = Lazy::new(|| dirs::home_dir().unwrap().join(".switch"));
+pub static DEFAULT_PRODKEYS_PATH: Lazy<PathBuf> = Lazy::new(|| SWITCH_DIR.join("prod.keys"));
+pub static DEFAULT_TITLEKEYS_PATH: Lazy<PathBuf> = Lazy::new(|| SWITCH_DIR.join("title.keys"));
 
 pub static EXE_DIR: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_exe().unwrap().parent().unwrap().into());
