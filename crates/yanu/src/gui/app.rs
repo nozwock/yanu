@@ -16,7 +16,7 @@ use hac::{
 };
 use tracing::info;
 
-use super::{cross_centered, increase_font_size_by};
+use super::{check_keyfile_exists, cross_centered, increase_font_size_by};
 use crate::{
     utils::{default_pack_outdir, pick_nca_file, pick_nsp_file},
     MpscChannel,
@@ -639,6 +639,8 @@ fn show_top_bar(
 impl YanuApp {
     fn do_update(&mut self, dialog_modal: &Modal) {
         if let Err(err) = || -> Result<()> {
+            check_keyfile_exists()?;
+
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
 
@@ -687,6 +689,8 @@ impl YanuApp {
     }
     fn do_unpack(&mut self, dialog_modal: &Modal) {
         if let Err(err) = || -> Result<()> {
+            check_keyfile_exists()?;
+
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
 
@@ -738,6 +742,8 @@ impl YanuApp {
     }
     fn do_pack(&mut self, dialog_modal: &Modal) {
         if let Err(err) = || -> Result<()> {
+            check_keyfile_exists()?;
+
             self.config.clone().store()?;
             self.timer = Some(Instant::now());
 
@@ -789,6 +795,8 @@ impl YanuApp {
     }
     fn do_convert(&mut self, dialog_modal: &Modal) {
         if let Err(err) = || -> Result<()> {
+            check_keyfile_exists()?;
+
             self.timer = Some(Instant::now());
 
             let source_path = PathBuf::from(&self.source_file_path_buf);

@@ -1,7 +1,9 @@
 pub mod app;
 
+use common::defines::DEFAULT_PRODKEYS_PATH;
 use eframe::egui;
 use egui::{Context, Id, InnerResponse, Ui};
+use eyre::{bail, Result};
 
 /// Centers arbitrary widgets vertically and horizontally using `Window`.
 pub fn cross_centered<I, R>(
@@ -37,4 +39,12 @@ pub fn increase_font_size_by(factor: f32, ctx: &Context) {
         font_id.size *= factor;
     }
     ctx.set_style(style);
+}
+
+pub fn check_keyfile_exists() -> Result<()> {
+    if DEFAULT_PRODKEYS_PATH.is_file() {
+        Ok(())
+    } else {
+        bail!("'prod.keys' Keyfile not found, it's required")
+    }
 }
