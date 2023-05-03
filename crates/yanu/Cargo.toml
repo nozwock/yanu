@@ -34,6 +34,7 @@ egui = "0.21.0"
 eframe = "0.21.3"
 egui-modal = "0.2.3"
 itertools = "0.10.5"
+opener = "0.6.1"
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }

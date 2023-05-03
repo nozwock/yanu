@@ -1,6 +1,9 @@
-use std::{path::PathBuf, process, sync::mpsc::TryRecvError, thread, time::Instant};
+use std::{path::PathBuf, sync::mpsc::TryRecvError, thread, time::Instant};
 
-use common::utils::get_size_as_string;
+use common::{
+    defines::{APP_CACHE_DIR, APP_CONFIG_DIR},
+    utils::get_size_as_string,
+};
 use config::{Config, NcaExtractor, NspExtractor};
 use eframe::egui;
 use egui::RichText;
@@ -516,7 +519,7 @@ impl eframe::App for YanuApp {
 
 fn show_top_bar(
     ctx: &egui::Context,
-    _frame: &mut eframe::Frame,
+    frame: &mut eframe::Frame,
     dialog_modal: &Modal,
     config: &mut Config,
     enable_config: bool,
@@ -524,14 +527,38 @@ fn show_top_bar(
     egui::TopBottomPanel::top("top bar").show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        ui.close_menu();
-                        process::exit(0);
-                    }
-                });
-
                 ui.add_enabled_ui(enable_config, |ui| {
+                    ui.menu_button("File", |ui| {
+                        if ui.button("Import Keyfile").clicked() {
+                            ui.close_menu();
+                            todo!("import file after some refactor picking func")
+                        }
+
+                        ui.separator();
+                        if let Err(err) = || -> Result<()> {
+                            if ui.button("Open Config Folder").clicked() {
+                                ui.close_menu();
+                                opener::open(APP_CONFIG_DIR.as_path())?;
+                            }
+                            if ui.button("Open Cache Folder").clicked() {
+                                ui.close_menu();
+                                opener::open(APP_CACHE_DIR.as_path())?;
+                            }
+                            Ok(())
+                        }() {
+                            dialog_modal.open_dialog(
+                                None::<&str>,
+                                Some(err),
+                                Some(egui_modal::Icon::Error),
+                            );
+                        }
+
+                        ui.separator();
+                        if ui.button("Exit").clicked() {
+                            ui.close_menu();
+                            frame.close();
+                        }
+                    });
                     ui.menu_button("Config", |ui| {
                         ui.menu_button("Temp Folder", |ui| {
                             if ui.button("Reset").clicked() {
