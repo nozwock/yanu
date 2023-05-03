@@ -2,6 +2,7 @@ use std::{path::PathBuf, sync::mpsc::TryRecvError, thread, time::Instant};
 
 use common::{
     defines::{APP_CACHE_DIR, APP_CONFIG_DIR},
+    format::HumanDuration,
     utils::get_size_as_string,
 };
 use config::{Config, NcaExtractor, NspExtractor};
@@ -416,7 +417,7 @@ impl eframe::App for YanuApp {
             Page::Loading => {
                 cross_centered("center loading", ctx, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.label(format!("{:?}", self.timer.expect("must be set to `Some` before the Loading page").elapsed()));
+                        ui.label(format!("{}", HumanDuration(self.timer.expect("must be set to `Some` before the Loading page").elapsed())));
                         ui.add_space(PADDING * 2.);
                         ui.add(egui::Spinner::default().size(HEADING_SIZE * 2.5));
                     });
