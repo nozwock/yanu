@@ -21,10 +21,10 @@ linux64:
 
 win64:
     cargo build --target {{ target-win64 }} --release
-    @mv -t {{justfile_directory()}}/target/{{ target-win64 }}/release/{{ bin }}.exe {{justfile_directory()}}/target/{{ bin }}-{{ target-win64 }}.exe
-    @mv -t {{justfile_directory()}}/target/{{ target-win64 }}/release/{{ bin-cli }}.exe {{justfile_directory()}}/target/{{ bin-cli }}-{{ target-win64 }}.exe
+    @mv -T {{justfile_directory()}}/target/{{ target-win64 }}/release/{{ bin }}.exe {{justfile_directory()}}/target/{{ bin }}-{{ target-win64 }}.exe
+    @mv -T {{justfile_directory()}}/target/{{ target-win64 }}/release/{{ bin-cli }}.exe {{justfile_directory()}}/target/{{ bin-cli }}-{{ target-win64 }}.exe
 
 win64-gnu:
     cross build --target {{ target-win64-gnu }} --release
-    @mv -t {{justfile_directory()}}/target/{{ target-win64-gnu }}/release/{{ bin }}.exe {{justfile_directory()}}/target/{{ bin }}-{{ target-win64-gnu }}.exe
-    @mv -t {{justfile_directory()}}/target/{{ target-win64-gnu }}/release/{{ bin-cli }}.exe {{justfile_directory()}}/target/{{ bin-cli }}-{{ target-win64-gnu }}.exe
+    @mv -T {{justfile_directory()}}/target/{{ target-win64-gnu }}/release/{{ bin }}.exe {{justfile_directory()}}/target/{{ bin }}-{{ target-win64-gnu }}.exe
+    @mv -T {{justfile_directory()}}/target/{{ target-win64-gnu }}/release/{{ bin-cli }}.exe {{justfile_directory()}}/target/{{ bin-cli }}-{{ target-win64-gnu }}.exe
