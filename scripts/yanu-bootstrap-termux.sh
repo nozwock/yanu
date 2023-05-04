@@ -69,7 +69,7 @@ proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu "$@"'
 chmod +x "$PATH/yanu-cli" || err "Failed to give executable permission"
 echo '
 #!/bin/bash
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu update-prompt' >>"$PATH/yanu" || err "Failed to write entry script"
+proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu tui' >>"$PATH/yanu" || err "Failed to write entry script"
 chmod +x "$PATH/yanu" || err "Failed to give executable permission"
 
 echo -e "\e[1;92mInstalled yanu successfully\!\n\e[0mAll options are exposed through the \e[1;93m'yanu-cli'\e[0m command.\nYou can just type \e[1;93m'yanu'\e[0m if you'd like to update only."
