@@ -67,37 +67,36 @@ Once you have the container, you can use it like this:
 ## Usage (CLI only)
 View CLI help with:
 ```sh
-yanu --help
+yanu-cli --help
 ```
 
 For updating a ROM:
 ```sh
-yanu --keyfile '/path/to/keyfile' update --base '/path/to/base' --update '/path/to/update'
+yanu-cli --keyfile '/path/to/keyfile' update --base '/path/to/base' --update '/path/to/update'
 ```
 
 Set a new `Yanu Directory` (Used in `tui`) with:
 ```sh
-yanu config --yanu-dir '/new/path/here'
+yanu-cli config --yanu-dir '/new/path/here'
 ```
 
 For unpacking ROMs:
 ```sh
-yanu unpack --base '/path/to/base' --update '/path/to/update'
+yanu-cli unpack --base '/path/to/base' --update '/path/to/update'
 ```
 
 OR, for only unpacking a single ROM:
 ```sh
-yanu unpack --base '/path/to/base'
+yanu-cli unpack --base '/path/to/base'
 ```
 
 For packing unpacked ROM data (both base+update were unpacked):
 ```sh
-yanu repack --controlnca './base+update.xxxxxx/patchdata/control.nca' --titleid 'xxxxxxxxxxxxxxxx' --romfsdir './base+update.xxxxxx/romfs' --exefsdir './base+update.xxxxxx/exefs'
+yanu-cli pack --controlnca './base+update.xxxxxx/patchdata/control.nca' --titleid 'xxxxxxxxxxxxxxxx' --romfsdir './base+update.xxxxxx/romfs' --exefsdir './base+update.xxxxxx/exefs'
 ```
 If only base was unpacked, get the control NCA from `basedata`.
 
 > **Note**
-> - On Android, these options are accessed using `yanu-cli` and not `yanu`.
 > - For Windows, adapt the above examples by replacing `/` with `\` and using the appropriate path to the executable.
 > - Control NCA is typically around 1MB in size.
 > - Yanu only accepts Control Type NCA. If unsure of the Type, trial and error can help narrow down the options.
