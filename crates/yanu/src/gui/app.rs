@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::mpsc::TryRecvError, thread, time::Instant};
 
 use common::{
-    defines::{APP_CACHE_DIR, APP_CONFIG_DIR, SWITCH_DIR},
+    defines::{APP_CACHE_DIR, APP_CONFIG_DIR, DEFAULT_PRODKEYS_PATH, SWITCH_DIR},
     format::HumanDuration,
     utils::get_fmt_size,
 };
@@ -10,6 +10,7 @@ use eframe::egui;
 use egui::RichText;
 use egui_modal::Modal;
 use eyre::{bail, Result};
+use fs_err as fs;
 use hac::{
     utils::{formatted_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id, xci::xci_to_nsps},
@@ -516,7 +517,33 @@ fn show_top_bar(
                     ui.add_enabled_ui(!page.eq(&Page::Loading), |ui| {
                         if ui.button("Import Keyfile").clicked() {
                             ui.close_menu();
-                            todo!("import file after some refactor picking func")
+                            consume_err(
+                                dialog_modal,
+                                || -> Result<PathBuf> {
+                                    let keyfile_path = rfd::FileDialog::new()
+                                        .set_title("Pick a Keyfile")
+                                        .add_filter("Keyfile", &["keys"])
+                                        .pick_file()
+                                        .ok_or_else(|| eyre::eyre!("No Keyfile was picked"))?;
+                                    info!(?keyfile_path, "Picked keyfile");
+                                    assert!(keyfile_path.is_file());
+
+                                    let dest = DEFAULT_PRODKEYS_PATH.as_path();
+                                    fs::create_dir_all(
+                                        dest.parent()
+                                            .ok_or_else(|| eyre::eyre!("Failed to get parent"))?,
+                                    )?;
+                                    fs::copy(keyfile_path.as_path(), dest)?;
+                                    Ok(keyfile_path)
+                                }(),
+                                |keyfile_path| {
+                                    dialog_modal.open_dialog(
+                                        None::<&str>,
+                                        Some(format!("Imported '{}'", keyfile_path.display())),
+                                        Some(egui_modal::Icon::Success),
+                                    );
+                                },
+                            );
                         }
 
                         ui.separator();
