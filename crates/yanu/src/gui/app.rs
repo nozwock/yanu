@@ -195,7 +195,14 @@ impl eframe::App for YanuApp {
 
                             ui.checkbox(&mut self.overwrite_titleid, "Overwrite TitleID");
                             if self.overwrite_titleid {
-                                ui.text_edit_singleline(&mut self.overwrite_titleid_buf);
+                            ui.text_edit_singleline(&mut self.pack_title_id_buf)
+                                .on_hover_text(
+                                    "Check the logs or output for guidance on \n\
+                                which TitleID to use if using the wrong one.\n\
+                                                                For eg:\n\
+                                                                'TitleID mismatch!\n\
+                                                                ACI0 TitleID: xxxxxxxxxxxxxxxx'",
+                                );
                             }
                         });
                     });
@@ -256,7 +263,8 @@ impl eframe::App for YanuApp {
                 cross_centered("center pack", ctx, |ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Control NCA:");
+                            ui.label("Control NCA:")
+                                .on_hover_text("Control NCA is typically around 1MB in size.");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 // TODO: Figure out how to move the focus to the end on demand
                                 // let text_edit =
@@ -282,7 +290,14 @@ impl eframe::App for YanuApp {
                             ui.add_space(PADDING);
 
                             ui.label("TitleID:");
-                            ui.text_edit_singleline(&mut self.pack_title_id_buf);
+                            ui.text_edit_singleline(&mut self.pack_title_id_buf)
+                                .on_hover_text(
+                                    "Check the logs or output for guidance on \n\
+                                which TitleID to use if using the wrong one.\n\
+                                                                For eg:\n\
+                                                                'TitleID mismatch!\n\
+                                                                ACI0 TitleID: xxxxxxxxxxxxxxxx'",
+                                );
 
                             ui.add_space(PADDING);
 
@@ -340,7 +355,10 @@ impl eframe::App for YanuApp {
                 cross_centered("center convert", ctx, |ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Source:");
+                            ui.label("Source:").on_hover_text(format!(
+                                "Possible Types: {}",
+                                self.convert_kind.reach_from_types().join(",")
+                            ));
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 ui.text_edit_singleline(&mut self.source_file_path_buf);
                                 if ui.button("📂 Browse").clicked() {
