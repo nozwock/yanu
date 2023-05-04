@@ -26,7 +26,7 @@ hac.workspace = true
 clap = { version = "4.1", features = ["derive"] }
 color-eyre.workspace = true
 console.workspace = true
-ctrlc = { version = "3.2", features = ["termination"] }
+ctrlc.workspace = true
 eyre.workspace = true
 fs-err.workspace = true
 indicatif = "0.17"
