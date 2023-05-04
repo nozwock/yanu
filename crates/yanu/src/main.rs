@@ -7,7 +7,6 @@
 use common::defines::APP_NAME;
 use common::log;
 use eyre::Result;
-// use fs_err as fs;
 use std::env;
 use tracing::info;
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
@@ -43,22 +42,6 @@ fn main() -> Result<()> {
         env!("CARGO_PKG_NAME"),
     );
 
-    // match run() {
-    //     Ok(_) => {
-    //         info!("Done");
-    //         Ok(())
-    //     }
-    //     Err(err) => {
-    //         error!(?err);
-    //         rfd::MessageDialog::new()
-    //             .set_level(rfd::MessageLevel::Error)
-    //             .set_title("Error occurred")
-    //             .set_description(&err.to_string())
-    //             .show();
-    //         bail!(err);
-    //     }
-    // }
-
     let native_options = eframe::NativeOptions {
         min_window_size: Some(egui::vec2(600., 400.)),
         initial_window_size: Some(egui::vec2(600., 400.)),
@@ -73,97 +56,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-// #[allow(dead_code)]
-// fn run() -> Result<()> {
-//     let config = Config::load()?;
-
-//     if !DEFAULT_PRODKEYS_PATH.is_file() {
-//         rfd::MessageDialog::new()
-//             .set_level(rfd::MessageLevel::Warning)
-//             .set_title("Keyfile required")
-//             .set_description("Select `prod.keys` keyfile to continue")
-//             .show();
-//         let keyfile_path = rfd::FileDialog::new()
-//             .add_filter("Keys", &["keys"])
-//             .pick_file()
-//             .ok_or_else(|| eyre!("No keyfile was selected"))?;
-//         info!(?keyfile_path, "Selected keyfile");
-
-//         // Dialog allows picking dir, atleast on GTK (prob a bug)
-//         //* ^^^^ doesn't seems to have this issue with the xdg portal backend
-//         if !keyfile_path.is_file() {
-//             bail!("\"{}\" is not a file", keyfile_path.display());
-//         }
-
-//         //? maybe validate if it's indeed prod.keys
-//         let default_path = DEFAULT_PRODKEYS_PATH.as_path();
-//         fs::create_dir_all(
-//             default_path
-//                 .parent()
-//                 .ok_or_else(|| eyre!("Failed to find parent"))?,
-//         )?;
-//         fs::copy(keyfile_path, default_path)?;
-//         info!("Copied keys successfully to the C2 ^-^");
-//     }
-
-//     rfd::MessageDialog::new()
-//         .set_level(rfd::MessageLevel::Info)
-//         .set_title("Base package required")
-//         .set_description("Select the BASE package file to update")
-//         .show();
-//     let base_path = pick_nsp_file(None)?;
-//     if !base_path.is_file() {
-//         bail!("\"{}\" is not a file", base_path.display());
-//     }
-
-//     rfd::MessageDialog::new()
-//         .set_level(rfd::MessageLevel::Info)
-//         .set_title("Update package required")
-//         .set_description("Select the UPDATE package file to apply")
-//         .show();
-//     let update_path = pick_nsp_file(None)?;
-//     if !update_path.is_file() {
-//         bail!("\"{}\" is not a file", update_path.display());
-//     }
-
-//     let base_name = base_path
-//         .file_name()
-//         .expect("File should've a filename")
-//         .to_string_lossy();
-//     let update_name = update_path
-//         .file_name()
-//         .expect("File should've a filename")
-//         .to_string_lossy();
-
-//     if rfd::MessageDialog::new()
-//         .set_level(rfd::MessageLevel::Info)
-//         .set_title("Is this correct?")
-//         .set_description(&format!(
-//             "Selected BASE package: \n\"{}\"\n\
-//                         Selected UPDATE package: \n\"{}\"",
-//             base_name, update_name
-//         ))
-//         .set_buttons(rfd::MessageButtons::YesNo)
-//         .show()
-//     {
-//         info!("Started patching!");
-//         let (patched, _nacp_data, _program_id) = update_nsp(
-//             &mut Nsp::try_new(&base_path)?,
-//             &mut Nsp::try_new(&update_path)?,
-//             None,
-//             default_pack_outdir()?,
-//             &config,
-//         )?;
-//         rfd::MessageDialog::new()
-//             .set_level(rfd::MessageLevel::Info)
-//             .set_title("Patching successful")
-//             .set_description(&format!(
-//                 "Patched file created at:\n\"{}\"",
-//                 patched.path.display()
-//             ))
-//             .show();
-//     }
-
-//     Ok(())
-// }
