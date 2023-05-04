@@ -7,6 +7,7 @@ bin := "yanu"
 bin-cli := "yanu-cli"
 target-android := "aarch64-unknown-linux-musl"
 target-linux64 := "x86_64-unknown-linux-musl"
+target-linux64-gnu := "x86_64-unknown-linux-gnu"
 target-win64 := "x86_64-pc-windows-msvc"
 target-win64-gnu := "x86_64-pc-windows-gnu"
 
@@ -15,8 +16,9 @@ android:
     @mv -T {{justfile_directory()}}/target/{{ target-android }}/release/{{ bin-cli }} {{justfile_directory()}}/target/{{ bin-cli }}-{{ replace(target-android, "unknown", "termux_proot") }}
 
 linux64:
-    cross build --target {{ target-linux64 }} --release
-    @mv -T {{justfile_directory()}}/target/{{ target-linux64 }}/release/{{ bin }} {{justfile_directory()}}/target/{{ bin }}-{{ target-linux64 }}
+    cross build --target {{ target-linux64-gnu }} --release --bin {{ bin }}
+    cross build --target {{ target-linux64 }} --release --bin {{ bin-cli }}
+    @mv -T {{justfile_directory()}}/target/{{ target-linux64-gnu }}/release/{{ bin }} {{justfile_directory()}}/target/{{ bin }}-{{ target-linux64-gnu }}
     @mv -T {{justfile_directory()}}/target/{{ target-linux64 }}/release/{{ bin-cli }} {{justfile_directory()}}/target/{{ bin-cli }}-{{ target-linux64 }}
 
 win64:
