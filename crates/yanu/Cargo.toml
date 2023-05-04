@@ -26,9 +26,15 @@ rfd = { git = "https://github.com/PolyMeilex/rfd.git", rev = "52d1010b09a957d3f1
 tempfile = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
-tracing-subscriber = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 walkdir = { workspace = true }
 bytesize.workspace = true
+
+egui = "0.21.0"
+eframe = "0.21.3"
+egui-modal = "0.2.3"
+itertools.workspace = true
+opener = "0.6.1"
 
 [target.'cfg(unix)'.dependencies]
 tilde-expand = { workspace = true }

@@ -1,28 +1,68 @@
-use eyre::Result;
+use common::{defines::DEFAULT_PRODKEYS_PATH, utils::get_fmt_size};
+use egui_modal::Modal;
+use eyre::{bail, Result};
 use std::path::PathBuf;
+use tracing::info;
 
-/// Don't make this public.\
-/// **Note:** `[..]` is there to help you, don't question it.
-fn pick_file<'a, T, I>(filters: I) -> Result<PathBuf>
-where
-    T: AsRef<[&'a str]> + 'a,
-    I: IntoIterator<Item = (&'a str, T)>,
-{
-    use common::utils::get_size_as_string;
-    use eyre::eyre;
-    use tracing::info;
+pub fn default_pack_outdir() -> Result<PathBuf> {
+    let outdir: PathBuf = {
+        if cfg!(feature = "android-proot") {
+            PathBuf::from("/storage/emulated/0")
+        } else {
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            std::env::current_dir()?
+        }
+    };
 
-    let mut filedialog = rfd::FileDialog::new();
-    for (name, extensions) in filters.into_iter() {
-        filedialog = filedialog.add_filter(name, extensions.as_ref());
+    if !outdir.is_dir() {
+        bail!("Failed to set '{}' as outdir", outdir.display());
     }
-    let path = filedialog.pick_file();
-    if let Some(path) = &path {
-        info!(?path, size = %get_size_as_string(path).unwrap_or_default(), "Selected file");
-    }
-    path.ok_or_else(|| eyre!("No file was selected"))
+
+    Ok(outdir)
 }
 
-pub fn pick_nsp_file() -> Result<PathBuf> {
-    pick_file([("NSP", &["nsp"])])
+pub fn check_keyfile_exists() -> Result<()> {
+    if DEFAULT_PRODKEYS_PATH.is_file() {
+        Ok(())
+    } else {
+        bail!("'prod.keys' Keyfile not found, it's required")
+    }
+}
+
+/// Consumes the `Err` and shows an Error dialog.
+pub fn consume_err<T>(dialog_modal: &Modal, inner: Result<T>, on_ok: impl FnOnce(T)) {
+    match inner {
+        Ok(t) => on_ok(t),
+        Err(err) => {
+            dialog_modal.open_dialog(None::<&str>, Some(err), Some(egui_modal::Icon::Error))
+        }
+    };
+}
+
+pub fn consume_err_or<T>(
+    body: &str,
+    dialog_modal: &Modal,
+    inner: Option<T>,
+    on_some: impl FnOnce(T),
+) {
+    match inner {
+        Some(t) => on_some(t),
+        None => dialog_modal.open_dialog(None::<&str>, Some(body), Some(egui_modal::Icon::Error)),
+    };
+}
+
+pub fn pick_nsp_file(dialog_modal: &Modal, title: Option<&str>, on_success: impl FnOnce(PathBuf)) {
+    let mut dialog = rfd::FileDialog::new().add_filter("NSP", &["nsp"]);
+    if let Some(title) = title {
+        dialog = dialog.set_title(title);
+    }
+    consume_err_or(
+        "No file was picked",
+        dialog_modal,
+        dialog.pick_file(),
+        |path| {
+            info!(?path, size = %get_fmt_size(&path).unwrap_or_default(), "Picked file");
+            on_success(path)
+        },
+    );
 }

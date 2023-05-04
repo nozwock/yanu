@@ -11,6 +11,7 @@ compile_error!("This traget configuration is not supported");
 pub mod defines;
 pub mod error;
 pub mod filename;
+pub mod format;
 pub mod log;
 pub mod utils;
 
