@@ -63,7 +63,7 @@ pub struct Update {
     #[arg(
         short,
         long,
-        long_help = "Set TitleID\n\
+        long_help = "Overwrite TitleID\n\
         Check the logs for guidance on which TitleID to use if using the wrong one."
     )]
     pub titleid: Option<String>,
