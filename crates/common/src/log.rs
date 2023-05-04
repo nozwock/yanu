@@ -34,12 +34,12 @@ where
         let message = format!(
             "{} {} {}",
             style(time_now).dim(),
-            match metadata.level() {
-                &Level::TRACE => style(metadata.level()).magenta(),
-                &Level::DEBUG => style(metadata.level()).blue(),
-                &Level::INFO => style(metadata.level()).green(),
-                &Level::WARN => style(metadata.level()).yellow(),
-                &Level::ERROR => style(metadata.level()).red(),
+            match *metadata.level() {
+                Level::TRACE => style(metadata.level()).magenta(),
+                Level::DEBUG => style(metadata.level()).blue(),
+                Level::INFO => style(metadata.level()).green(),
+                Level::WARN => style(metadata.level()).yellow(),
+                Level::ERROR => style(metadata.level()).red(),
             },
             style(format!(
                 "[{}:{}]",

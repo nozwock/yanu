@@ -66,18 +66,14 @@ pub fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
     // and absent of any intermediate components.
     let abs_path = path.as_ref().canonicalize()?;
     let mut parent = Some(abs_path.as_path());
-    loop {
-        if let Some(inner_parent) = parent {
-            for disk in system.disks() {
-                if inner_parent == disk.mount_point().canonicalize()? {
-                    debug!(?disk);
-                    return Ok(ByteSize(disk.available_space()));
-                }
+    while let Some(inner_parent) = parent {
+        for disk in system.disks() {
+            if inner_parent == disk.mount_point().canonicalize()? {
+                debug!(?disk);
+                return Ok(ByteSize(disk.available_space()));
             }
-            parent = parent.and_then(|path| path.parent());
-        } else {
-            break;
         }
+        parent = parent.and_then(|path| path.parent());
     }
 
     unreachable!()

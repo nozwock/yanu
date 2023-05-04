@@ -8,7 +8,7 @@ use std::{
 use tracing::info;
 use walkdir::WalkDir;
 
-const NACP_FILENAME: &'static str = "control.nacp";
+const NACP_FILENAME: &str = "control.nacp";
 
 /// https://switchbrew.org/wiki/NACP_Format
 ///

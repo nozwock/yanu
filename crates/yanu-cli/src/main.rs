@@ -70,7 +70,7 @@ fn main() -> Result<()> {
 
     // Exit signals handling
     ctrlc::set_handler(move || {
-        eprintln!("\n{}", "Process terminated by the user, cleaning up...");
+        eprintln!("\nProcess terminated by the user, cleaning up...");
         error!("Process terminated by the user");
     })?;
 
@@ -215,7 +215,7 @@ fn run() -> Result<()> {
             timer = Some(Instant::now());
             unpack_nsp(
                 &mut Nsp::try_new(opts.base)?,
-                opts.update.map(|f| Nsp::try_new(f).ok()).flatten().as_mut(),
+                opts.update.and_then(|f| Nsp::try_new(f).ok()).as_mut(),
                 &outdir,
                 &config,
             )?;
@@ -338,7 +338,7 @@ fn run() -> Result<()> {
 
             if !DEFAULT_PRODKEYS_PATH.is_file() {
                 // Looking for `prod.keys` in yanu_dir
-                let keyfile_path = match WalkDir::new(&yanu_dir)
+                let keyfile_path = match WalkDir::new(yanu_dir)
                     .min_depth(1)
                     .into_iter()
                     .filter_map(|e| e.ok())
@@ -374,7 +374,7 @@ fn run() -> Result<()> {
                 info!("Copied keys successfully to the C2 ^-^");
             }
 
-            let roms_path = WalkDir::new(&yanu_dir)
+            let roms_path = WalkDir::new(yanu_dir)
                 .min_depth(1)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -384,10 +384,8 @@ fn run() -> Result<()> {
             let options = roms_path
                 .iter()
                 .map(|entry| {
-                    entry.file_name().to_str().expect(&format!(
-                        "'{}' should've valid Unicode",
-                        entry.path().display()
-                    ))
+                    entry.file_name().to_str().unwrap_or_else(|| panic!("'{}' should've valid Unicode",
+                        entry.path().display()))
                 })
                 .collect::<Vec<_>>();
             if options.is_empty() {
@@ -399,10 +397,8 @@ fn run() -> Result<()> {
                 .find(|entry| entry.file_name() == choice)
                 .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
-                .expect(&format!(
-                    "Selected package '{}' should be in {:#?}",
-                    choice, roms_path
-                ));
+                .unwrap_or_else(|| panic!("Selected package '{}' should be in {:#?}",
+                    choice, roms_path));
 
             let options = options
                 .into_iter()
@@ -417,10 +413,8 @@ fn run() -> Result<()> {
                 .find(|entry| entry.file_name() == choice)
                 .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
-                .expect(&format!(
-                    "Selected package '{}' should be in {:#?}",
-                    choice, roms_path
-                ));
+                .unwrap_or_else(|| panic!("Selected package '{}' should be in {:#?}",
+                    choice, roms_path));
 
             if !check_space_with_prompt!(2, &[&base.path, &update.path], &config.temp_dir) {
                 return Ok(());

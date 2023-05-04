@@ -97,8 +97,7 @@ impl Nca {
         stdout
             .lines()
             .find(|line| line.contains(program_id_pat))
-            .map(|line| line.trim().split(' ').last())
-            .flatten()
+            .and_then(|line| line.trim().split(' ').last())
             .map(|id_str| hex::decode_to_slice(id_str, program_id.as_mut()))
             .ok_or_else(|| {
                 eyre!(
@@ -111,13 +110,11 @@ impl Nca {
         let content_type = match stdout
             .lines()
             .find(|line| line.contains("Content Type:"))
-            .map(|line| {
+            .and_then(|line| {
                 line.trim()
                     .split(' ')
-                    .last()
-                    .and_then(|kind| Some(ContentType::from_str(kind)))
+                    .last().map(ContentType::from_str)
             })
-            .flatten()
             .transpose()
         {
             Ok(content_type) => content_type.ok_or_else(|| {

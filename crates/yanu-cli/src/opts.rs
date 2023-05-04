@@ -2,7 +2,7 @@ use crate::utils::get_section;
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-const SECTION_PADDING: &'static str = "  ";
+const SECTION_PADDING: &str = "  ";
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help = true)]
