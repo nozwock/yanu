@@ -82,10 +82,10 @@ enum Converted {
 
 #[derive(Debug)]
 enum Message {
-    DoUpdate(Result<Nsp>),
-    DoUnpack(Result<PathBuf>),
-    DoPack(Result<Nsp>),
-    DoConvert(Result<Converted>),
+    Update(Result<Nsp>),
+    Unpack(Result<PathBuf>),
+    Pack(Result<Nsp>),
+    Convert(Result<Converted>),
 }
 
 impl YanuApp {
@@ -399,7 +399,7 @@ impl eframe::App for YanuApp {
                     rest => {
                         match rest {
                             Ok(message) => match message {
-                                Message::DoUpdate(response) => {
+                                Message::Update(response) => {
                                     self.page = Page::Update;
                                     consume_err(
                                         &dialog_modal,
@@ -419,7 +419,7 @@ impl eframe::App for YanuApp {
                                         }
                                     );
                                 }
-                                Message::DoUnpack(response) => {
+                                Message::Unpack(response) => {
                                     self.page = Page::Unpack;
                                     consume_err(
                                         &dialog_modal,
@@ -439,7 +439,7 @@ impl eframe::App for YanuApp {
                                         }
                                     );
                                 },
-                                Message::DoPack(response) => {
+                                Message::Pack(response) => {
                                     self.page = Page::Pack;
                                     consume_err(
                                         &dialog_modal,
@@ -459,7 +459,7 @@ impl eframe::App for YanuApp {
                                         }
                                     );
                                 },
-                                Message::DoConvert(response) => {
+                                Message::Convert(response) => {
                                     self.page = Page::Convert;
                                     // This was manually formatted -_-
                                     consume_err(
@@ -670,7 +670,7 @@ impl YanuApp {
             let config = self.config.clone();
             let tx = self.channel.tx.clone();
             thread::spawn(move || {
-                tx.send(Message::DoUpdate(|| -> Result<Nsp> {
+                tx.send(Message::Update(|| -> Result<Nsp> {
                     let (mut patched, nacp_data, program_id) = update_nsp(
                         &mut Nsp::try_new(base_pkg_path)?,
                         &mut Nsp::try_new(update_pkg_path)?,
@@ -727,13 +727,10 @@ impl YanuApp {
             let config = self.config.clone();
             let tx = self.channel.tx.clone();
             thread::spawn(move || {
-                tx.send(Message::DoUnpack(|| -> Result<PathBuf> {
+                tx.send(Message::Unpack(|| -> Result<PathBuf> {
                     unpack_nsp(
                         &mut Nsp::try_new(base_pkg_path)?,
-                        update_pkg_path
-                            .map(|f| Nsp::try_new(f).ok())
-                            .flatten()
-                            .as_mut(),
+                        update_pkg_path.and_then(|f| Nsp::try_new(f).ok()).as_mut(),
                         &outdir,
                         &config,
                     )?;
@@ -775,7 +772,7 @@ impl YanuApp {
             let config = self.config.clone();
             let tx = self.channel.tx.clone();
             thread::spawn(move || {
-                tx.send(Message::DoPack(|| -> Result<Nsp> {
+                tx.send(Message::Pack(|| -> Result<Nsp> {
                     let (mut patched, nacp_data) = pack_fs_data(
                         control_path,
                         program_id.clone(),
@@ -833,7 +830,7 @@ impl YanuApp {
 
             let tx = self.channel.tx.clone();
             thread::spawn(move || {
-                tx.send(Message::DoConvert(|| -> Result<Converted> {
+                tx.send(Message::Convert(|| -> Result<Converted> {
                     let converted = match convert_kind {
                         ConvertKind::Nsp => match source_path.extension() {
                             Some(ext) if ext == "xci" => {
