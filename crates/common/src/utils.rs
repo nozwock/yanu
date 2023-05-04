@@ -64,7 +64,17 @@ pub fn get_disk_free<P: AsRef<Path>>(path: P) -> Result<ByteSize> {
     let mut parent = Some(abs_path.as_path());
     while let Some(inner_parent) = parent {
         for disk in system.disks() {
-            if inner_parent == disk.mount_point().canonicalize()? {
+            let disk_mount = {
+                #[cfg(windows)]
+                {
+                    disk.mount_point().canonicalize()?
+                }
+                #[cfg(not(windows))]
+                {
+                    disk.mount_point()
+                }
+            };
+            if inner_parent == disk_mount {
                 debug!(?disk);
                 return Ok(ByteSize(disk.available_space()));
             }

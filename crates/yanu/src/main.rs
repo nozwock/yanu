@@ -8,7 +8,7 @@ use common::defines::APP_NAME;
 use common::log;
 use eyre::Result;
 use std::env;
-use tracing::{error, info};
+use tracing::info;
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 use yanu::gui::app;
 
