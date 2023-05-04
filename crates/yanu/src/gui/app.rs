@@ -264,7 +264,7 @@ impl eframe::App for YanuApp {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
                             ui.label("Control NCA:")
-                                .on_hover_text("Control NCA is typically around 1MB in size.");
+                                .on_hover_text("Control NCA is typically around 1MB in size");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                                 // TODO: Figure out how to move the focus to the end on demand
                                 // let text_edit =
@@ -609,9 +609,7 @@ fn show_top_bar(
                                 consume_err_or(
                                     "No folder was picked",
                                     dialog_modal,
-                                    rfd::FileDialog::new()
-                                        .set_title("Pick a folder to create Temp folders in")
-                                        .pick_folder(),
+                                    rfd::FileDialog::new().pick_folder(),
                                     |dir| {
                                         dialog_modal.open_dialog(
                                             None::<&str>,
@@ -625,7 +623,9 @@ fn show_top_bar(
                                     },
                                 );
                             }
-                        });
+                        })
+                        .response
+                        .on_hover_text("Temp dirs will be created in this folder");
                         ui.menu_button("NSP Extractor", |ui| {
                             ui.radio_value(
                                 &mut config.nsp_extractor,
