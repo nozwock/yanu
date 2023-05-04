@@ -1,4 +1,5 @@
 use eyre::{bail, Result};
+use itertools::Itertools;
 
 pub mod nacp;
 pub mod nca;
@@ -22,4 +23,13 @@ pub fn validate_program_id(program_id: &str) -> Result<()> {
             program_id
         )
     }
+}
+
+pub fn filter_out_lines(pat: &str, buf: &[u8]) -> String {
+    let buf_str = String::from_utf8_lossy(buf);
+    buf_str.lines().filter(|s| !s.contains(pat)).join("\n")
+}
+
+pub fn filter_out_key_mismatches(buf: &[u8]) -> String {
+    filter_out_lines("Failed to match key", buf)
 }

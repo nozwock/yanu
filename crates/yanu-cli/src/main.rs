@@ -22,7 +22,7 @@ use indicatif::HumanDuration;
 use tracing::{debug, error, info, warn};
 use yanu_cli::opts::{self, YanuCli};
 
-// TODO: this but for specifics like file, and dir
+// TODO: This but for specifics like file, and dir
 macro_rules! path_exists {
     ($($a:expr),*) => {
         [$($a,)*]

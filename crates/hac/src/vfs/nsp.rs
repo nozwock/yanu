@@ -1,4 +1,7 @@
-use crate::{backend::Backend, vfs::ticket::TitleKey};
+use crate::{
+    backend::Backend,
+    vfs::{filter_out_key_mismatches, ticket::TitleKey},
+};
 use common::utils::{ext_matches, get_size_as_string};
 use eyre::{bail, Result};
 use std::{
@@ -41,14 +44,15 @@ impl Nsp {
         ])
         .stderr(Stdio::piped());
         let output = cmd.spawn()?.wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        // Better to have it lossy since accuracy doesn't matter here,
+        // also it won't bail from the function anymore.
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             error!(
                 nsp = %self.path.display(),
                 backend = ?extractor.kind(),
-                // Better to have it lossy since accuracy doesn't matter here,
-                // also it won't bail from the function anymore.
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while unpacking NSP"
             );
             bail!("Failed to extract '{}'", self.path.display());
@@ -85,12 +89,13 @@ impl Nsp {
         ])
         .stderr(Stdio::piped());
         let output = cmd.spawn()?.wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             error!(
                 backend = ?packer.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while packing NCAs to NSP"
             );
             bail!("Encountered an error while packing NCAs to NSP");

@@ -14,7 +14,10 @@ use strum_macros::EnumString;
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
-use crate::backend::{Backend, BackendKind};
+use crate::{
+    backend::{Backend, BackendKind},
+    vfs::filter_out_key_mismatches,
+};
 
 #[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq, Hash)]
 pub enum ContentType {
@@ -69,11 +72,12 @@ impl Nca {
         let output = Command::new(reader.path())
             .args([file_path.as_ref()])
             .output()?; // All streams are piped
+        let stderr = filter_out_key_mismatches(&output.stderr);
         if !output.status.success() {
             warn!(
                 nca = %file_path.as_ref().display(),
                 backend = ?reader.kind(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while viewing info",
             );
         }
@@ -103,7 +107,7 @@ impl Nca {
                     file_path.as_ref().display()
                 )
             })??;
-        debug!(program_id = ?hex::encode(program_id)); // umm...
+        debug!(program_id = ?hex::encode(program_id));
 
         let content_type = match stdout
             .lines()
@@ -156,12 +160,13 @@ impl Nca {
             .stderr(Stdio::piped())
             .spawn()?
             .wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             warn!(
                 nca = %self.path.display(),
                 backend = ?extractor.kind(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while unpacking RomFS from NCA",
             );
             bail!("Encountered an error while unpacking RomFS from NCA");
@@ -195,12 +200,13 @@ impl Nca {
         ])
         .stderr(Stdio::piped());
         let output = cmd.spawn()?.wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             error!(
                 backend = ?extractor.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while unpacking RomFS/ExeFS from NCAs"
             );
             bail!("Encountered an error while unpacking RomFS/ExeFS from NCAs");
@@ -257,12 +263,13 @@ impl Nca {
         ])
         .stderr(Stdio::piped());
         let output = cmd.spawn()?.wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             warn!(
                 backend = ?packer.kind(),
                 exit_code = ?output.status.code(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while packing FS files to NCA"
             );
         }
@@ -321,12 +328,13 @@ impl Nca {
         ])
         .stderr(Stdio::piped());
         let output = cmd.spawn()?.wait_with_output()?;
-        io::stderr().write_all(&output.stderr)?;
+        let stderr = filter_out_key_mismatches(&output.stderr);
+        eprint!("{}", stderr);
         if !output.status.success() {
             warn!(
                 backend = ?packer.kind(),
                 code = ?output.status.code(),
-                stderr = %String::from_utf8_lossy(&output.stderr),
+                %stderr,
                 "Encountered an error while generating Meta NCA"
             );
         }

@@ -22,6 +22,7 @@ config.workspace = true
 eyre.workspace = true
 fs-err.workspace = true
 hex = "0.4"
+itertools.workspace = true
 strum = "0.24"
 strum_macros = "0.24"
 once_cell = "1.17"
