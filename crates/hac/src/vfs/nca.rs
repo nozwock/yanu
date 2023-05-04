@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt,
-    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,

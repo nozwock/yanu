@@ -5,7 +5,6 @@ use crate::{
 use common::utils::{ext_matches, get_size_as_string};
 use eyre::{bail, Result};
 use std::{
-    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
