@@ -21,8 +21,6 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 - [x] NSP 
 - [x] XCI* (through XCI-NSP conversion)
 
-> **Note** - Support for others might be added.
-
 ## Installation
 
 ### Android w/Termux
