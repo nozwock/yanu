@@ -19,7 +19,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Supported File Types
 - [x] NSP 
-- [ ] XCI
+- [x] XCI* (through XCI-NSP conversion)
 
 > **Note** - Support for others might be added.
 
@@ -77,9 +77,9 @@ For updating a ROM:
 yanu --keyfile '/path/to/keyfile' update --base '/path/to/base' --update '/path/to/update'
 ```
 
-Set a new `Roms Directory` (Used in `update-prompt`) with:
+Set a new `Yanu Directory` (Used in `tui`) with:
 ```sh
-yanu config --roms-dir '/new/path/here'
+yanu config --yanu-dir '/new/path/here'
 ```
 
 For unpacking ROMs:
@@ -92,12 +92,14 @@ OR, for only unpacking a single ROM:
 yanu unpack --base '/path/to/base'
 ```
 
-For repacking unpacked ROM data (with base+update):
+For packing unpacked ROM data (both base+update were unpacked):
 ```sh
-yanu repack --controlnca './base+update.bylies/patchdata/nca_around_1mb.nca' --titleid 'BaseGameTitleID' --romfsdir './base+update.bylies/romfs' --exefsdir './base+update.bylies/exefs'
+yanu repack --controlnca './base+update.xxxxxx/patchdata/control.nca' --titleid 'xxxxxxxxxxxxxxxx' --romfsdir './base+update.xxxxxx/romfs' --exefsdir './base+update.xxxxxx/exefs'
 ```
+If only base was unpacked, get the control NCA from `basedata`.
 
 > **Note**
+> - On Android, these options are accessed using `yanu-cli` and not `yanu`.
 > - For Windows, adapt the above examples by replacing `/` with `\` and using the appropriate path to the executable.
 > - Control NCA is typically around 1MB in size.
 > - Yanu only accepts Control Type NCA. If unsure of the Type, trial and error can help narrow down the options.
