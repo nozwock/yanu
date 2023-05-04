@@ -104,8 +104,8 @@ impl YanuApp {
         increase_font_size_by(1.2, &cc.egui_ctx);
 
         Self {
-            config: Config::load().unwrap(), // TODO: handle this somehow
-            // maybe show a dialog message and then exit
+            // TODO: Handle this somehow, maybe show a dialog message and then exit
+            config: Config::load().unwrap(),
             ..Default::default()
         }
     }
@@ -258,10 +258,10 @@ impl eframe::App for YanuApp {
                         ui.group(|ui| {
                             ui.label("Control NCA:");
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+                                // TODO: Figure out how to move the focus to the end on demand
                                 // let text_edit =
                                 //     egui::TextEdit::singleline(&mut self.control_nca_path).show(ui);
 
-                                // TODO: Figure out how to move the focus to the end on demand
                                 ui.text_edit_singleline(&mut self.control_nca_path_buf);
                                 if ui.button("📂 Browse").clicked() {
                                     consume_err_or(
