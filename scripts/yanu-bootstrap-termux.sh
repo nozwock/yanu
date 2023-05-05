@@ -65,13 +65,12 @@ fi
 # Setup entry script
 rm -f "$BIN_PATH/yanu" || err "Failed to clean up old entry script"
 rm -f "$BIN_PATH/yanu-cli" || err "Failed to clean up old entry script"
-echo '
-#!/bin/bash
+echo '#!/bin/bash
 proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu "$@"' >>"$BIN_PATH/yanu-cli" || err "Failed to write entry script"
 chmod +x "$BIN_PATH/yanu-cli" || err "Failed to give executable permission"
-echo '
-#!/bin/bash
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu tui' >>"$BIN_PATH/yanu" || err "Failed to write entry script"
+echo '#!/bin/bash
+yanu-cli tui' >>"$BIN_PATH/yanu" || err "Failed to write alias script"
 chmod +x "$BIN_PATH/yanu" || err "Failed to give executable permission"
 
-echo -e "\e[1;92mInstalled yanu successfully\!\n\e[0mAll options are exposed through the \e[1;93m'yanu-cli'\e[0m command.\nYou can just type \e[1;93m'yanu'\e[0m if you'd like to update only."
+echo -e "Yanu has been successfully installed! The \e[1;92m'yanu-cli'\e[0m command provides access to all available options." \
+    "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu-cli tui'\e[0m."
