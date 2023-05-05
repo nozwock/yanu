@@ -40,6 +40,8 @@ while true; do
 done
 # Argparsing - END
 
+BIN_PATH='/data/data/com.termux/files/usr/bin'
+
 # Setup deps
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
@@ -61,15 +63,15 @@ else
 fi
 
 # Setup entry script
-rm -f "$PATH/yanu" || err "Failed to clean up old entry script"
-rm -f "$PATH/yanu-cli" || err "Failed to clean up old entry script"
+rm -f "$BIN_PATH/yanu" || err "Failed to clean up old entry script"
+rm -f "$BIN_PATH/yanu-cli" || err "Failed to clean up old entry script"
 echo '
 #!/bin/bash
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu "$@"' >>"$PATH/yanu-cli" || err "Failed to write entry script"
-chmod +x "$PATH/yanu-cli" || err "Failed to give executable permission"
+proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu "$@"' >>"$BIN_PATH/yanu-cli" || err "Failed to write entry script"
+chmod +x "$BIN_PATH/yanu-cli" || err "Failed to give executable permission"
 echo '
 #!/bin/bash
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu tui' >>"$PATH/yanu" || err "Failed to write entry script"
-chmod +x "$PATH/yanu" || err "Failed to give executable permission"
+proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- yanu tui' >>"$BIN_PATH/yanu" || err "Failed to write entry script"
+chmod +x "$BIN_PATH/yanu" || err "Failed to give executable permission"
 
 echo -e "\e[1;92mInstalled yanu successfully\!\n\e[0mAll options are exposed through the \e[1;93m'yanu-cli'\e[0m command.\nYou can just type \e[1;93m'yanu'\e[0m if you'd like to update only."
