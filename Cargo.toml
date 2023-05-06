@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
-license = "MIT"
+license = "GPLv2"
 rust-version = "1.68"
 version = "0.10.1"
 
