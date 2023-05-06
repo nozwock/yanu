@@ -3,7 +3,11 @@ pub mod unpack;
 pub mod update;
 
 use crate::vfs::{nacp::NacpData, ticket::TitleKey};
-use common::{defines::DEFAULT_TITLEKEYS_PATH, error::MultiReport, utils::move_file};
+use common::{
+    defines::{DEFAULT_TITLEKEYS_PATH, SWITCH_DIR},
+    error::MultiReport,
+    utils::move_file,
+};
 use eyre::{bail, eyre, Result};
 use fs_err as fs;
 use std::{
@@ -27,8 +31,8 @@ pub fn store_titlekeys<'a, I>(keys: I) -> Result<()>
 where
     I: Iterator<Item = &'a TitleKey>,
 {
-    info!(keyfile = ?DEFAULT_TITLEKEYS_PATH.as_path(), "Storing TitleKeys");
-    fs::create_dir_all(DEFAULT_TITLEKEYS_PATH.parent().unwrap())?;
+    info!(keyfile = ?SWITCH_DIR, "Storing TitleKeys");
+    fs::create_dir_all(SWITCH_DIR.as_path())?;
     fs::write(
         DEFAULT_TITLEKEYS_PATH.as_path(),
         keys.map(|key| key.to_string())

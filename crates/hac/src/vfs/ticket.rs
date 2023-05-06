@@ -33,11 +33,11 @@ impl TitleKey {
     const RIGHTS_ID_OFFSET: usize = 0x2a0;
     const TITLE_KEY_OFFSET: usize = 0x180;
 
-    pub fn try_new<P: AsRef<Path>>(decrypted_tik_path: P) -> Result<TitleKey> {
+    pub fn try_new<P: AsRef<Path>>(tik_file: P) -> Result<TitleKey> {
         let mut title_key = TitleKey::default();
-        let mut ticket = fs::File::open(decrypted_tik_path.as_ref())?;
+        let mut ticket = fs::File::open(tik_file.as_ref())?;
 
-        info!(tik = %decrypted_tik_path.as_ref().display(), "Reading ticket");
+        info!(tik = %tik_file.as_ref().display(), "Reading ticket");
 
         ticket.seek(io::SeekFrom::Start(TitleKey::RIGHTS_ID_OFFSET as _))?;
         ticket.read_exact(&mut title_key.rights_id)?;
