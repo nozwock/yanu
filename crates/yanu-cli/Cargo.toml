@@ -29,7 +29,6 @@ console.workspace = true
 ctrlc.workspace = true
 eyre.workspace = true
 fs-err.workspace = true
-indicatif = "0.17"
 inquire = "0.6"
 serde.workspace = true
 tempfile.workspace = true

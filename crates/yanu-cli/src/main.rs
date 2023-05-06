@@ -3,6 +3,7 @@ use std::{path::PathBuf, time::Instant};
 use clap::Parser;
 use common::{
     defines::{APP_CONFIG_PATH, DEFAULT_PRODKEYS_PATH},
+    format::HumanDuration,
     log,
     utils::{ext_matches, get_disk_free, get_fmt_size, get_paths_size},
 };
@@ -18,7 +19,6 @@ use hac::{
     utils::{formatted_nsp_rename, pack::pack_fs_data, unpack::unpack_nsp, update::update_nsp},
     vfs::{nsp::Nsp, validate_program_id, xci::xci_to_nsps},
 };
-use indicatif::HumanDuration;
 use tracing::{debug, error, info, warn};
 use yanu_cli::opts::{self, YanuCli};
 
@@ -384,8 +384,9 @@ fn run() -> Result<()> {
             let options = roms_path
                 .iter()
                 .map(|entry| {
-                    entry.file_name().to_str().unwrap_or_else(|| panic!("'{}' should've valid Unicode",
-                        entry.path().display()))
+                    entry.file_name().to_str().unwrap_or_else(|| {
+                        panic!("'{}' should've valid Unicode", entry.path().display())
+                    })
                 })
                 .collect::<Vec<_>>();
             if options.is_empty() {
@@ -397,8 +398,12 @@ fn run() -> Result<()> {
                 .find(|entry| entry.file_name() == choice)
                 .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
-                .unwrap_or_else(|| panic!("Selected package '{}' should be in {:#?}",
-                    choice, roms_path));
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Selected package '{}' should be in {:#?}",
+                        choice, roms_path
+                    )
+                });
 
             let options = options
                 .into_iter()
@@ -413,8 +418,12 @@ fn run() -> Result<()> {
                 .find(|entry| entry.file_name() == choice)
                 .map(|entry| Nsp::try_new(entry.path()))
                 .transpose()?
-                .unwrap_or_else(|| panic!("Selected package '{}' should be in {:#?}",
-                    choice, roms_path));
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Selected package '{}' should be in {:#?}",
+                        choice, roms_path
+                    )
+                });
 
             if !check_space_with_prompt!(2, &[&base.path, &update.path], &config.temp_dir) {
                 return Ok(());
