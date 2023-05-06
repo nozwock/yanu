@@ -112,7 +112,7 @@ If only base was unpacked, get the control NCA from `basedata`.
 
 ## Troubleshooting
 
-- Newer games failing to update.
+- Newer games failing to update.\
    Unfortunately, before applying the update, it is necessary to first downgrade the base and update ROM files firmware using [NSCB](https://github.com/julesontheroad/NSC_BUILDER). This approach appears to be effective.
 
 - If you encounter errors such as 'Failed to sync package repos' while installing yanu on Termux, try updating your outdated repositories using:
