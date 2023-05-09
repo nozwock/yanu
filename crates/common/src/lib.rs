@@ -6,7 +6,7 @@
     ),
     all(target_arch = "aarch64", feature = "android-proot")
 )))]
-compile_error!("This traget configuration is not supported");
+compile_error!("This target configuration is not supported");
 
 pub mod defines;
 pub mod error;

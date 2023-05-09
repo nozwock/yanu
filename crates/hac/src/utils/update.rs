@@ -129,7 +129,7 @@ where
     let fs_dir = tempfile::tempdir_in(&cfg.temp_dir)?;
     let romfs_dir = fs_dir.path().join("romfs");
     let exefs_dir = fs_dir.path().join("exefs");
-    // !Unpacking fs files from NCAs
+    // !Unpacking FS files from NCAs
     _ = base_nca.unpack_all(&nca_extractor, &update_nca, &romfs_dir, &exefs_dir); // !Ignoring err
 
     let program_id = match program_id {
