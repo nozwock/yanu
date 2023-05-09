@@ -25,7 +25,7 @@ Precompiled binaries are available from the [GitHub releases page](https://githu
 
 ### Android w/Termux
 
-> **Check out [Video Tutorial](https://www.youtube.com/watch?v=rsYHWL7G3EI) by Zerokimchi for Android.** _(outdated command in the video)_
+> **Check out [Video Tutorial](https://teddit.net/r/EmulationOnAndroid/comments/11ui6v8) by SmokeyMC for Android.**
 
 1. Download & Install `Termux` from [F-droid](https://f-droid.org/en/packages/com.termux/).
 2. Copy-paste the following in `Termux` and hit enter:
