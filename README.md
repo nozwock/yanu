@@ -10,6 +10,7 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 ---
 
 ## About
+[![download badge](https://img.shields.io/github/downloads/nozwock/yanu/total?style=social)](https://github.com/nozwock/yanu/releases)
 
 **Yanu** is a **Nintendo Switch** ROM updater designed to work with Skyline on [Android w/Termux](https://github.com/nozwock/yanu#android-wtermux), [Linux](https://github.com/nozwock/yanu#linux), and [Windows](https://github.com/nozwock/yanu#windows), as well as other platforms with the help of [Docker images](https://github.com/nozwock/yanu#docker). It serves as a temporary solution until Skyline supports Updates/DLCs natively.
 
