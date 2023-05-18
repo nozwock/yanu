@@ -18,6 +18,10 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
+<details><summary>Screenshot</summary>
+<img alt="screenshot" src="https://github.com/nozwock/yanu/assets/57829219/4543d6c0-ab91-41e0-abdd-6c3ad5ec2591">
+</details>
+
 ### Supported File Types
 - [x] NSP 
 - [x] XCI* (through XCI-NSP conversion)
@@ -105,11 +109,11 @@ If only base was unpacked, get the control NCA from `basedata`.
 
 ## Directories Used
 
-| Used for | Windows | Linux |
-| --- | --- | --- |
-| Keys | `%USERPROFILE%\.switch` | `$HOME/.switch` |
-| Cache | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu` |
-| Config | `%APPDATA%\com.github.nozwock.yanu` | `$HOME/.config/com.github.nozwock.yanu` |
+| Used for | Windows                                  | Linux                                   |
+| -------- | ---------------------------------------- | --------------------------------------- |
+| Keys     | `%USERPROFILE%\.switch`                  | `$HOME/.switch`                         |
+| Cache    | `%LOCALAPPDATA%\com.github.nozwock.yanu` | `$HOME/.cache/com.github.nozwock.yanu`  |
+| Config   | `%APPDATA%\com.github.nozwock.yanu`      | `$HOME/.config/com.github.nozwock.yanu` |
 
 ## Troubleshooting
 
