@@ -63,13 +63,17 @@ impl fmt::Display for BackendKind {
 impl BackendKind {
     // This is important, don't remove it again!
     fn filename(&self) -> String {
+        let filename = match self {
+            BackendKind::FourNXCI => "4nxci".into(),
+            _ => format!("{}", self).to_lowercase(),
+        };
         #[cfg(unix)]
         {
-            format!("{}", self).to_lowercase()
+            filename
         }
         #[cfg(windows)]
         {
-            format!("{}.exe", self).to_lowercase()
+            format!("{filename}.exe")
         }
     }
 }
