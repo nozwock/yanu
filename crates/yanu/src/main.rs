@@ -45,9 +45,12 @@ fn main() -> Result<()> {
         env!("CARGO_PKG_NAME"),
     );
 
+    let icon_bytes = include_bytes!("../../../assets/icon.png");
+
     let native_options = eframe::NativeOptions {
         min_window_size: Some(egui::vec2(600., 400.)),
         initial_window_size: Some(egui::vec2(600., 400.)),
+        icon_data: Some(eframe::IconData::try_from_png_bytes(icon_bytes)?),
         ..Default::default()
     };
     eframe::run_native(
