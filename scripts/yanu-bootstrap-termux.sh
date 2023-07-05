@@ -86,7 +86,7 @@ echo $'#!/bin/bash
 YANU_OUT="$HOME/tmp.com.github.nozwock.yanu.out"
 
 filter_ansi_codes() {
-    sed -r \'s/\x1b\[\??[0-9;]*[A-Za-z]//g\'
+    sed -r \'s/\\x1b\[\??[0-9;]*[A-Za-z]//g\'
 }
 
 cleanup() {
@@ -108,8 +108,8 @@ ret="$?"
 if $termux_api_exists; then
     if [ "$ret" -eq 0 ]; then
         yanu_out_content="$(cat "$YANU_OUT" | tail -n2 | filter_ansi_codes)"
-        patched_path="$(echo "$yanu_out_content" | sed -nr "s/.*Patched NSP created at \'(.*)\'.*/\1/p")"
-        time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\1/p\')"
+        patched_path="$(echo "$yanu_out_content" | sed -nr "s/.*Patched NSP created at \'(.*)\'.*/\\1/p")"
+        time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
 
         echo -e "Patched successfully to \'$patched_path\'\nTook $time_taken" | termux-notification -t \'Yanu\' --icon done
     else
