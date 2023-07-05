@@ -111,7 +111,7 @@ if $termux_api_exists; then
         patched_path="$(echo "$yanu_out_content" | sed -nr "s/.*Patched NSP created at \'(.*)\'.*/\\1/p")"
         time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
 
-        echo -e "Patched successfully to \'$patched_path\'\nTook $time_taken" | termux-notification -t \'Yanu\' --icon done
+        echo -e "Patched successfully to \'$patched_path\'\\nTook $time_taken" | termux-notification -t \'Yanu\' --icon done
     else
         termux-notification -t \'Yanu\' -c \'Patching failed due to some error\' --icon error
     fi
