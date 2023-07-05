@@ -16,7 +16,7 @@ proot() {
 patch_am() {
     # https://github.com/termux/termux-api/issues/552#issuecomment-1382722639
     local am_path="$PREFIX/bin/am" pat="app_process" patch="-Xnoimage-dex2oat"
-    sed -i "/$pat/\!b; /$patch/b; s/$pat/& $patch/" "$am_path" || return $?
+    sed -i "/$pat/!b; /$patch/b; s/$pat/& $patch/" "$am_path" || return $?
 }
 
 # Argparsing
