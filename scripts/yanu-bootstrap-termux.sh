@@ -77,7 +77,7 @@ rm -f "$BIN_PATH/yanu-cli" || err "Failed to clean up old entry script"
 
 echo '#!/bin/bash
 YANU_OUT='tmp.com.github.nozwock.yanu.out'
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- bash -c "yanu "$@" 2> >(tee \$HOME/$YANU_OUT)"
+proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- bash -c "$(echo "yanu ""$@"" 2> >(tee \$HOME/$YANU_OUT)")"
 ' >>"$BIN_PATH/yanu-cli" || err "Failed to write entry script"
 chmod +x "$BIN_PATH/yanu-cli" || err "Failed to give executable permission"
 
