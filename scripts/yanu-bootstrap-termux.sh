@@ -103,9 +103,9 @@ notify() {
             message="$(echo "$yanu_out_content" | head -n1)"
             time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
 
-            echo -e "Process completed successfully\\n$message\\nTook $time_taken" | termux-notification -t "Yanu" --icon done
+            echo -e "Process completed successfully\\n$message\\nTook $time_taken" | termux-notification -t "Yanu - Ok" --icon done
         else
-            termux-notification -t "Yanu" -c "Process failed due to some error" --icon error
+            termux-notification -t "Yanu - Error" -c "Process failed due to some error" --icon error
         fi
     fi
 }
