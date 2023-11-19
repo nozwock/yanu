@@ -1,20 +1,22 @@
 #!/bin/bash
 
-# Handle errors
+# Show error message and exit
+# $* - error message
 err() {
     printf >&2 "\e[;91m%s\n\e[0m" "Error: $(if [[ -n "$*" ]]; then echo -e "$*"; else echo 'an error occurred'; fi)"
     exit 1
 }
 
-# Alias for run in proot
-# @args string
+# Runs passed command in proot
+# $1 - command string
 proot() {
     printf >&2 "\e[1;97m%s\n%s\n\e[0m" "Running in PROOT:" "$1"
     proot-distro login ubuntu -- bash -c "$1"
 }
 
+# Patch activity manager for performance improvements
+# https://github.com/termux/termux-api/issues/552#issuecomment-1382722639
 patch_am() {
-    # https://github.com/termux/termux-api/issues/552#issuecomment-1382722639
     local am_path="$PREFIX/bin/am" pat="app_process" patch="-Xnoimage-dex2oat"
     sed -i "/$pat/!b; /$patch/b; s/$pat/& $patch/" "$am_path" || return $?
 }
@@ -80,6 +82,7 @@ echo $'#!/bin/bash
 
 YANU_OUT_PATH="$HOME/tmp.com.github.nozwock.yanu.out"
 
+# Launch proot yanu
 yanu() {
     proot-distro login ubuntu --bind /storage/emulated/0 --termux-home -- bash -c "$(echo "yanu ""$@"" 2> >(tee $YANU_OUT_PATH)")"
 }
@@ -91,6 +94,7 @@ filter_ansi_codes() {
 termux_api_exists=false
 pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >/dev/null | grep -iq error && termux_api_exists=true
 
+# Shows notification for failure or success based on the status code
 # $1 - status code
 notify() {
     if $termux_api_exists; then
@@ -145,5 +149,5 @@ fi
 ' >>"$BIN_DIR/yanu" || err "Failed to write entry script"
 chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
 
-echo -e "Yanu has been successfully installed! The \e[1;92m'yanu-cli'\e[0m command provides access to all available options." \
-    "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu-cli tui'\e[0m."
+echo -e "Yanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
+    "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu tui'\e[0m."
