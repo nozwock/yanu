@@ -77,45 +77,45 @@ rm -f "$BIN_PATH/yanu-cli" || err "Failed to clean up old entry script"
 
 echo '#!/bin/bash
 YANU_OUT='tmp.com.github.nozwock.yanu.out'
-proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- bash -c "yanu $@"
+proot-distro login --bind /storage/emulated/0 --termux-home ubuntu -- bash -c "yanu "$@" 2> >(tee \$HOME/$YANU_OUT)"
 ' >>"$BIN_PATH/yanu-cli" || err "Failed to write entry script"
 chmod +x "$BIN_PATH/yanu-cli" || err "Failed to give executable permission"
 
 echo $'#!/bin/bash
 
-# YANU_OUT="$HOME/tmp.com.github.nozwock.yanu.out"
+YANU_OUT="$HOME/tmp.com.github.nozwock.yanu.out"
 
-# filter_ansi_codes() {
-#     sed -r \'s/\\x1b\[\??[0-9;]*[A-Za-z]//g\'
-# }
+filter_ansi_codes() {
+    sed -r \'s/\\x1b\[\??[0-9;]*[A-Za-z]//g\'
+}
 
 cleanup() {
-    # rm -f "$YANU_OUT"
+    rm -f "$YANU_OUT"
     termux-wake-unlock
     exit
 }
 
-# termux_api_exists=false
-# pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >/dev/null | grep -iq error && termux_api_exists=true
+termux_api_exists=false
+pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >/dev/null | grep -iq error && termux_api_exists=true
 
 echo "Acquiring wakelock...."
 termux-wake-lock
 trap cleanup EXIT
 
 yanu-cli tui
-# ret="$?"
+ret="$?"
 
-# if $termux_api_exists; then
-#     if [ "$ret" -eq 0 ]; then
-#         yanu_out_content="$(cat "$YANU_OUT" | tail -n2 | filter_ansi_codes)"
-#         patched_path="$(echo "$yanu_out_content" | sed -nr "s/.*Patched NSP created at \'(.*)\'.*/\\1/p")"
-#         time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
+if $termux_api_exists; then
+    if [ "$ret" -eq 0 ]; then
+        yanu_out_content="$(cat "$YANU_OUT" | tail -n2 | filter_ansi_codes)"
+        patched_path="$(echo "$yanu_out_content" | sed -nr "s/.*Patched NSP created at \'(.*)\'.*/\\1/p")"
+        time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
 
-#         echo -e "Patched successfully to \'$patched_path\'\\nTook $time_taken" | termux-notification -t \'Yanu\' --icon done
-#     else
-#         termux-notification -t \'Yanu\' -c \'Patching failed due to some error\' --icon error
-#     fi
-# fi
+        echo -e "Patched successfully to \'$patched_path\'\\nTook $time_taken" | termux-notification -t \'Yanu\' --icon done
+    else
+        termux-notification -t \'Yanu\' -c \'Patching failed due to some error\' --icon error
+    fi
+fi
 ' >>"$BIN_PATH/yanu" || err "Failed to write alias script"
 chmod +x "$BIN_PATH/yanu" || err "Failed to give executable permission"
 
