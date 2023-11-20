@@ -17,7 +17,11 @@ proot() {
 # Patches to make yanu work
 apply_workaround_patches() {
     # Workaround for https://github.com/nozwock/yanu/issues/44
-    proot '[[ ! -f "/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so" ]] && ln -sf "$(find /usr/lib/aarch64-linux-gnu/ -type f -name '"'libbfd*.so'"' | head -n1)" '"'/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so'"
+    proot '
+    if [[ ! -f "/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so" ]]; then
+        ln -sf "$(find /usr/lib/aarch64-linux-gnu/ -type f -name '"'libbfd*.so'"' | head -n1)" '"'/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so'
+    fi
+    "
 }
 
 # Patch activity manager for performance improvements
@@ -167,5 +171,5 @@ fi
 ' >>"$BIN_DIR/yanu" || err "Failed to write entry script"
 chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
 
-echo -e "Yanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
+echo -e "\nYanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
     "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu tui'\e[0m."
