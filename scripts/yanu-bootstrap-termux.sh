@@ -28,14 +28,19 @@ if [ "$?" != 4 ]; then
 fi
 
 set -uo noclobber -o pipefail
-params="$(getopt -o t: -l tag: --name "$0" -- "$@")" || exit $?
+# NOTE: getopt doesn't work when there's no '-o' and only `-l`
+params="$(getopt -o t: -l tag:,skip-deps --name "$0" -- "$@")" || exit $?
 eval set -- "$params"
 
-while true; do
+flag_skip_deps=false
+while (($#)); do
     case "$1" in
     -t | --tag)
         arg_tag=$2
-        shift 2
+        shift
+        ;;
+    --skip-deps)
+        flag_skip_deps=true
         ;;
     --)
         shift
@@ -45,20 +50,27 @@ while true; do
         err "Unknown: $1"
         ;;
     esac
+    shift
 done
 # Argparsing - END
 
 USR_DIR='/data/data/com.termux/files/usr'
 BIN_DIR="${USR_DIR}/bin"
 
-# Setup deps
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
-sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
-sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
-sh -c 'yes Y | pkg in proot-distro termux-api' || err "Failed to install essential packages"
-proot-distro install ubuntu || true # ignore err
-proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
-proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
+
+# Setup deps
+if $flag_skip_deps; then
+    echo >&2 '\e[1;93mNOTE: Skipping dependencies may cause issues!\e[0m'
+else
+    sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
+    sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
+    sh -c 'yes Y | pkg in proot-distro termux-api' || err "Failed to install essential packages"
+    proot-distro install ubuntu || true # ignore err
+    proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
+    proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
+fi
+
 proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot")
 
 # Fetch 'yanu' binary
