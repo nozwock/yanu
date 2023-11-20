@@ -61,7 +61,7 @@ termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage
 
 # Setup deps
 if $flag_skip_deps; then
-    echo >&2 '\e[1;93mNOTE: Skipping dependencies may cause issues!\e[0m'
+    echo -e '\e[1;93mNOTE: Skipping dependencies may cause issues!\e[0m' >&2
 else
     sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
     sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
