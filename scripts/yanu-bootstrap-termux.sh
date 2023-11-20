@@ -14,6 +14,12 @@ proot() {
     proot-distro login ubuntu -- bash -c "$1"
 }
 
+# Patches to make yanu work
+apply_workaround_patches() {
+    # Workaround for https://github.com/nozwock/yanu/issues/44
+    proot '[[ ! -f "/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so" ]] && ln -sf "$(find /usr/lib/aarch64-linux-gnu/ -type f -name '"'libbfd*.so'"' | head -n1)" '"'/usr/lib/aarch64-linux-gnu/libbfd-2.38-system.so'"
+}
+
 # Patch activity manager for performance improvements
 # https://github.com/termux/termux-api/issues/552#issuecomment-1382722639
 patch_am() {
@@ -83,8 +89,8 @@ else
     proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag=$arg_tag --to=/usr/bin/" || err "Failed to fetch 'yanu' binary in proot"
 fi
 
-# Patch activity manager for performance improvements
-patch_am
+apply_workaround_patches || err "Failed to apply workaround patches"
+patch_am || err "Failed to patch AM"
 
 # Setup entry script
 rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
