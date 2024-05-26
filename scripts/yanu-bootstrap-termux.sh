@@ -31,77 +31,78 @@ patch_am() {
     sed -i "/$pat/!b; /$patch/b; s/$pat/& $patch/" "$am_path" || return $?
 }
 
-# Argparsing
-getopt -T
-if [ "$?" != 4 ]; then
-    err "wrong version of 'getopt' detected"
-fi
+main() {
+    # Argparsing
+    getopt -T
+    if [ "$?" != 4 ]; then
+        err "wrong version of 'getopt' detected"
+    fi
 
-set -uo noclobber -o pipefail
-# NOTE: getopt doesn't work when there's no '-o' and only `-l`
-params="$(getopt -o t: -l tag:,skip-deps --name "$0" -- "$@")" || exit $?
-eval set -- "$params"
+    set -uo noclobber -o pipefail
+    # NOTE: getopt doesn't work when there's no '-o' and only `-l`
+    params="$(getopt -o t: -l tag:,skip-deps --name "$0" -- "$@")" || exit $?
+    eval set -- "$params"
 
-flag_skip_deps=false
-while (($#)); do
-    case "$1" in
-    -t | --tag)
-        arg_tag=$2
+    flag_skip_deps=false
+    while (($#)); do
+        case "$1" in
+        -t | --tag)
+            arg_tag=$2
+            shift
+            ;;
+        --skip-deps)
+            flag_skip_deps=true
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            err "Unknown: $1"
+            ;;
+        esac
         shift
-        ;;
-    --skip-deps)
-        flag_skip_deps=true
-        ;;
-    --)
-        shift
-        break
-        ;;
-    *)
-        err "Unknown: $1"
-        ;;
-    esac
-    shift
-done
-# Argparsing - END
+    done
+    # Argparsing - END
 
-USR_DIR='/data/data/com.termux/files/usr'
-BIN_DIR="${USR_DIR}/bin"
+    USR_DIR='/data/data/com.termux/files/usr'
+    BIN_DIR="${USR_DIR}/bin"
 
-termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
+    termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 
-# Setup deps
-if [ "$flag_skip_deps" = true ]; then
-    echo -e '\e[1;93mNOTE: Skipping dependencies may cause issues!\e[0m' >&2
-else
-    sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
-    sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
-    sh -c 'yes Y | pkg in proot-distro termux-api' || err "Failed to install essential packages"
-    proot-distro install ubuntu-oldlts || true # ignore err
-    proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
-    proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
-fi
+    # Setup deps
+    if [ "$flag_skip_deps" = true ]; then
+        echo -e '\e[1;93mWARN: Skipping dependencies may cause issues!\e[0m' >&2
+    else
+        sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
+        sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
+        sh -c 'yes Y | pkg in proot-distro termux-api' || err "Failed to install essential packages"
+        proot-distro install ubuntu-oldlts || true # ignore err
+        proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
+        proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
+    fi
 
-proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot")
+    proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; } && mv ./eget /bin/' || err "Failed install 'eget' in proot")
 
-# Fetch 'yanu' binary
-proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
+    # Fetch 'yanu' binary
+    proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
 
-# Previous variable check method: https://stackoverflow.com/a/13864829
-if [ -v arg_tag ]; then
-    # Exists
-    proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag=$arg_tag --to=/usr/bin/" || err "Failed to fetch 'yanu' binary in proot"
-else
-    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to=/usr/bin/' || err "Failed to fetch 'yanu' binary in proot"
-fi
+    # Previous variable check method: https://stackoverflow.com/a/13864829
+    if [ -v arg_tag ]; then
+        # Exists
+        proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag=$arg_tag --to=/usr/bin/" || err "Failed to fetch 'yanu' binary in proot"
+    else
+        proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to=/usr/bin/' || err "Failed to fetch 'yanu' binary in proot"
+    fi
 
-apply_workaround_patches || err "Failed to apply workaround patches"
-patch_am || err "Failed to patch AM"
+    apply_workaround_patches || err "Failed to apply workaround patches"
+    patch_am || err "Failed to patch AM"
 
-# Setup entry script
-rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
-rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
+    # Setup entry script
+    rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
+    rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
 
-cat >"$BIN_DIR/yanu" <<"EOF"
+    cat >"$BIN_DIR/yanu" <<"EOF"
 #!/bin/bash
 
 YANU_OUT_PATH="$HOME/tmp.com.github.nozwock.yanu.out"
@@ -176,7 +177,10 @@ else
 fi
 EOF
 
-chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
+    chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
 
-echo -e "\nYanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
-    "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu tui'\e[0m."
+    echo -e "\nYanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
+        "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu tui'\e[0m."
+}
+
+main "$@"
