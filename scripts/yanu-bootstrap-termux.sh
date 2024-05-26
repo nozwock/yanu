@@ -145,9 +145,24 @@ cleanup() {
     exit
 }
 
-get_wakelock
+notify_flag=false
+for arg in "$@"; do
+    if [[ $arg =~ ^(update|pack|unpack|convert|tui)$ ]]; then
+        notify_flag=true
+    fi
+    if [[ $arg =~ ^(help|-h|--help)$ ]]; then
+        notify_flag=false
+        break
+    fi
+done
+
+# Only set wakelock for non-help commands
+if [ "$notify_flag" = true ] || [[ $# -eq 0 ]]; then
+    get_wakelock
+fi
 trap cleanup EXIT
 
+echo 'Entering proot...'
 if [[ $# -eq 0 ]]; then
     yanu tui
     notify $?
@@ -155,19 +170,8 @@ else
     yanu "$@"
     code=$?
 
-    notify_flag=false
-    for arg in "$@"; do
-        if [[ $arg =~ ^(update|pack|unpack|convert|tui)$ ]]; then
-            notify_flag=true
-        fi
-        if [[ $arg =~ ^(-h|--help)$ ]]; then
-            notify_flag=false
-            break
-        fi
-    done
-
     if [ "$notify_flag" = true ]; then
-        notify $code
+        notify "$code"
     fi
 fi
 EOF
