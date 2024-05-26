@@ -70,7 +70,7 @@ BIN_DIR="${USR_DIR}/bin"
 termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 
 # Setup deps
-if $flag_skip_deps; then
+if [ "$flag_skip_deps" = true ]; then
     echo -e '\e[1;93mNOTE: Skipping dependencies may cause issues!\e[0m' >&2
 else
     sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
@@ -85,12 +85,13 @@ proot 'which eget' || (proot '{ curl https://zyedidia.github.io/eget.sh | bash; 
 
 # Fetch 'yanu' binary
 proot 'rm -f /usr/bin/yanu /bin/yanu' || err "Failed to remove existing 'yanu' in proot"
-if [ -z ${arg_tag+x} ]; then # https://stackoverflow.com/a/13864829
-    # Unset
-    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to=/usr/bin/' || err "Failed to fetch 'yanu' binary in proot"
-else
-    # Set
+
+# Previous variable check method: https://stackoverflow.com/a/13864829
+if [ -v arg_tag ]; then
+    # Exists
     proot "eget https://github.com/nozwock/yanu/ --asset aarch64 --tag=$arg_tag --to=/usr/bin/" || err "Failed to fetch 'yanu' binary in proot"
+else
+    proot 'eget https://github.com/nozwock/yanu/ --asset aarch64 --to=/usr/bin/' || err "Failed to fetch 'yanu' binary in proot"
 fi
 
 apply_workaround_patches || err "Failed to apply workaround patches"
@@ -100,17 +101,18 @@ patch_am || err "Failed to patch AM"
 rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
 rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
 
-echo $'#!/bin/bash
+cat >"$BIN_DIR/yanu" <<"EOF"
+#!/bin/bash
 
 YANU_OUT_PATH="$HOME/tmp.com.github.nozwock.yanu.out"
 
 # Launch proot yanu
 yanu() {
-    proot-distro login ubuntu --bind /storage/emulated/0 --termux-home -- bash -c "$(echo "yanu ""$@"" 2> >(tee $YANU_OUT_PATH)")"
+    proot-distro login ubuntu --bind /storage/emulated/0 --termux-home -- bash -c 'yanu '"$*"" 2> >(tee $YANU_OUT_PATH)"
 }
 
 filter_ansi_codes() {
-    sed -r \'s/\\x1b\[\\??[0-9;]*[A-Za-z]//g\'
+    sed -r 's/\x1b\[\??[0-9;]*[A-Za-z]//g'
 }
 
 termux_api_exists=false
@@ -119,13 +121,13 @@ pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >
 # Shows notification for failure or success based on the status code
 # $1 - status code
 notify() {
-    if $termux_api_exists; then
+    if [ "$termux_api_exists" = true ]; then
         if [ "$1" -eq 0 ]; then
             yanu_out_content="$(cat "$YANU_OUT_PATH" | tail -n2 | filter_ansi_codes)"
             message="$(echo "$yanu_out_content" | head -n1)"
-            time_taken="$(echo "$yanu_out_content" | sed -nr \'s/.*Process completed \((.*)\).*/\\1/p\')"
+            time_taken="$(echo "$yanu_out_content" | sed -nr 's/.*Process completed \((.*)\).*/\1/p')"
 
-            echo -e "Process completed successfully\\n$message\\nTook $time_taken" | termux-notification -t "Yanu - Ok" --icon done
+            echo -e "Process completed successfully\n$message\nTook $time_taken" | termux-notification -t "Yanu - Ok" --icon done
         else
             termux-notification -t "Yanu - Error" -c "Process failed due to some error" --icon error
         fi
@@ -164,11 +166,12 @@ else
         fi
     done
 
-    if $notify_flag; then
+    if [ "$notify_flag" = true ]; then
         notify $code
     fi
 fi
-' >>"$BIN_DIR/yanu" || err "Failed to write entry script"
+EOF
+
 chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
 
 echo -e "\nYanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
