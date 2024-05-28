@@ -128,7 +128,7 @@ yanu() {
 
     for it in "${external_storage_arr[@]}"; do
         if [ -d "$it" ]; then
-            bind_opts+=( "--bind $it" )
+            bind_opts+=( --bind "$it" )
         fi
     done
 
