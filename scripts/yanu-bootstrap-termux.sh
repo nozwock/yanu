@@ -117,12 +117,12 @@ yanu() {
     if [ -d "$HOME/storage/external-1" ]; then
         external_storage_path="$(grep -E '\s/storage/.{4}-.{4}' /proc/mounts | cut -d ' ' -f2)"
 
-        readarray arr <<< "$external_storage_path"
+        readarray -t arr <<< "$external_storage_path"
         external_storage_arr+=( "${arr[@]}" )
     fi
 
     if [ -f "$BINDINGS_PATH" ]; then
-        readarray arr < "$BINDINGS_PATH"
+        readarray -t arr < "$BINDINGS_PATH"
         external_storage_arr+=( "${arr[@]}" )
     fi
 
