@@ -105,11 +105,34 @@ main() {
     cat >"$BIN_DIR/yanu" <<"EOF"
 #!/bin/bash
 
+CFG_DIR="$HOME/.config/com.github.nozwock.yanu"
 YANU_OUT_PATH="$HOME/tmp.com.github.nozwock.yanu.out"
+BINDINGS_PATH="$CFG_DIR/proot-bindings"
 
 # Launch proot yanu
 yanu() {
-    proot-distro login ubuntu-oldlts --bind /storage/emulated/0 --termux-home -- bash -c 'yanu '"$*"" 2> >(tee $YANU_OUT_PATH)"
+    bind_opts=()
+    external_storage_arr=()
+
+    if [ -d "$HOME/storage/external-1" ]; then
+        external_storage_path="$(grep -E '\s/storage/.{4}-.{4}' /proc/mounts | cut -d ' ' -f2)"
+
+        readarray -t arr <<< "$external_storage_path"
+        external_storage_arr+=( "${arr[@]}" )
+    fi
+
+    if [ -f "$BINDINGS_PATH" ]; then
+        readarray -t arr < "$BINDINGS_PATH"
+        external_storage_arr+=( "${arr[@]}" )
+    fi
+
+    for it in "${external_storage_arr[@]}"; do
+        if [ -d "$it" ]; then
+            bind_opts+=( --bind "$it" )
+        fi
+    done
+
+    proot-distro login ubuntu-oldlts --termux-home --bind /storage/emulated/0 "${bind_opts[@]}" -- bash -c 'yanu '"$*"" 2> >(tee $YANU_OUT_PATH)"
 }
 
 filter_ansi_codes() {
