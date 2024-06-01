@@ -253,6 +253,7 @@ fi
 EOF
 
     chmod +x "$BIN_DIR/yanu" || err "Failed to give executable permission"
+    chmod +x "$BIN_DIR/yanu-cli" || err "Failed to give executable permission"
 
     echo -e "\nYanu has been successfully installed! The \e[1;92m'yanu --help'\e[0m command provides help for all available commands. (\e[1;92m'yanu-cli'\e[0m is deprecated.)" \
         "For interactive NSP updates, you can simply type \e[1;92m'yanu'\e[0m, which is an alias for \e[1;92m'yanu tui'\e[0m."
