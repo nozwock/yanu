@@ -65,8 +65,7 @@ main() {
     done
     # Argparsing - END
 
-    USR_DIR='/data/data/com.termux/files/usr'
-    BIN_DIR="${USR_DIR}/bin"
+    BIN_DIR="$PREFIX/bin"
 
     termux-setup-storage <<<"Y" || err "Failed to get permission to Internal storage"
 
@@ -98,16 +97,19 @@ main() {
     apply_workaround_patches || err "Failed to apply workaround patches"
     patch_am || err "Failed to patch AM"
 
-    # Setup entry script
-    rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
-    rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
+    # Cleaning up old files
+    # rm -f "$BIN_DIR/yanu" || err "Failed to clean up old entry script"
+    # rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
 
+    # Setup entry script
     cat >"$BIN_DIR/yanu" <<"EOF"
 #!/bin/bash
 
 CFG_DIR="$HOME/.config/com.github.nozwock.yanu"
 YANU_OUT_PATH="$HOME/tmp.com.github.nozwock.yanu.out"
 BINDINGS_PATH="$CFG_DIR/proot-bindings"
+
+IS_WAKELOCK_SET=true
 
 # Launch proot yanu
 yanu() {
@@ -139,13 +141,17 @@ filter_ansi_codes() {
     sed -r 's/\x1b\[\??[0-9;]*[A-Za-z]//g'
 }
 
-termux_api_exists=false
-pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >/dev/null | grep -iq error && termux_api_exists=true
+# Returns boolean, `true` or `false`
+does_termux_api_exist() {
+    out=false
+    pkg 2>/dev/null list-installed | grep -q termux-api && ! termux-api-start 2>&1 >/dev/null | grep -iq error && out=true
+    echo "$out"
+}
 
 # Shows notification for failure or success based on the status code
 # $1 - status code
 notify() {
-    if [ "$termux_api_exists" = true ]; then
+    if [ "$(does_termux_api_exist)" = true ]; then
         if [ "$1" -eq 0 ]; then
             yanu_out_content="$(cat "$YANU_OUT_PATH" | tail -n2 | filter_ansi_codes)"
             message="$(echo "$yanu_out_content" | head -n1)"
@@ -158,6 +164,23 @@ notify() {
     fi
 }
 
+# Returns boolean, `true` or `false`
+# $@ - Args passes to yanu
+should_notify() {
+    out=false
+    for arg in "$@"; do
+        if [[ $arg =~ ^(update|pack|unpack|convert|tui)$ ]]; then
+            out=true
+        fi
+        if [[ $arg =~ ^(help|-h|--help)$ ]]; then
+            out=false
+            break
+        fi
+    done
+
+    echo "$out"
+}
+
 get_wakelock() {
     echo "Acquiring wakelock..."
     termux-wake-lock
@@ -165,36 +188,65 @@ get_wakelock() {
 
 cleanup() {
     rm -f "$YANU_OUT_PATH"
-    termux-wake-unlock
+    if [ "$IS_WAKELOCK_SET" = true ]; then
+        termux-wake-unlock
+    fi
     exit
 }
 
-notify_flag=false
-for arg in "$@"; do
-    if [[ $arg =~ ^(update|pack|unpack|convert|tui)$ ]]; then
-        notify_flag=true
-    fi
-    if [[ $arg =~ ^(help|-h|--help)$ ]]; then
-        notify_flag=false
-        break
-    fi
-done
+# If not sourced
+if [ "${#BASH_SOURCE[@]}" = 1 ]; then
+    show_notification="$(should_notify "$@")"
 
-# Only set wakelock for non-help commands
-if [ "$notify_flag" = true ] || [[ $# -eq 0 ]]; then
-    get_wakelock
+    # Only set wakelock for non-help commands
+    if [ "$show_notification" = true ] || [[ $# -eq 0 ]]; then
+        get_wakelock
+    else
+        IS_WAKELOCK_SET=false
+    fi
+    trap cleanup EXIT
+
+    echo 'Entering proot...'
+    if [[ $# -eq 0 ]]; then
+        yanu tui
+        notify $?
+    else
+        yanu "$@"
+        code=$?
+
+        if [ "$show_notification" = true ]; then
+            notify "$code"
+        fi
+    fi
 fi
-trap cleanup EXIT
+EOF
 
-echo 'Entering proot...'
-if [[ $# -eq 0 ]]; then
-    yanu tui
-    notify $?
-else
+    # For backwards-compatibility sake
+    cat >"$BIN_DIR/yanu-cli" <<"EOF"
+#!/bin/bash
+
+BIN_DIR="$PREFIX/bin"
+
+source "$BIN_DIR/yanu"
+
+
+# If not sourced
+if [ "${#BASH_SOURCE[@]}" = 1 ]; then
+    show_notification="$(should_notify "$@")"
+
+    # Only set wakelock for non-help commands
+    if [ "$show_notification" = true ] || [[ $# -eq 0 ]]; then
+        get_wakelock
+    else
+        IS_WAKELOCK_SET=false
+    fi
+    trap cleanup EXIT
+
+    echo 'Entering proot...'
     yanu "$@"
     code=$?
 
-    if [ "$notify_flag" = true ]; then
+    if [ "$show_notification" = true ]; then
         notify "$code"
     fi
 fi
