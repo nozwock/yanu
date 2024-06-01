@@ -102,7 +102,7 @@ main() {
     # rm -f "$BIN_DIR/yanu-cli" || err "Failed to clean up old entry script"
 
     # Setup entry script
-    cat >"$BIN_DIR/yanu" <<"EOF"
+    cat >|"$BIN_DIR/yanu" <<"EOF"
 #!/bin/bash
 
 CFG_DIR="$HOME/.config/com.github.nozwock.yanu"
@@ -222,7 +222,7 @@ fi
 EOF
 
     # For backwards-compatibility sake
-    cat >"$BIN_DIR/yanu-cli" <<"EOF"
+    cat >|"$BIN_DIR/yanu-cli" <<"EOF"
 #!/bin/bash
 
 BIN_DIR="$PREFIX/bin"
