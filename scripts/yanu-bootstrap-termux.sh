@@ -235,7 +235,7 @@ if [ "${#BASH_SOURCE[@]}" = 1 ]; then
     show_notification="$(should_notify "$@")"
 
     # Only set wakelock for non-help commands
-    if [ "$show_notification" = true ] || [[ $# -eq 0 ]]; then
+    if [ "$show_notification" = true ]; then
         get_wakelock
     else
         IS_WAKELOCK_SET=false
