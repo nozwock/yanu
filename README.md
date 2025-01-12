@@ -14,7 +14,8 @@ Yet Another NSP Updater for [Skyline](https://github.com/skyline-emu/skyline)
 
 **Yanu** is a **Nintendo Switch** ROM updater designed to work with Skyline on [Android w/Termux](https://github.com/nozwock/yanu#android-wtermux), [Linux](https://github.com/nozwock/yanu#linux), and [Windows](https://github.com/nozwock/yanu#windows), as well as other platforms with the help of [Docker images](https://github.com/nozwock/yanu#docker). It serves as a temporary solution until Skyline supports Updates/DLCs natively.
 
-> **Warning** - **Doesn't support DLCs.**
+> [!IMPORTANT]
+> Yanu doesn't support DLCs as of yet
 
 Precompiled binaries are available from the [GitHub releases page](https://github.com/nozwock/yanu/releases).
 
@@ -61,7 +62,7 @@ Relevant resources:
 
 - Just [download](https://github.com/nozwock/yanu/releases) & run.
 
-> **Note**\
+> [!NOTE]
 > Due to the lack of code-signing, some anti-virus programs may falsely identify the program as malicious. I cannot afford expensive certificates to prevent this. Exercise caution if concerned and consider using tools like [virustotal.com](https://www.virustotal.com) or [hybrid-analysis.com](https://www.hybrid-analysis.com).
 
 ### Docker
@@ -69,7 +70,7 @@ Go [here](https://github.com/nozwock/yanu/pkgs/container/yanu) to pull the conta
 Once you have the container, you can use it like this:
    ```sh
       # Expecting 'prod.keys` in pwd
-      docker run -v $(pwd)/prod.keys:/root/.switch/prod.keys -v $(pwd):/work ghcr.io/nozwock/yanu update --base '/path/to/base' --update '/path/to/update' 
+      docker run -v "$(pwd)"/prod.keys:/root/.switch/prod.keys -v "$(pwd)":/work ghcr.io/nozwock/yanu update --base '/path/to/base' --update '/path/to/update' 
    ```
 
 ## Usage (CLI only)
@@ -104,7 +105,7 @@ yanu-cli pack --controlnca './base+update.xxxxxx/patchdata/control.nca' --titlei
 ```
 If only base was unpacked, get the control NCA from `basedata`.
 
-> **Note**
+> [!TIP]
 > - For Windows, adapt the above examples by replacing `/` with `\` and using the appropriate path to the executable.
 > - Control NCA is typically around 1MB in size.
 > - Yanu only accepts Control Type NCA. If unsure of the Type, trial and error can help narrow down the options.
