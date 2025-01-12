@@ -11,7 +11,7 @@ err() {
 # $1 - command string
 proot() {
     printf >&2 "\e[1;97m%s\n%s\n\e[0m" "Running in PROOT:" "$1"
-    proot-distro login ubuntu-oldlts -- bash -c "$1"
+    proot-distro login ubuntu -- bash -c "$1"
 }
 
 # Patches to make yanu work
@@ -77,7 +77,7 @@ main() {
         sh -c 'yes Y | pkg update' || termux-change-repo && sh -c 'yes Y | pkg update' || err "Failed to sync package repos; Changing mirror should help 'termux-change-repo'"
         sh -c 'yes Y | pkg upgrade' || err "Failed to update packages"
         sh -c 'yes Y | pkg in proot-distro termux-api' || err "Failed to install essential packages"
-        proot-distro install ubuntu-oldlts || true # ignore err
+        proot-distro install ubuntu || true # ignore err
         proot 'yes Y | apt update && apt upgrade' || err "Failed to update packages in proot"
         proot 'apt install git gcc binutils make -y' || err "Failed to install required deps in proot"
     fi
@@ -132,7 +132,7 @@ yanu() {
         fi
     done
 
-    proot-distro login ubuntu-oldlts --termux-home --bind /storage/emulated/0 "${bind_opts[@]}" -- bash -c 'yanu '"$*"" 2> >(tee $YANU_OUT_PATH)"
+    proot-distro login ubuntu --termux-home --bind /storage/emulated/0 "${bind_opts[@]}" -- bash -c 'yanu '"$*"" 2> >(tee $YANU_OUT_PATH)"
 }
 
 filter_ansi_codes() {
