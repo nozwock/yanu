@@ -54,6 +54,9 @@ Relevant resources:
    chmod +x yanu-x86_64-unknown-linux-musl
    ```
 
+> [!NOTE]
+> If for some reason, the backends are not compiling properly for you on Linux, you could always use the docker builds.
+
 ### Windows
 
 - Just [download](https://github.com/nozwock/yanu/releases) & run.
